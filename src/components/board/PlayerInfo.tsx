@@ -15,6 +15,7 @@ export function PlayerInfo({ playerId, isOpponent }: PlayerInfoProps) {
   const healthControls = useAnimationControls();
   const prevHealthRef = useRef(player?.health);
   const healthRef = usePositionRegistry(`player:${playerId}`);
+  const cardBackSrc = `${import.meta.env.BASE_URL}cardback.webp`;
 
   useEffect(() => {
     if (!player) return;
@@ -82,7 +83,7 @@ export function PlayerInfo({ playerId, isOpponent }: PlayerInfoProps) {
         {player.deck.length > 0 && (
           <div className="absolute inset-0 rounded overflow-hidden bg-slate-900 border border-slate-600/40">
             <img
-              src="/cardback.webp"
+              src={cardBackSrc}
               alt="Deck"
               className="w-full h-full object-contain p-1 opacity-60"
               draggable={false}

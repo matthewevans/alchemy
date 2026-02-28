@@ -4,6 +4,7 @@ interface CardBackProps {
 
 export function CardBack({ size = 'hand' }: CardBackProps) {
   const isHand = size === 'hand';
+  const cardBackSrc = `${import.meta.env.BASE_URL}cardback.webp`;
 
   return (
     <div
@@ -14,7 +15,7 @@ export function CardBack({ size = 'hand' }: CardBackProps) {
       }}
     >
       <img
-        src="/cardback.webp"
+        src={cardBackSrc}
         alt="Card back"
         className="absolute inset-0 w-full h-full object-cover"
         draggable={false}

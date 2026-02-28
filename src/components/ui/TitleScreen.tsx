@@ -33,6 +33,7 @@ function useSparkles(count: number): Particle[] {
 export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScreenProps) {
   const particles = useSparkles(30);
   const [mounted, setMounted] = useState(false);
+  const logoWordmarkSrc = `${import.meta.env.BASE_URL}logo_wordmark.webp`;
 
   useEffect(() => {
     setMounted(true);
@@ -68,7 +69,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScree
 
       {/* Logo */}
       <motion.img
-        src="/logo_wordmark.webp"
+        src={logoWordmarkSrc}
         alt="Alchemy"
         className="w-80 max-w-[80vw] mb-8 drop-shadow-lg"
         initial={{ opacity: 0, scale: 0.9 }}
