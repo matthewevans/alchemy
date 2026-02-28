@@ -5,4 +5,6 @@ import { GamePage } from './pages/GamePage';
 export const router = createBrowserRouter([
   { path: '/', element: <HomePage /> },
   { path: '/game/:id', element: <GamePage /> },
-]);
+], {
+  basename: import.meta.env.BASE_URL,
+});
