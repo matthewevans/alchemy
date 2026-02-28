@@ -44,7 +44,7 @@ function App() {
   return (
     <>
       <RouterProvider router={router} />
-      <div className="fixed right-2 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-[60] pointer-events-none">
+      <div className="fixed left-2 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-[60] pointer-events-none">
         <div className="rounded-md border border-slate-600/60 bg-slate-950/75 px-2 py-1 text-[10px] text-slate-300 shadow-lg shadow-black/40 backdrop-blur-sm">
           <span>{`v${__APP_VERSION__}`}</span>
           <span className="ml-1 text-slate-400">{__BUILD_HASH__}</span>
