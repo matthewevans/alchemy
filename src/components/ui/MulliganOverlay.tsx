@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { HandCard } from '@components/card';
+import { gameButtonClass } from './buttonStyles';
 
 export function MulliganOverlay() {
   const state = useGameStore((s) => s.state);
@@ -98,7 +99,11 @@ export function MulliganOverlay() {
       {/* Buttons */}
       <div className="flex gap-4">
         <motion.button
-          className="px-6 py-3 rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/30 cursor-pointer"
+          className={gameButtonClass({
+            tone: 'emerald',
+            size: 'md',
+            className: 'font-bold',
+          })}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleKeep}
@@ -106,13 +111,12 @@ export function MulliganOverlay() {
           Keep Hand
         </motion.button>
         <motion.button
-          className={`
-            px-6 py-3 rounded-xl font-bold shadow-lg cursor-pointer
-            ${selectedIndices.size > 0
-              ? 'bg-gradient-to-b from-red-500 to-red-700 text-white shadow-red-500/30'
-              : 'bg-slate-700 text-white/30 cursor-not-allowed'
-            }
-          `}
+          className={gameButtonClass({
+            tone: 'red',
+            size: 'md',
+            disabled: selectedIndices.size === 0,
+            className: 'font-bold',
+          })}
           whileHover={selectedIndices.size > 0 ? { scale: 1.05 } : undefined}
           whileTap={selectedIndices.size > 0 ? { scale: 0.95 } : undefined}
           onClick={handleMulligan}

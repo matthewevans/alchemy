@@ -4,6 +4,7 @@ import type { PeerSession } from '@network/peer';
 import { createHostOffer, joinWithOffer } from '@network/connection';
 import { createPeerSession } from '@network/peer';
 import { DeckSelector } from './DeckSelector';
+import { gameButtonClass } from './buttonStyles';
 
 type LobbyStep =
   | { type: 'choose_role' }
@@ -207,7 +208,11 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
             <h2 className="text-3xl font-bold mb-2">Multiplayer</h2>
             <p className="text-white/50 text-sm mb-4">Challenge a friend via peer-to-peer</p>
             <motion.button
-              className="px-10 py-4 rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 text-white text-xl font-bold shadow-lg shadow-amber-500/30 cursor-pointer"
+              className={gameButtonClass({
+                tone: 'amber',
+                size: 'lg',
+                className: 'px-10 text-xl font-bold',
+              })}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleHost}
@@ -215,7 +220,11 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
               Host Game
             </motion.button>
             <motion.button
-              className="px-10 py-4 rounded-2xl bg-gradient-to-b from-blue-400 to-blue-600 text-white text-xl font-bold shadow-lg shadow-blue-500/30 cursor-pointer"
+              className={gameButtonClass({
+                tone: 'blue',
+                size: 'lg',
+                className: 'px-10 text-xl font-bold',
+              })}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleJoin}
@@ -223,7 +232,11 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
               Join Game
             </motion.button>
             <motion.button
-              className="mt-4 px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm cursor-pointer hover:bg-white/10"
+              className={gameButtonClass({
+                tone: 'neutral',
+                size: 'sm',
+                className: 'mt-4 px-6 py-2 rounded-xl text-sm',
+              })}
               whileTap={{ scale: 0.95 }}
               onClick={onBack}
             >
@@ -246,7 +259,11 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
               {step.inviteCode}
             </div>
             <motion.button
-              className="px-6 py-2 rounded-lg bg-amber-500 text-white font-bold text-sm cursor-pointer"
+              className={gameButtonClass({
+                tone: 'amber',
+                size: 'sm',
+                className: 'px-6 py-2 font-bold text-sm',
+              })}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => copyToClipboard(step.inviteCode)}
@@ -264,11 +281,12 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
               onChange={(e) => setInputCode(e.target.value)}
             />
             <motion.button
-              className={`px-8 py-3 rounded-xl font-bold text-sm cursor-pointer ${
-                inputCode.trim()
-                  ? 'bg-gradient-to-b from-emerald-400 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
-                  : 'bg-slate-700 text-white/30 cursor-not-allowed'
-              }`}
+              className={gameButtonClass({
+                tone: 'emerald',
+                size: 'md',
+                disabled: !inputCode.trim(),
+                className: 'px-8 font-bold text-sm',
+              })}
               whileHover={inputCode.trim() ? { scale: 1.05 } : undefined}
               whileTap={inputCode.trim() ? { scale: 0.95 } : undefined}
               onClick={handleHostConnect}
@@ -297,18 +315,23 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
             />
             <div className="flex gap-3">
               <motion.button
-                className="px-6 py-2 rounded-lg bg-white/5 border border-white/10 text-white/60 text-sm cursor-pointer hover:bg-white/10"
+                className={gameButtonClass({
+                  tone: 'neutral',
+                  size: 'sm',
+                  className: 'px-6 py-2 text-sm',
+                })}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => { setInputCode(''); setStep({ type: 'choose_role' }); }}
               >
                 Back
               </motion.button>
               <motion.button
-                className={`px-8 py-3 rounded-xl font-bold text-sm cursor-pointer ${
-                  inputCode.trim()
-                    ? 'bg-gradient-to-b from-blue-400 to-blue-600 text-white shadow-lg shadow-blue-500/30'
-                    : 'bg-slate-700 text-white/30 cursor-not-allowed'
-                }`}
+                className={gameButtonClass({
+                  tone: 'blue',
+                  size: 'md',
+                  disabled: !inputCode.trim(),
+                  className: 'px-8 font-bold text-sm',
+                })}
                 whileHover={inputCode.trim() ? { scale: 1.05 } : undefined}
                 whileTap={inputCode.trim() ? { scale: 0.95 } : undefined}
                 onClick={handleJoinEnterInvite}
@@ -334,7 +357,11 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
               {step.answerCode}
             </div>
             <motion.button
-              className="px-6 py-2 rounded-lg bg-blue-500 text-white font-bold text-sm cursor-pointer"
+              className={gameButtonClass({
+                tone: 'blue',
+                size: 'sm',
+                className: 'px-6 py-2 font-bold text-sm',
+              })}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => copyToClipboard(step.answerCode)}
@@ -346,7 +373,11 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
             <p className="text-white/50 text-sm text-center">Once the host has your code, click connect</p>
             <motion.button
-              className="px-8 py-3 rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-600 text-white font-bold text-sm shadow-lg shadow-emerald-500/30 cursor-pointer"
+              className={gameButtonClass({
+                tone: 'emerald',
+                size: 'md',
+                className: 'px-8 font-bold text-sm',
+              })}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleJoinConnect}
@@ -384,7 +415,11 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
             <h3 className="text-xl font-bold text-red-400">Connection Error</h3>
             <p className="text-white/60 text-sm text-center">{step.message}</p>
             <motion.button
-              className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white/70 font-medium cursor-pointer hover:bg-white/10"
+              className={gameButtonClass({
+                tone: 'neutral',
+                size: 'md',
+                className: 'px-6 font-medium',
+              })}
               whileTap={{ scale: 0.95 }}
               onClick={() => { setInputCode(''); setStep({ type: 'choose_role' }); }}
             >

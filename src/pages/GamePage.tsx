@@ -13,6 +13,7 @@ import { AnimatePresence } from 'framer-motion';
 import { GameBoard } from '@components/board';
 import { GameOverScreen, MulliganOverlay } from '@components/ui';
 import { GameMenu } from '@components/ui/GameMenu';
+import { gameButtonClass } from '@components/ui/buttonStyles';
 
 type GamePhase = 'playing' | 'game_over';
 
@@ -193,7 +194,12 @@ function PlayingScreenInner({
 
       {/* Gear menu button */}
       <button
-        className="fixed top-3 right-3 z-30 w-10 h-10 flex items-center justify-center rounded-full bg-slate-800/80 border border-slate-700/50 text-white/70 hover:text-white hover:bg-slate-700/80 cursor-pointer transition-colors"
+        className={gameButtonClass({
+          tone: 'slate',
+          size: 'sm',
+          className:
+            'fixed top-3 right-3 z-30 w-10 h-10 p-0 rounded-full flex items-center justify-center text-white/70 hover:text-white',
+        })}
         onClick={() => setShowMenu(true)}
         aria-label="Game menu"
       >
@@ -225,7 +231,11 @@ function PlayingScreenInner({
             <h3 className="text-xl font-bold text-red-400">Disconnected</h3>
             <p className="text-white/70 text-sm text-center">{disconnectReason}</p>
             <button
-              className="px-6 py-3 rounded-xl bg-gradient-to-b from-slate-500 to-slate-700 text-white font-bold cursor-pointer hover:from-slate-400 hover:to-slate-600"
+              className={gameButtonClass({
+                tone: 'slate',
+                size: 'md',
+                className: 'font-bold',
+              })}
               onClick={onDisconnectAck}
             >
               Main Menu

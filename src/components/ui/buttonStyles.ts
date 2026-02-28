@@ -1,0 +1,47 @@
+export type GameButtonTone = 'neutral' | 'emerald' | 'amber' | 'blue' | 'red' | 'indigo' | 'slate';
+export type GameButtonSize = 'xs' | 'sm' | 'md' | 'lg';
+
+const GAME_BUTTON_BASE =
+  'border border-solid font-semibold backdrop-blur-sm transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40';
+
+const GAME_BUTTON_TONES: Record<GameButtonTone, string> = {
+  neutral: 'border-white/25 bg-white/8 text-white/80 hover:bg-white/14 hover:text-white',
+  emerald: 'border-emerald-300/70 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-400/28',
+  amber: 'border-amber-300/70 bg-amber-500/20 text-amber-100 hover:bg-amber-400/30',
+  blue: 'border-blue-300/70 bg-blue-500/20 text-blue-100 hover:bg-blue-400/30',
+  red: 'border-red-300/70 bg-red-500/20 text-red-100 hover:bg-red-400/30',
+  indigo: 'border-indigo-300/70 bg-indigo-500/20 text-indigo-100 hover:bg-indigo-400/30',
+  slate: 'border-slate-300/60 bg-slate-500/20 text-slate-100 hover:bg-slate-400/28',
+};
+
+const GAME_BUTTON_SIZES: Record<GameButtonSize, string> = {
+  xs: 'px-2 py-1 rounded-md text-[10px]',
+  sm: 'px-3 py-1.5 rounded-lg text-sm',
+  md: 'px-6 py-3 rounded-xl text-base',
+  lg: 'px-10 py-4 rounded-2xl text-xl',
+};
+
+const GAME_BUTTON_DISABLED = 'border-slate-600/50 bg-slate-800/45 text-white/35 cursor-not-allowed';
+
+interface GameButtonClassOptions {
+  tone: GameButtonTone;
+  size?: GameButtonSize;
+  disabled?: boolean;
+  className?: string;
+}
+
+export function gameButtonClass({
+  tone,
+  size = 'md',
+  disabled = false,
+  className,
+}: GameButtonClassOptions): string {
+  return [
+    GAME_BUTTON_BASE,
+    GAME_BUTTON_SIZES[size],
+    disabled ? GAME_BUTTON_DISABLED : GAME_BUTTON_TONES[tone],
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
+}

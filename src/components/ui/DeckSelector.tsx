@@ -3,6 +3,7 @@ import type { Element } from '@engine/types';
 import { ELEMENT_META } from '@engine/elements';
 import { getCardsByElement } from '@engine/cards';
 import { getElementColor, getElementIconPath } from '@components/card/cardUtils';
+import { gameButtonClass } from './buttonStyles';
 
 interface DeckSelectorProps {
   onSelectDeck: (deckCardIds: string[]) => void;
@@ -75,7 +76,11 @@ export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <motion.button
-            className="px-4 py-2 rounded-lg bg-slate-800 text-white/70 text-sm font-medium hover:bg-slate-700 cursor-pointer"
+            className={gameButtonClass({
+              tone: 'neutral',
+              size: 'sm',
+              className: 'px-4 py-2 font-medium',
+            })}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onBack}
@@ -99,7 +104,12 @@ export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
             return (
               <motion.button
                 key={deck.name}
-                className="relative p-4 rounded-xl bg-slate-800/80 border text-left hover:bg-slate-800 transition-colors cursor-pointer overflow-hidden"
+                className={gameButtonClass({
+                  tone: 'neutral',
+                  size: 'md',
+                  className:
+                    'relative p-4 rounded-xl bg-slate-800/65 text-left hover:bg-slate-800/80 overflow-hidden',
+                })}
                 style={{
                   borderColor: `${primaryColor}33`,
                 }}

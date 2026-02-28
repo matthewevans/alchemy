@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import type { PlayerId } from '@engine/types';
+import { gameButtonClass } from './buttonStyles';
 
 interface GameOverScreenProps {
   winner: PlayerId;
@@ -95,7 +96,11 @@ export function GameOverScreen({ winner, humanPlayer, onPlayAgain, onMainMenu }:
         transition={{ duration: 0.4, delay: 0.6 }}
       >
         <motion.button
-          className="px-8 py-3 rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-600 text-white font-bold text-lg shadow-lg shadow-emerald-500/30 cursor-pointer"
+          className={gameButtonClass({
+            tone: 'emerald',
+            size: 'md',
+            className: 'px-8 text-lg font-bold',
+          })}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={onPlayAgain}
@@ -103,7 +108,11 @@ export function GameOverScreen({ winner, humanPlayer, onPlayAgain, onMainMenu }:
           Play Again
         </motion.button>
         <motion.button
-          className="px-8 py-3 rounded-xl bg-gradient-to-b from-slate-600 to-slate-700 text-white font-bold text-lg shadow-lg shadow-slate-500/20 cursor-pointer"
+          className={gameButtonClass({
+            tone: 'slate',
+            size: 'md',
+            className: 'px-8 text-lg font-bold',
+          })}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={onMainMenu}

@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import type { GameAction } from '@engine/types';
+import { gameButtonClass } from '@components/ui/buttonStyles';
 
 const PHASES = [
   { key: 'draw', label: 'Draw', icon: '🂠' },
@@ -77,15 +78,16 @@ export function PhaseStrip() {
       {/* Advance button */}
       {canAdvance && advanceInfo && (
         <motion.button
-          className={`
-            ml-2 px-4 py-1.5 rounded-lg font-bold text-sm text-white shadow-md
-            ${currentPhaseType === 'play'
-              ? 'bg-gradient-to-b from-red-500 to-orange-600 shadow-red-500/30'
-              : currentPhaseType === 'end'
-                ? 'bg-gradient-to-b from-indigo-500 to-indigo-700 shadow-indigo-500/30'
-                : 'bg-gradient-to-b from-slate-500 to-slate-600 shadow-slate-500/20'
-            }
-          `}
+          className={gameButtonClass({
+            tone:
+              currentPhaseType === 'play'
+                ? 'red'
+                : currentPhaseType === 'end'
+                  ? 'indigo'
+                  : 'slate',
+            size: 'sm',
+            className: 'ml-2 px-4 py-1.5 font-bold',
+          })}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => dispatch(advanceInfo.action, humanPlayer)}

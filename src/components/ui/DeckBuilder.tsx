@@ -11,6 +11,7 @@ import { getElementColor, getElementIconPath } from '@components/card/cardUtils'
 import { loadSavedDecks, saveDeck, deleteDeck } from '@storage/deckStorage';
 import { encodeDeck, decodeDeck } from '@storage/shareCode';
 import type { SavedDeck } from '@storage/deckStorage';
+import { gameButtonClass } from './buttonStyles';
 
 interface DeckBuilderProps {
   onSelectDeck: (deckCardIds: string[]) => void;
@@ -101,8 +102,9 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
       const current = prev[cardId] ?? 0;
       if (current <= 0) return prev;
       if (current === 1) {
-        const { [cardId]: _, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next[cardId];
+        return next;
       }
       return { ...prev, [cardId]: current - 1 };
     });
@@ -186,7 +188,11 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
       {/* ═══ Top Bar ═══ */}
       <div className="shrink-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-b from-slate-900 to-slate-950 border-b border-white/5">
         <motion.button
-          className="px-3 py-1.5 rounded bg-white/5 text-white/60 text-sm hover:bg-white/10 hover:text-white cursor-pointer"
+          className={gameButtonClass({
+            tone: 'neutral',
+            size: 'sm',
+            className: 'px-3 py-1.5 text-sm',
+          })}
           whileTap={{ scale: 0.95 }}
           onClick={onBack}
         >
@@ -197,11 +203,15 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
 
         {/* Element filter pills */}
         <button
-          className={`px-2 py-1 rounded text-xs font-medium cursor-pointer transition-colors ${
-            elementFilter === 'all'
-              ? 'bg-white/15 text-white'
-              : 'text-white/40 hover:text-white/60'
-          }`}
+          className={gameButtonClass({
+            tone: 'neutral',
+            size: 'xs',
+            className: `px-2 py-1 rounded text-xs font-medium ${
+              elementFilter === 'all'
+                ? 'border-white/40 bg-white/16 text-white'
+                : 'text-white/40 hover:text-white/70'
+            }`,
+          })}
           onClick={() => setElementFilter('all')}
         >
           All
@@ -211,9 +221,14 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
           return (
             <button
               key={el}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium cursor-pointer transition-colors"
+              className={gameButtonClass({
+                tone: 'neutral',
+                size: 'xs',
+                className: 'flex items-center gap-1 px-2 py-1 rounded text-xs font-medium',
+              })}
               style={{
-                backgroundColor: elementFilter === el ? color + '33' : undefined,
+                backgroundColor: elementFilter === el ? color + '22' : undefined,
+                borderColor: elementFilter === el ? color + '88' : undefined,
                 color: elementFilter === el ? color : 'rgba(255,255,255,0.4)',
               }}
               onClick={() => setElementFilter(el)}
@@ -234,7 +249,11 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
         />
 
         <motion.button
-          className="px-3 py-1.5 rounded bg-amber-600/80 text-white text-sm font-medium hover:bg-amber-500 cursor-pointer"
+          className={gameButtonClass({
+            tone: 'amber',
+            size: 'sm',
+            className: 'px-3 py-1.5 text-sm font-medium',
+          })}
           whileTap={{ scale: 0.95 }}
           onClick={handleSave}
         >
@@ -242,7 +261,11 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
         </motion.button>
 
         <motion.button
-          className="px-3 py-1.5 rounded bg-white/5 text-white/60 text-sm hover:bg-white/10 cursor-pointer"
+          className={gameButtonClass({
+            tone: 'neutral',
+            size: 'sm',
+            className: 'px-3 py-1.5 text-sm',
+          })}
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowSaved(!showSaved)}
         >
@@ -361,7 +384,11 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
                 placeholder="Paste share code..."
               />
               <button
-                className="px-2 py-1 rounded bg-white/10 text-white/60 text-[10px] hover:bg-white/15 cursor-pointer"
+                className={gameButtonClass({
+                  tone: 'neutral',
+                  size: 'xs',
+                  className: 'px-2 py-1 text-[10px]',
+                })}
                 onClick={handleImport}
               >
                 Import
@@ -369,13 +396,21 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
             </div>
             <div className="flex gap-1">
               <button
-                className="flex-1 px-2 py-1 rounded bg-white/10 text-white/60 text-[10px] hover:bg-white/15 cursor-pointer"
+                className={gameButtonClass({
+                  tone: 'neutral',
+                  size: 'xs',
+                  className: 'flex-1 px-2 py-1 text-[10px]',
+                })}
                 onClick={handleExport}
               >
                 Export
               </button>
               <button
-                className="flex-1 px-2 py-1 rounded bg-white/10 text-white/60 text-[10px] hover:bg-white/15 cursor-pointer"
+                className={gameButtonClass({
+                  tone: 'neutral',
+                  size: 'xs',
+                  className: 'flex-1 px-2 py-1 text-[10px]',
+                })}
                 onClick={handleClear}
               >
                 Clear
@@ -389,11 +424,12 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
 
             {/* Play button */}
             <motion.button
-              className={`w-full py-2 rounded-lg font-bold text-sm cursor-pointer ${
-                validation.valid
-                  ? 'bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-lg shadow-amber-500/20'
-                  : 'bg-white/5 text-white/20 cursor-not-allowed'
-              }`}
+              className={gameButtonClass({
+                tone: 'amber',
+                size: 'sm',
+                disabled: !validation.valid,
+                className: 'w-full py-2 font-bold text-sm',
+              })}
               whileHover={validation.valid ? { scale: 1.02 } : {}}
               whileTap={validation.valid ? { scale: 0.98 } : {}}
               onClick={handlePlay}
@@ -426,14 +462,23 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
                       className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 group"
                     >
                       <button
-                        className="flex-1 text-left text-white/70 text-xs hover:text-white truncate cursor-pointer"
+                        className={gameButtonClass({
+                          tone: 'neutral',
+                          size: 'xs',
+                          className: 'flex-1 text-left text-white/70 hover:text-white truncate',
+                        })}
                         onClick={() => handleLoad(deck)}
                       >
                         {deck.name}
                         <span className="text-white/30 ml-1">({deck.cardIds.length})</span>
                       </button>
                       <button
-                        className="opacity-0 group-hover:opacity-100 text-red-400/50 hover:text-red-400 text-xs transition-opacity cursor-pointer"
+                        className={gameButtonClass({
+                          tone: 'red',
+                          size: 'xs',
+                          className:
+                            'opacity-0 group-hover:opacity-100 text-red-400/70 hover:text-red-300 transition-opacity px-1.5 py-0.5',
+                        })}
                         onClick={() => handleDelete(deck.id)}
                       >
                         x
@@ -536,14 +581,24 @@ function CollectionCardBar({
       {/* +/- buttons on hover */}
       <div className="shrink-0 flex opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          className="w-6 h-9 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 text-sm cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
+          className={gameButtonClass({
+            tone: 'neutral',
+            size: 'xs',
+            className:
+              'w-6 h-9 px-0 py-0 rounded-none border-l-0 text-sm flex items-center justify-center text-white/40 hover:text-white disabled:opacity-20',
+          })}
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
           disabled={count === 0}
         >
           -
         </button>
         <button
-          className="w-6 h-9 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 text-sm cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
+          className={gameButtonClass({
+            tone: 'neutral',
+            size: 'xs',
+            className:
+              'w-6 h-9 px-0 py-0 rounded-none border-l-0 text-sm flex items-center justify-center text-white/40 hover:text-white disabled:opacity-20',
+          })}
           onClick={(e) => { e.stopPropagation(); onAdd(); }}
           disabled={!canAdd}
         >
@@ -571,9 +626,14 @@ function DeckCardBar({
 
   return (
     <button
-      className="group w-full flex items-center h-7 rounded overflow-hidden cursor-pointer transition-colors hover:brightness-125"
+      className={gameButtonClass({
+        tone: 'neutral',
+        size: 'xs',
+        className: 'group w-full flex items-center h-7 px-0 py-0 rounded overflow-hidden hover:brightness-110',
+      })}
       style={{
-        background: `linear-gradient(90deg, ${color}20 0%, ${color}08 100%)`,
+        borderColor: `${color}88`,
+        backgroundColor: `${color}22`,
       }}
       onClick={onClick}
     >

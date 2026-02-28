@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { gameButtonClass } from './buttonStyles';
 
 interface TitleScreenProps {
   onPlay: () => void;
@@ -85,23 +86,35 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScree
         transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
       >
         <motion.button
-          className="px-12 py-4 rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 text-white text-2xl font-bold shadow-lg shadow-emerald-500/40 cursor-pointer"
-          whileHover={{ scale: 1.06, boxShadow: '0 0 30px rgba(52, 211, 153, 0.5)' }}
+          className={gameButtonClass({
+            tone: 'emerald',
+            size: 'lg',
+            className: 'px-12 text-2xl font-bold',
+          })}
+          whileHover={{ scale: 1.06 }}
           whileTap={{ scale: 0.96 }}
           onClick={onPlay}
         >
           Play
         </motion.button>
         <motion.button
-          className="px-10 py-3 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 text-white text-lg font-bold shadow-lg shadow-amber-500/30 cursor-pointer"
-          whileHover={{ scale: 1.04, boxShadow: '0 0 25px rgba(251, 191, 36, 0.4)' }}
+          className={gameButtonClass({
+            tone: 'amber',
+            size: 'md',
+            className: 'px-10 text-lg font-bold',
+          })}
+          whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.96 }}
           onClick={onMultiplayer}
         >
           Multiplayer
         </motion.button>
         <motion.button
-          className="px-8 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm font-medium hover:bg-white/10 hover:text-white cursor-pointer"
+          className={gameButtonClass({
+            tone: 'neutral',
+            size: 'sm',
+            className: 'px-8 py-2.5 rounded-xl text-sm font-medium',
+          })}
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.96 }}
           onClick={onDeckBuilder}

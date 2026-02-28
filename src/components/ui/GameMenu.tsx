@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { gameButtonClass } from './buttonStyles';
 
 interface GameMenuProps {
   onResume: () => void;
@@ -31,7 +32,11 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
 
         {/* Resume */}
         <button
-          className="w-full px-6 py-3 rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 text-white font-bold cursor-pointer hover:from-emerald-400 hover:to-emerald-600 transition-colors"
+          className={gameButtonClass({
+            tone: 'emerald',
+            size: 'md',
+            className: 'w-full font-bold',
+          })}
           onClick={onResume}
         >
           Resume
@@ -50,13 +55,21 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
               <p className="text-white/70 text-sm text-center">Are you sure?</p>
               <div className="flex gap-2">
                 <button
-                  className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-b from-red-500 to-red-700 text-white font-bold cursor-pointer hover:from-red-400 hover:to-red-600 transition-colors"
+                  className={gameButtonClass({
+                    tone: 'red',
+                    size: 'sm',
+                    className: 'flex-1 px-4 py-2 rounded-xl font-bold',
+                  })}
                   onClick={onConcede}
                 >
                   Yes
                 </button>
                 <button
-                  className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-b from-slate-500 to-slate-700 text-white font-bold cursor-pointer hover:from-slate-400 hover:to-slate-600 transition-colors"
+                  className={gameButtonClass({
+                    tone: 'slate',
+                    size: 'sm',
+                    className: 'flex-1 px-4 py-2 rounded-xl font-bold',
+                  })}
                   onClick={() => setConfirmingConcede(false)}
                 >
                   No
@@ -66,7 +79,11 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
           ) : (
             <motion.button
               key="concede"
-              className="w-full px-6 py-3 rounded-xl bg-gradient-to-b from-red-500 to-red-700 text-white font-bold cursor-pointer hover:from-red-400 hover:to-red-600 transition-colors"
+              className={gameButtonClass({
+                tone: 'red',
+                size: 'md',
+                className: 'w-full font-bold',
+              })}
               onClick={() => setConfirmingConcede(true)}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -79,7 +96,11 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
 
         {/* Main Menu */}
         <button
-          className="w-full px-6 py-3 rounded-xl bg-gradient-to-b from-slate-500 to-slate-700 text-white font-bold cursor-pointer hover:from-slate-400 hover:to-slate-600 transition-colors"
+          className={gameButtonClass({
+            tone: 'slate',
+            size: 'md',
+            className: 'w-full font-bold',
+          })}
           onClick={onMainMenu}
         >
           Main Menu

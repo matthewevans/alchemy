@@ -4,6 +4,7 @@ import type { GameAction } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { getOpponent } from '@engine/types';
+import { gameButtonClass } from '@components/ui/buttonStyles';
 
 export function CombatControls() {
   const phase = useGameStore((s) => s.state?.phase);
@@ -44,7 +45,11 @@ export function CombatControls() {
           <>
             {hasValidAttackers && (
               <motion.button
-                className="px-5 py-1.5 rounded-lg bg-gradient-to-b from-red-500 to-red-700 text-white font-bold text-sm shadow-lg shadow-red-500/30 cursor-pointer"
+                className={gameButtonClass({
+                  tone: 'red',
+                  size: 'sm',
+                  className: 'px-5 py-1.5 font-bold',
+                })}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleAllAttack}
@@ -53,7 +58,11 @@ export function CombatControls() {
               </motion.button>
             )}
             <motion.button
-              className="px-5 py-1.5 rounded-lg bg-gradient-to-b from-red-500 to-orange-600 text-white font-bold text-sm shadow-lg shadow-red-500/30 cursor-pointer"
+              className={gameButtonClass({
+                tone: 'red',
+                size: 'sm',
+                className: 'px-5 py-1.5 font-bold',
+              })}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer)}
@@ -67,7 +76,11 @@ export function CombatControls() {
           <>
             <span className="text-blue-300 font-medium text-xs">Assign blockers</span>
             <motion.button
-              className="px-5 py-1.5 rounded-lg bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/30 cursor-pointer"
+              className={gameButtonClass({
+                tone: 'blue',
+                size: 'sm',
+                className: 'px-5 py-1.5 font-bold',
+              })}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => dispatch({ type: 'CONFIRM_BLOCKERS' }, humanPlayer)}
