@@ -10,6 +10,9 @@ interface UIStore {
   // Targeting
   isTargeting: boolean;
 
+  // Combat
+  selectedBlockerId: string | null;
+
   // Turn banner
   showTurnBanner: boolean;
   turnBannerText: string;
@@ -19,6 +22,7 @@ interface UIStore {
   hoverCard: (cardId: string | null) => void;
   inspectCard: (cardId: string | null) => void;
   setTargeting: (targeting: boolean) => void;
+  selectBlocker: (id: string | null) => void;
   flashTurnBanner: (text: string) => void;
   clearUI: () => void;
 }
@@ -29,6 +33,7 @@ export const useUIStore = create<UIStore>()(
     hoveredCardId: null,
     inspectedCardId: null,
     isTargeting: false,
+    selectedBlockerId: null,
     showTurnBanner: false,
     turnBannerText: '',
 
@@ -36,6 +41,7 @@ export const useUIStore = create<UIStore>()(
     hoverCard: (cardId) => set({ hoveredCardId: cardId }),
     inspectCard: (cardId) => set({ inspectedCardId: cardId }),
     setTargeting: (targeting) => set({ isTargeting: targeting }),
+    selectBlocker: (id) => set({ selectedBlockerId: id }),
 
     flashTurnBanner: (text) => {
       set({ showTurnBanner: true, turnBannerText: text });
@@ -48,6 +54,7 @@ export const useUIStore = create<UIStore>()(
         hoveredCardId: null,
         inspectedCardId: null,
         isTargeting: false,
+        selectedBlockerId: null,
         showTurnBanner: false,
         turnBannerText: '',
       }),

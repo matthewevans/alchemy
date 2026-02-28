@@ -3,6 +3,9 @@ import { getOpponent } from '@engine/types';
 import { PlayerInfo } from './PlayerInfo';
 import { CreatureSlots } from './CreatureSlots';
 import { BattleLine } from './BattleLine';
+import { PlayerHand } from '@components/hand';
+import { CombatControls } from '@components/combat';
+import { PhaseStrip, TurnBanner } from '@components/phase';
 
 export function GameBoard() {
   const humanPlayer = useGameStore((s) => s.humanPlayer);
@@ -29,21 +32,28 @@ export function GameBoard() {
         <CreatureSlots playerId={opponentPlayer} isOpponent />
       </div>
 
-      {/* Battle line */}
+      {/* Battle line + combat controls */}
       <BattleLine />
+      <CombatControls />
 
       {/* Player board */}
       <div className="flex-1 flex items-start justify-center">
         <CreatureSlots playerId={humanPlayer} isOpponent={false} />
       </div>
 
-      {/* Player info + phase strip placeholder */}
-      <div className="flex justify-center">
+      {/* Player info + phase strip */}
+      <div className="flex flex-col items-center">
         <PlayerInfo playerId={humanPlayer} isOpponent={false} />
+        <PhaseStrip />
       </div>
 
-      {/* Hand area placeholder */}
-      <div className="h-[calc(var(--card-height)+1.5rem)] shrink-0" />
+      {/* Player hand */}
+      <div className="shrink-0 pb-2">
+        <PlayerHand />
+      </div>
+
+      {/* Turn banner overlay */}
+      <TurnBanner />
     </div>
   );
 }
