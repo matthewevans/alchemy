@@ -2,7 +2,7 @@ import type { Element } from '@engine/types';
 
 /** Path to card art image. Returns path regardless of whether file exists — callers should handle missing art via onError. */
 export function getCardArtPath(cardId: string, element: Element): string {
-  return `/cards/${element}/${cardId}.png`;
+  return `/cards/${element}/${cardId}.webp`;
 }
 
 const ELEMENT_COLORS: Record<Element, string> = {
@@ -32,11 +32,11 @@ const ELEMENT_ART_GRADIENTS: Record<Element, string> = {
 
 /** Element icon image paths */
 const ELEMENT_ICON_PATHS: Record<Element, string> = {
-  fire: '/elements/fire.png',
-  water: '/elements/water.png',
-  earth: '/elements/earth.png',
-  air: '/elements/air.png',
-  shadow: '/elements/shadow.png',
+  fire: '/elements/fire.webp',
+  water: '/elements/water.webp',
+  earth: '/elements/earth.webp',
+  air: '/elements/air.webp',
+  shadow: '/elements/shadow.webp',
 };
 
 /** Card frame gradient (the outer border area) */

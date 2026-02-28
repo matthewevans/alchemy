@@ -14,7 +14,7 @@ export function CardBack({ size = 'hand' }: CardBackProps) {
       }}
     >
       <img
-        src="/cardback.png"
+        src="/cardback.webp"
         alt="Card back"
         className="absolute inset-0 w-full h-full object-cover"
         draggable={false}

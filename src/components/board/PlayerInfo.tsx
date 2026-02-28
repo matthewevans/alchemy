@@ -82,7 +82,7 @@ export function PlayerInfo({ playerId, isOpponent }: PlayerInfoProps) {
         {player.deck.length > 0 && (
           <div className="absolute inset-0 rounded overflow-hidden bg-slate-900 border border-slate-600/40">
             <img
-              src="/cardback.png"
+              src="/cardback.webp"
               alt="Deck"
               className="w-full h-full object-contain p-1 opacity-60"
               draggable={false}
