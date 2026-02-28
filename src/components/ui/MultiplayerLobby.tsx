@@ -5,6 +5,8 @@ import { createHostOffer, joinWithOffer } from '@network/connection';
 import { createPeerSession } from '@network/peer';
 import { DeckSelector } from './DeckSelector';
 import { gameButtonClass } from './buttonStyles';
+import { CodeQrDisplay } from './CodeQrDisplay';
+import { QrScannerModal } from './QrScannerModal';
 
 type LobbyStep =
   | { type: 'choose_role' }
@@ -26,6 +28,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
   const [step, setStep] = useState<LobbyStep>({ type: 'choose_role' });
   const [inputCode, setInputCode] = useState('');
   const [copied, setCopied] = useState(false);
+  const [scannerTarget, setScannerTarget] = useState<'invite' | 'answer' | null>(null);
   const mountedRef = useRef(true);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -136,12 +139,16 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
     setStep({ type: 'join_enter_invite' });
   }, []);
 
-  const handleJoinEnterInvite = useCallback(() => {
-    const code = inputCode.trim();
+  const applyJoinInviteCode = useCallback((rawCode: string) => {
+    const code = rawCode.trim();
     if (!code) return;
     setInputCode('');
     setStep({ type: 'join_select_deck', inviteCode: code });
-  }, [inputCode]);
+  }, []);
+
+  const handleJoinEnterInvite = useCallback(() => {
+    applyJoinInviteCode(inputCode);
+  }, [applyJoinInviteCode, inputCode]);
 
   const handleJoinDeckSelected = useCallback(async (deckIds: string[]) => {
     if (step.type !== 'join_select_deck') return;
@@ -205,6 +212,27 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
       setStep({ type: 'error', message: err instanceof Error ? err.message : `Connection failed: ${err}` });
     }
   }, [step, onStartGame]);
+
+  const handleScanInvite = useCallback(() => {
+    setScannerTarget('invite');
+  }, []);
+
+  const handleScanAnswer = useCallback(() => {
+    setScannerTarget('answer');
+  }, []);
+
+  const handleCloseScanner = useCallback(() => {
+    setScannerTarget(null);
+  }, []);
+
+  const handleScannedCode = useCallback((code: string) => {
+    if (scannerTarget === 'invite') {
+      applyJoinInviteCode(code);
+    } else if (scannerTarget === 'answer') {
+      setInputCode(code.trim());
+    }
+    setScannerTarget(null);
+  }, [applyJoinInviteCode, scannerTarget]);
 
   // ─── Deck Selection Screens ───
 
@@ -282,6 +310,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
             <div className="w-full bg-slate-800 rounded-lg p-3 break-all text-xs font-mono text-amber-300 max-h-24 overflow-y-auto select-all">
               {step.inviteCode}
             </div>
+            <CodeQrDisplay code={step.inviteCode} color="amber" />
             <motion.button
               className={gameButtonClass({
                 tone: 'amber',
@@ -298,6 +327,18 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
             <div className="w-full border-t border-white/10 my-2" />
 
             <p className="text-white/50 text-sm text-center">Paste their answer code below</p>
+            <motion.button
+              className={gameButtonClass({
+                tone: 'blue',
+                size: 'sm',
+                className: 'px-6 py-2 text-sm',
+              })}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={handleScanAnswer}
+            >
+              Scan Answer QR
+            </motion.button>
             <textarea
               className="w-full bg-slate-800 rounded-lg p-3 text-xs font-mono text-blue-300 resize-none h-20 outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="Paste answer code here..."
@@ -337,6 +378,18 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
               value={inputCode}
               onChange={(e) => setInputCode(e.target.value)}
             />
+            <motion.button
+              className={gameButtonClass({
+                tone: 'amber',
+                size: 'sm',
+                className: 'px-6 py-2 text-sm',
+              })}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={handleScanInvite}
+            >
+              Scan Invite QR
+            </motion.button>
             <div className="flex gap-3">
               <motion.button
                 className={gameButtonClass({
@@ -380,6 +433,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
             <div className="w-full bg-slate-800 rounded-lg p-3 break-all text-xs font-mono text-blue-300 max-h-24 overflow-y-auto select-all">
               {step.answerCode}
             </div>
+            <CodeQrDisplay code={step.answerCode} color="blue" />
             <motion.button
               className={gameButtonClass({
                 tone: 'blue',
@@ -452,6 +506,13 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
           </motion.div>
         )}
       </AnimatePresence>
+
+      <QrScannerModal
+        open={scannerTarget !== null}
+        onClose={handleCloseScanner}
+        onScan={handleScannedCode}
+        title={scannerTarget === 'answer' ? 'Scan Answer Code' : 'Scan Invite Code'}
+      />
     </div>
   );
 }
