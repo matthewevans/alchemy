@@ -8,7 +8,7 @@ import {
   makePermanent,
   resetTestCounters,
 } from './__fixtures__/testHelpers';
-import type { GameAction, Phase } from '../types';
+import type { Phase } from '../types';
 
 beforeEach(() => {
   resetTestCounters();

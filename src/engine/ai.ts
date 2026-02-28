@@ -144,7 +144,6 @@ function chooseTargetingAction(
   }
 
   const effectDef = EFFECT_REGISTRY[state.phase.effectId];
-  const opponent = getOpponent(aiPlayer);
 
   if (effectDef) {
     const steps = effectDef.steps;
@@ -260,8 +259,8 @@ function chooseBattleAction(
 }
 
 function chooseAttackerAction(
-  state: GameState,
-  aiPlayer: PlayerId,
+  _state: GameState,
+  _aiPlayer: PlayerId,
   actions: GameAction[],
 ): GameAction {
   // Declare all eligible creatures as attackers, then confirm
@@ -300,8 +299,6 @@ function chooseBlockerAction(
   const myBoard = state.players[aiPlayer].board;
   const opponent = getOpponent(aiPlayer);
   const opponentBoard = state.players[opponent].board;
-  const confirmedAttackers = state.phase.confirmedAttackers;
-  const tentativeBlockers = state.phase.tentativeBlockers;
 
   // Find the best blocking assignment
   let bestBlock: GameAction | null = null;
