@@ -108,7 +108,7 @@ export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
                   tone: 'neutral',
                   size: 'md',
                   className:
-                    'relative p-4 rounded-xl bg-slate-800/65 text-left hover:bg-slate-800/80 overflow-hidden',
+                    'relative w-full min-h-[11.5rem] p-4 rounded-xl bg-slate-800/65 text-left hover:bg-slate-800/80 overflow-hidden flex flex-col items-start justify-start',
                 })}
                 style={{
                   borderColor: `${primaryColor}33`,
@@ -127,14 +127,14 @@ export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
                   className="absolute -right-4 -top-4 w-24 h-24 object-contain opacity-10 pointer-events-none"
                 />
 
-                <h2 className="text-lg font-bold text-white mb-2 relative">{deck.name}</h2>
-                <div className="flex gap-2 mb-2 relative">
+                <h2 className="text-lg leading-tight font-bold text-white mb-2 relative whitespace-normal break-words">{deck.name}</h2>
+                <div className="flex flex-wrap gap-2 mb-2 relative">
                   {deck.elements.map((el) => (
                     <ElementIcon key={el} element={el} />
                   ))}
                 </div>
-                <p className="text-white/50 text-xs mb-2 relative">{deck.playstyle}</p>
-                <p className="text-white/30 text-xs relative">{cardCount} cards</p>
+                <p className="text-white/65 text-sm leading-snug mb-2 relative whitespace-normal break-words">{deck.playstyle}</p>
+                <p className="text-white/45 text-xs relative mt-auto">{cardCount} cards</p>
               </motion.button>
             );
           })}
