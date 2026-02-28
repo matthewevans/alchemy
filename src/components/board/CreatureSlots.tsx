@@ -1,6 +1,8 @@
+import { AnimatePresence } from 'framer-motion';
 import type { GameAction, PlayerId } from '@engine/types';
 import { getOpponent } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
+import { useGameDispatch } from '@game/GameDispatchContext';
 import { useUIStore } from '@game/uiStore';
 import { BoardCard } from '@components/card';
 
@@ -16,11 +18,12 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   const activePlayer = useGameStore((s) => s.state?.activePlayer);
   const humanPlayer = useGameStore((s) => s.humanPlayer);
   const legalActions = useGameStore((s) => s.legalActions);
-  const dispatch = useGameStore((s) => s.dispatch);
+  const dispatch = useGameDispatch();
   const selectedHandIndex = useUIStore((s) => s.selectedHandIndex);
   const selectHandCard = useUIStore((s) => s.selectHandCard);
   const selectedBlockerId = useUIStore((s) => s.selectedBlockerId);
   const selectBlocker = useUIStore((s) => s.selectBlocker);
+  const inspectCard = useUIStore((s) => s.inspectCard);
 
   const isPlayerBoard = playerId === humanPlayer;
   const isPlayPhase = phase?.type === 'play';
@@ -135,6 +138,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
 
   return (
     <div className="flex items-center justify-center gap-3 px-6 py-1">
+      <AnimatePresence mode="popLayout">
       {slots.map((permanent, slotIndex) => {
         if (permanent) {
           const isAttacking = allAttackers.includes(permanent.permanentId);
@@ -153,6 +157,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
               isValidAttacker={isValidAttacker}
               isValidBlocker={isValidBlocker}
               onClick={() => handleCreatureClick(permanent.permanentId)}
+              onLongPress={() => inspectCard(permanent.cardId)}
             />
           );
         }
@@ -172,6 +177,8 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
               width: 'var(--board-card-width)',
               height: 'var(--board-card-height)',
             }}
+            data-slot-index={slotIndex}
+            data-board-player={playerId}
             onClick={() => handleEmptySlotClick(slotIndex)}
           >
             {showPlusOnEmpty && (
@@ -180,6 +187,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
           </div>
         );
       })}
+      </AnimatePresence>
     </div>
   );
 }

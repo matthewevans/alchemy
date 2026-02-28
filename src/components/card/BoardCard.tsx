@@ -1,13 +1,17 @@
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Permanent } from '@engine/types';
 import { getCurrentHealth, getEffectiveAttack } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
 import { KEYWORD_REGISTRY } from '@engine/keywords';
+import { usePositionRegistry } from '@hooks/usePositionRegistry';
+import { useLongPress } from '@hooks/useLongPress';
 import {
   getElementColor,
   getElementArtGradient,
   getElementIconPath,
   getElementFrameGradient,
+  getCardArtPath,
 } from './cardUtils';
 
 interface BoardCardProps {
@@ -18,6 +22,7 @@ interface BoardCardProps {
   isValidAttacker: boolean;
   isValidBlocker: boolean;
   onClick: () => void;
+  onLongPress?: () => void;
 }
 
 export function BoardCard({
@@ -28,21 +33,26 @@ export function BoardCard({
   isValidAttacker,
   isValidBlocker,
   onClick,
+  onLongPress: onLongPressProp,
 }: BoardCardProps) {
+  const longPress = useLongPress(() => onLongPressProp?.());
   const card = CARD_REGISTRY[permanent.cardId];
   const elementColor = getElementColor(card.element);
   const artGradient = getElementArtGradient(card.element);
   const elementIconPath = getElementIconPath(card.element);
   const frameGradient = getElementFrameGradient(card.element);
+  const artPath = getCardArtPath(card.id, card.element);
   const currentHealth = getCurrentHealth(permanent);
   const effectiveAttack = getEffectiveAttack(permanent);
   const isDamaged = permanent.damage > 0;
   const hasSwift = card.keywords.includes('swift');
   const isSummoningSick = permanent.summonedThisTurn && !hasSwift;
   const isInteractable = isValidAttacker || isValidBlocker;
+  const posRef = usePositionRegistry(permanent.permanentId);
 
   return (
     <motion.div
+      ref={posRef}
       className={`
         touch-target relative flex flex-col cursor-pointer select-none
         ${isSummoningSick ? 'saturate-50 brightness-75' : ''}
@@ -52,14 +62,20 @@ export function BoardCard({
         height: 'var(--board-card-height)',
         fontSize: 'calc(var(--card-font-scale) * 1rem)',
       }}
+      layout
       animate={{
         rotate: permanent.isTapped ? 15 : 0,
         x: isAttacking ? 4 : 0,
         y: isAttacking ? -6 : 0,
       }}
+      exit={{ opacity: 0, scale: 0.6, transition: { duration: 0.3 } }}
       whileTap={{ scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-      onClick={onClick}
+      onClick={() => { if (!longPress.firedRef.current) onClick(); }}
+      onPointerDown={longPress.onPointerDown}
+      onPointerMove={longPress.onPointerMove}
+      onPointerUp={longPress.onPointerUp}
+      onPointerCancel={longPress.onPointerCancel}
     >
       {/* Combat / interaction glow ring */}
       {(isAttacking || isBlocking || isValidTarget || isInteractable) && (
@@ -125,8 +141,12 @@ export function BoardCard({
             background: artGradient,
           }}
         >
-          {/* Art placeholder — will be replaced by generated card art */}
-          <div className="w-full h-full" />
+          <img
+            src={artPath}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
 
           {/* Keyword icons overlay */}
           {card.keywords.length > 0 && (
@@ -135,13 +155,7 @@ export function BoardCard({
               style={{ fontSize: 'calc(var(--card-font-scale) * 0.55rem)' }}
             >
               {card.keywords.map((kw) => (
-                <span
-                  key={kw}
-                  title={KEYWORD_REGISTRY[kw].description}
-                  className="drop-shadow-md"
-                >
-                  {KEYWORD_REGISTRY[kw].icon}
-                </span>
+                <BoardKeywordIcon key={kw} keyword={kw} />
               ))}
             </div>
           )}
@@ -191,5 +205,36 @@ export function BoardCard({
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function BoardKeywordIcon({ keyword }: { keyword: import('@engine/types').Keyword }) {
+  const [hovered, setHovered] = useState(false);
+  const kwDef = KEYWORD_REGISTRY[keyword];
+
+  return (
+    <span
+      className="relative drop-shadow-md cursor-help"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={(e) => { e.stopPropagation(); setHovered((prev) => !prev); }}
+    >
+      {kwDef.icon}
+      <AnimatePresence>
+        {hovered && (
+          <motion.div
+            className="absolute bottom-full right-0 mb-1 px-2 py-1 rounded-lg bg-slate-800 border border-slate-600/50 shadow-xl whitespace-nowrap z-50 pointer-events-none"
+            style={{ fontSize: '11px' }}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.15 }}
+          >
+            <span className="text-amber-300 font-bold capitalize">{kwDef.name}</span>
+            <span className="text-white/70"> — {kwDef.description}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </span>
   );
 }

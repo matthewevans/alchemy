@@ -7,7 +7,7 @@ import { reduce } from '@engine/reducer';
 import { createInitialGameState } from '@engine/gameInit';
 import type { GameInitConfig } from '@engine/gameInit';
 import { enumerateLegalActions } from '@engine/validation';
-import { saveGame, clearSavedGame } from '@storage/persistence';
+import { saveGame, clearSavedGame, saveActiveGameId } from '@storage/persistence';
 import type { PersistedGame } from '@storage/persistence';
 
 interface GameStore {
@@ -16,6 +16,7 @@ interface GameStore {
   events: GameEvent[];
   rng: SeededRNG | null;
   humanPlayer: PlayerId;
+  gameId: string | null;
   player1DeckIds: string[];
   player2DeckIds: string[];
 
@@ -23,7 +24,7 @@ interface GameStore {
   legalActions: GameAction[];
 
   // Actions
-  initGame: (config: GameInitConfig, humanPlayer: PlayerId) => void;
+  initGame: (config: GameInitConfig, humanPlayer: PlayerId) => string;
   restoreGame: (gameState: GameState, rngState: number, persisted: PersistedGame) => void;
   dispatch: (action: GameAction, actingPlayer: PlayerId) => GameEvent[];
   reset: () => void;
@@ -35,11 +36,13 @@ export const useGameStore = create<GameStore>()(
     events: [],
     rng: null,
     humanPlayer: 'player1',
+    gameId: null,
     player1DeckIds: [],
     player2DeckIds: [],
     legalActions: [],
 
     initGame: (config, humanPlayer) => {
+      const gameId = crypto.randomUUID();
       const gameState = createInitialGameState(config);
       const legal = enumerateLegalActions(gameState, humanPlayer);
       const rng = config.rng as SeededRNG;
@@ -51,12 +54,15 @@ export const useGameStore = create<GameStore>()(
         events: [],
         rng,
         humanPlayer,
+        gameId,
         player1DeckIds: p1Ids,
         player2DeckIds: p2Ids,
         legalActions: legal,
       });
 
-      saveGame(gameState, rng.getState(), humanPlayer, p1Ids, p2Ids);
+      saveActiveGameId(gameId);
+      saveGame(gameId, gameState, rng.getState(), humanPlayer, p1Ids, p2Ids);
+      return gameId;
     },
 
     restoreGame: (gameState, rngState, persisted) => {
@@ -68,6 +74,7 @@ export const useGameStore = create<GameStore>()(
         events: [],
         rng,
         humanPlayer: persisted.humanPlayer,
+        gameId: persisted.gameId,
         player1DeckIds: persisted.player1DeckIds,
         player2DeckIds: persisted.player2DeckIds,
         legalActions: legal,
@@ -75,7 +82,7 @@ export const useGameStore = create<GameStore>()(
     },
 
     dispatch: (action, actingPlayer) => {
-      const { state, rng, humanPlayer, player1DeckIds, player2DeckIds } = get();
+      const { state, rng, humanPlayer, gameId, player1DeckIds, player2DeckIds } = get();
       if (!state || !rng) throw new Error('Game not initialized');
 
       const result = reduce(state, action, actingPlayer, rng);
@@ -88,19 +95,21 @@ export const useGameStore = create<GameStore>()(
       });
 
       // Auto-save unless game just ended
-      if (result.newState.phase.type !== 'game_over') {
-        saveGame(result.newState, rng.getState(), humanPlayer, player1DeckIds, player2DeckIds);
+      if (result.newState.phase.type !== 'game_over' && gameId) {
+        saveGame(gameId, result.newState, rng.getState(), humanPlayer, player1DeckIds, player2DeckIds);
       }
 
       return result.events;
     },
 
     reset: () => {
-      clearSavedGame();
+      const { gameId } = get();
+      clearSavedGame(gameId ?? undefined);
       set({
         state: null,
         events: [],
         rng: null,
+        gameId: null,
         player1DeckIds: [],
         player2DeckIds: [],
         legalActions: [],

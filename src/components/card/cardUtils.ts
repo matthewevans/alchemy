@@ -1,5 +1,10 @@
 import type { Element } from '@engine/types';
 
+/** Path to card art image. Returns path regardless of whether file exists — callers should handle missing art via onError. */
+export function getCardArtPath(cardId: string, element: Element): string {
+  return `/cards/${element}/${cardId}.png`;
+}
+
 const ELEMENT_COLORS: Record<Element, string> = {
   fire: '#ef4444',
   water: '#3b82f6',

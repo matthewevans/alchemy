@@ -7,6 +7,7 @@ import { TIER_CONFIGS } from '@engine/ruleset';
 export interface PersistedGame {
   version: 1;
   savedAt: number;
+  gameId: string;
   gameState: PersistedGameState;
   rngState: number;
   humanPlayer: PlayerId;
@@ -32,12 +33,28 @@ export interface GameHistoryEntry {
 
 // ─── Storage Keys ───
 
-const GAME_KEY = 'alchemy:savedGame';
+const GAME_KEY_PREFIX = 'alchemy:game:';
+const ACTIVE_GAME_KEY = 'alchemy:activeGameId';
 const HISTORY_KEY = 'alchemy:gameHistory';
+
+// ─── Active Game ID ───
+
+export function saveActiveGameId(id: string): void {
+  localStorage.setItem(ACTIVE_GAME_KEY, id);
+}
+
+export function loadActiveGameId(): string | null {
+  return localStorage.getItem(ACTIVE_GAME_KEY);
+}
+
+export function clearActiveGameId(): void {
+  localStorage.removeItem(ACTIVE_GAME_KEY);
+}
 
 // ─── Game Persistence ───
 
 export function saveGame(
+  gameId: string,
   gameState: GameState,
   rngState: number,
   humanPlayer: PlayerId,
@@ -48,17 +65,21 @@ export function saveGame(
   const persisted: PersistedGame = {
     version: 1,
     savedAt: Date.now(),
+    gameId,
     gameState: { ...gameState, ruleset: rulesetWithoutKeywords },
     rngState,
     humanPlayer,
     player1DeckIds,
     player2DeckIds,
   };
-  localStorage.setItem(GAME_KEY, JSON.stringify(persisted));
+  localStorage.setItem(GAME_KEY_PREFIX + gameId, JSON.stringify(persisted));
 }
 
-export function loadGame(): { gameState: GameState; rngState: number; persisted: PersistedGame } | null {
-  const raw = localStorage.getItem(GAME_KEY);
+export function loadGame(gameId?: string): { gameState: GameState; rngState: number; persisted: PersistedGame } | null {
+  const id = gameId ?? loadActiveGameId();
+  if (!id) return null;
+
+  const raw = localStorage.getItem(GAME_KEY_PREFIX + id);
   if (!raw) return null;
 
   try {
@@ -78,8 +99,12 @@ export function loadGame(): { gameState: GameState; rngState: number; persisted:
   }
 }
 
-export function clearSavedGame(): void {
-  localStorage.removeItem(GAME_KEY);
+export function clearSavedGame(gameId?: string): void {
+  const id = gameId ?? loadActiveGameId();
+  if (id) {
+    localStorage.removeItem(GAME_KEY_PREFIX + id);
+  }
+  clearActiveGameId();
 }
 
 // ─── Game History ───

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 
 interface TitleScreenProps {
   onPlay: () => void;
+  onMultiplayer: () => void;
   onDeckBuilder: () => void;
 }
 
@@ -29,7 +30,7 @@ function useSparkles(count: number): Particle[] {
   return particles;
 }
 
-export function TitleScreen({ onPlay, onDeckBuilder }: TitleScreenProps) {
+export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScreenProps) {
   const particles = useSparkles(30);
   const [mounted, setMounted] = useState(false);
 
@@ -89,6 +90,14 @@ export function TitleScreen({ onPlay, onDeckBuilder }: TitleScreenProps) {
           onClick={onPlay}
         >
           Play
+        </motion.button>
+        <motion.button
+          className="px-10 py-3 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 text-white text-lg font-bold shadow-lg shadow-amber-500/30 cursor-pointer"
+          whileHover={{ scale: 1.04, boxShadow: '0 0 25px rgba(251, 191, 36, 0.4)' }}
+          whileTap={{ scale: 0.96 }}
+          onClick={onMultiplayer}
+        >
+          Multiplayer
         </motion.button>
         <motion.button
           className="px-8 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm font-medium hover:bg-white/10 hover:text-white cursor-pointer"

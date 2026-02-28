@@ -1,17 +1,35 @@
+import { useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { GameAction } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
+import { useGameDispatch } from '@game/GameDispatchContext';
 import { getOpponent } from '@engine/types';
 
 export function CombatControls() {
   const phase = useGameStore((s) => s.state?.phase);
   const activePlayer = useGameStore((s) => s.state?.activePlayer);
   const humanPlayer = useGameStore((s) => s.humanPlayer);
-  const dispatch = useGameStore((s) => s.dispatch);
+  const legalActions = useGameStore((s) => s.legalActions);
+  const dispatch = useGameDispatch();
+
+  const handleAllAttack = useCallback(() => {
+    // Declare every valid attacker, then confirm
+    const declareActions = legalActions.filter(
+      (a): a is Extract<GameAction, { type: 'DECLARE_ATTACKER' }> => a.type === 'DECLARE_ATTACKER',
+    );
+    for (const action of declareActions) {
+      dispatch(action, humanPlayer);
+    }
+    dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer);
+  }, [legalActions, dispatch, humanPlayer]);
 
   if (!phase || phase.type !== 'battle' || !activePlayer) return null;
 
   const isAttacker = humanPlayer === activePlayer;
   const isDefender = humanPlayer === getOpponent(activePlayer);
+
+  const hasValidAttackers = legalActions.some((a) => a.type === 'DECLARE_ATTACKER');
+  const hasTentativeAttackers = phase.step === 'declare_attackers' && phase.tentativeAttackers.length > 0;
 
   return (
     <AnimatePresence>
@@ -24,20 +42,23 @@ export function CombatControls() {
       >
         {phase.step === 'declare_attackers' && isAttacker && (
           <>
+            {hasValidAttackers && (
+              <motion.button
+                className="px-5 py-1.5 rounded-lg bg-gradient-to-b from-red-500 to-red-700 text-white font-bold text-sm shadow-lg shadow-red-500/30 cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleAllAttack}
+              >
+                All Attack
+              </motion.button>
+            )}
             <motion.button
               className="px-5 py-1.5 rounded-lg bg-gradient-to-b from-red-500 to-orange-600 text-white font-bold text-sm shadow-lg shadow-red-500/30 cursor-pointer"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer)}
             >
-              Attack!
-            </motion.button>
-            <motion.button
-              className="px-3 py-1.5 rounded-lg bg-slate-700 text-white/60 font-medium text-xs cursor-pointer hover:bg-slate-600"
-              whileTap={{ scale: 0.95 }}
-              onClick={() => dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer)}
-            >
-              Skip
+              {hasTentativeAttackers ? 'Attack!' : 'Skip'}
             </motion.button>
           </>
         )}

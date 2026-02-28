@@ -1,148 +1,30 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { PlayerId } from '@engine/types';
-import { createRNG } from '@engine/prng';
-import { TIER_CONFIGS } from '@engine/ruleset';
-import { ELEMENTS } from '@engine/elements';
-import { getCardsByElement } from '@engine/cards';
+import { useEffect } from 'react';
+import { RouterProvider } from 'react-router-dom';
 import { useGameStore } from '@game/gameStore';
-import { useGameLoop } from '@hooks/useGameLoop';
-import { loadGame, clearSavedGame, saveHistoryEntry } from '@storage/persistence';
-import { TitleScreen, DeckSelector, DeckBuilder, GameOverScreen, MulliganOverlay } from '@components/ui';
-import { GameBoard } from '@components/board';
+import { loadGame, loadActiveGameId } from '@storage/persistence';
+import { router } from './router';
 import './index.css';
 
-type AppScreen = 'title' | 'deck_select' | 'deck_builder' | 'playing' | 'game_over';
-
-function PlayingScreen({ onGameOver }: { onGameOver: (winner: PlayerId) => void }) {
-  useGameLoop();
-
-  const phase = useGameStore((s) => s.state?.phase);
-
-  // Detect game_over and notify parent
-  if (phase?.type === 'game_over') {
-    // Use a microtask to avoid updating parent during render
-    queueMicrotask(() => onGameOver(phase.winner));
-  }
-
-  return (
-    <>
-      <GameBoard />
-      <MulliganOverlay />
-    </>
-  );
-}
-
 function App() {
-  const [screen, setScreen] = useState<AppScreen>('title');
-  const [gameOverWinner, setGameOverWinner] = useState<PlayerId>('player1');
-
-  const initGame = useGameStore((s) => s.initGame);
   const restoreGame = useGameStore((s) => s.restoreGame);
-  const resetGame = useGameStore((s) => s.reset);
-  const humanPlayer = useGameStore((s) => s.humanPlayer);
-  const player1DeckIds = useGameStore((s) => s.player1DeckIds);
-  const player2DeckIds = useGameStore((s) => s.player2DeckIds);
-  const turn = useGameStore((s) => s.state?.turn ?? 0);
+  const gameId = useGameStore((s) => s.gameId);
 
-  // Restore saved game on mount
+  // On mount, if there's an active game but store is empty, restore + navigate
   useEffect(() => {
-    const saved = loadGame();
+    if (gameId) return; // Already loaded
+
+    const activeId = loadActiveGameId();
+    if (!activeId) return;
+
+    const saved = loadGame(activeId);
     if (saved) {
       restoreGame(saved.gameState, saved.rngState, saved.persisted);
-      setScreen('playing');
+      // GamePage will pick this up via store and set up controller
+      router.navigate(`/game/${activeId}`, { replace: true });
     }
-  }, [restoreGame]);
+  }, [restoreGame, gameId]);
 
-  const handlePlay = useCallback(() => {
-    setScreen('deck_select');
-  }, []);
-
-  const handleDeckBuilder = useCallback(() => {
-    setScreen('deck_builder');
-  }, []);
-
-  const handleSelectDeck = useCallback(
-    (deckCardIds: string[]) => {
-      // Determine human's element(s) from the chosen deck card IDs
-      const humanElements = new Set<string>();
-      for (const id of deckCardIds) {
-        const el = id.split('_')[0];
-        humanElements.add(el);
-      }
-      // Pick a random mono deck for the AI, different from the human's element(s)
-      const rng = createRNG(Date.now());
-      const availableElements = ELEMENTS.filter((el) => !humanElements.has(el));
-      const aiElement = availableElements[Math.floor(rng() * availableElements.length)];
-      const aiCards = getCardsByElement(aiElement);
-      const aiDeck = aiCards.flatMap((c) => [c.id, c.id]); // mono deck: 2 copies each
-
-      initGame(
-        {
-          ruleset: TIER_CONFIGS.apprentice,
-          player1Deck: deckCardIds,
-          player2Deck: aiDeck,
-          rng,
-        },
-        'player1',
-      );
-
-      setScreen('playing');
-    },
-    [initGame],
-  );
-
-  const handleBack = useCallback(() => {
-    setScreen('title');
-  }, []);
-
-  const handleGameOver = useCallback(
-    (winner: PlayerId) => {
-      setGameOverWinner(winner);
-      setScreen('game_over');
-
-      clearSavedGame();
-      saveHistoryEntry({
-        id: crypto.randomUUID(),
-        playedAt: Date.now(),
-        outcome: winner === humanPlayer ? 'win' : 'loss',
-        humanPlayer,
-        player1DeckIds,
-        player2DeckIds,
-        turns: turn,
-      });
-    },
-    [humanPlayer, player1DeckIds, player2DeckIds, turn],
-  );
-
-  const handlePlayAgain = useCallback(() => {
-    resetGame();
-    setScreen('deck_select');
-  }, [resetGame]);
-
-  const handleMainMenu = useCallback(() => {
-    resetGame();
-    setScreen('title');
-  }, [resetGame]);
-
-  switch (screen) {
-    case 'title':
-      return <TitleScreen onPlay={handlePlay} onDeckBuilder={handleDeckBuilder} />;
-    case 'deck_select':
-      return <DeckSelector onSelectDeck={handleSelectDeck} onBack={handleBack} />;
-    case 'deck_builder':
-      return <DeckBuilder onSelectDeck={handleSelectDeck} onBack={handleBack} />;
-    case 'playing':
-      return <PlayingScreen onGameOver={handleGameOver} />;
-    case 'game_over':
-      return (
-        <GameOverScreen
-          winner={gameOverWinner}
-          humanPlayer="player1"
-          onPlayAgain={handlePlayAgain}
-          onMainMenu={handleMainMenu}
-        />
-      );
-  }
+  return <RouterProvider router={router} />;
 }
 
 export default App;

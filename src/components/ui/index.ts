@@ -3,3 +3,5 @@ export { DeckSelector } from './DeckSelector';
 export { DeckBuilder } from './DeckBuilder';
 export { GameOverScreen } from './GameOverScreen';
 export { MulliganOverlay } from './MulliganOverlay';
+export { MultiplayerLobby } from './MultiplayerLobby';
+export { GameMenu } from './GameMenu';

@@ -1,14 +1,17 @@
 import { motion } from 'framer-motion';
 import type { CardInstance } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
-import { KEYWORD_REGISTRY } from '@engine/keywords';
 import { EFFECT_REGISTRY } from '@engine/effects';
+import { useLongPress } from '@hooks/useLongPress';
 import {
   getElementColor,
   getElementArtGradient,
   getElementIconPath,
   getElementFrameGradient,
+  getCardArtPath,
 } from './cardUtils';
+import { KeywordBadge } from './KeywordBadge';
+import { EffectShorthand } from './EffectShorthand';
 
 interface HandCardProps {
   cardInstance: CardInstance;
@@ -16,6 +19,8 @@ interface HandCardProps {
   isSelected: boolean;
   onClick: () => void;
   onHover: (hovering: boolean) => void;
+  onLongPress?: () => void;
+  onPointerDown?: (e: React.PointerEvent) => void;
 }
 
 export function HandCard({
@@ -24,12 +29,16 @@ export function HandCard({
   isSelected,
   onClick,
   onHover,
+  onLongPress: onLongPressProp,
+  onPointerDown: onPointerDownProp,
 }: HandCardProps) {
+  const longPress = useLongPress(() => onLongPressProp?.());
   const card = CARD_REGISTRY[cardInstance.cardId];
   const elementColor = getElementColor(card.element);
   const artGradient = getElementArtGradient(card.element);
   const elementIconPath = getElementIconPath(card.element);
   const frameGradient = getElementFrameGradient(card.element);
+  const artPath = getCardArtPath(card.id, card.element);
   const effect = card.effectId ? EFFECT_REGISTRY[card.effectId] : null;
   const isCreature = card.type === 'creature';
 
@@ -51,7 +60,11 @@ export function HandCard({
       whileHover={{ y: isSelected ? -20 : -8, scale: 1.04 }}
       whileTap={{ scale: 0.97 }}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-      onClick={onClick}
+      onClick={() => { if (!longPress.firedRef.current) onClick(); }}
+      onPointerDown={(e) => { longPress.onPointerDown(e); onPointerDownProp?.(e); }}
+      onPointerMove={longPress.onPointerMove}
+      onPointerUp={longPress.onPointerUp}
+      onPointerCancel={longPress.onPointerCancel}
       onHoverStart={() => onHover(true)}
       onHoverEnd={() => onHover(false)}
     >
@@ -136,8 +149,12 @@ export function HandCard({
             background: artGradient,
           }}
         >
-          {/* Art placeholder — will be replaced by generated card art */}
-          <div className="w-full h-full" />
+          <img
+            src={artPath}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
 
           {/* Art frame border */}
           <div
@@ -157,38 +174,20 @@ export function HandCard({
           {/* Keywords */}
           {card.keywords.length > 0 && (
             <div className="flex flex-wrap gap-x-1 gap-y-0.5 mb-0.5">
-              {card.keywords.map((kw) => {
-                const kwDef = KEYWORD_REGISTRY[kw];
-                return (
-                  <span
-                    key={kw}
-                    className="inline-flex items-center gap-0.5 text-amber-300 font-semibold"
-                    style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
-                    title={kwDef.description}
-                  >
-                    <span>{kwDef.icon}</span>
-                    <span className="capitalize">{kwDef.name}</span>
-                  </span>
-                );
-              })}
+              {card.keywords.map((kw) => (
+                <KeywordBadge key={kw} keyword={kw} />
+              ))}
             </div>
           )}
 
-          {/* Spell effect text */}
-          {effect && (
-            <p
-              className="text-white/80 leading-tight"
-              style={{ fontSize: 'calc(var(--card-font-scale) * 0.45rem)' }}
-            >
-              {effect.description}
-            </p>
-          )}
+          {/* Spell effect — symbolic shorthand */}
+          {effect && <EffectShorthand effect={effect} />}
 
           {/* Flavor text (if space) */}
           {card.flavor && !effect && card.keywords.length === 0 && (
             <p
               className="text-white/30 italic leading-tight"
-              style={{ fontSize: 'calc(var(--card-font-scale) * 0.4rem)' }}
+              style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
             >
               {card.flavor}
             </p>

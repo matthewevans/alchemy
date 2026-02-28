@@ -1,21 +1,20 @@
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '@game/gameStore';
 import { useUIStore } from '@game/uiStore';
-import { chooseAction } from '@engine/ai';
+import { useAnimationStore } from '@game/animationStore';
+import { useGameDispatch, useOpponentController } from '@game/GameDispatchContext';
+import { isOpponentPhase } from '@game/controllers/types';
 import { getOpponent } from '@engine/types';
 import type { GameAction, GameState, PlayerId } from '@engine/types';
 
 export function useGameLoop() {
   const prevActivePlayerRef = useRef<string | null>(null);
-  const aiLoopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoAdvanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const controller = useOpponentController();
+  const dispatch = useGameDispatch();
 
   useEffect(() => {
     const clearTimers = () => {
-      if (aiLoopTimeoutRef.current !== null) {
-        clearTimeout(aiLoopTimeoutRef.current);
-        aiLoopTimeoutRef.current = null;
-      }
       if (autoAdvanceTimeoutRef.current !== null) {
         clearTimeout(autoAdvanceTimeoutRef.current);
         autoAdvanceTimeoutRef.current = null;
@@ -25,11 +24,14 @@ export function useGameLoop() {
     const tick = () => {
       clearTimers();
 
-      const { state, rng, humanPlayer, dispatch, legalActions } = useGameStore.getState();
+      // Wait for animations to finish before processing game logic
+      if (useAnimationStore.getState().isAnimating) return;
+
+      const { state, rng, humanPlayer, legalActions } = useGameStore.getState();
       if (!state || !rng) return;
       if (state.phase.type === 'game_over') return;
 
-      const aiPlayer = getOpponent(humanPlayer);
+      const opponentPlayer = getOpponent(humanPlayer);
 
       // Detect active player change for turn banners
       const activeKey = `${state.activePlayer}-${state.turn}`;
@@ -39,19 +41,9 @@ export function useGameLoop() {
         useUIStore.getState().flashTurnBanner(isHumanTurn ? 'YOUR TURN' : 'THEIR TURN');
       }
 
-      // AI turn logic
-      if (isAIPhase(state, aiPlayer)) {
-        const delay = 500 + Math.random() * 500;
-        aiLoopTimeoutRef.current = setTimeout(() => {
-          const fresh = useGameStore.getState();
-          if (!fresh.state || !fresh.rng) return;
-          if (fresh.state.phase.type === 'game_over') return;
-          if (!isAIPhase(fresh.state, aiPlayer)) return;
-
-          const action = chooseAction(fresh.state, aiPlayer, fresh.rng);
-          dispatch(action, aiPlayer);
-          tick();
-        }, delay);
+      // Opponent turn — delegate to controller
+      if (isOpponentPhase(state, opponentPlayer)) {
+        controller?.onOpponentPhase();
         return;
       }
 
@@ -72,20 +64,6 @@ export function useGameLoop() {
           return;
         }
 
-        // Auto-skip battle if no creatures can attack
-        if (state.phase.type === 'battle' && 'step' in state.phase && state.phase.step === 'declare_attackers') {
-          const canDeclare = legalActions.some((a) => a.type === 'DECLARE_ATTACKER');
-          if (!canDeclare) {
-            autoAdvanceTimeoutRef.current = setTimeout(() => {
-              const fresh = useGameStore.getState();
-              if (!fresh.state || fresh.state.phase.type !== 'battle') return;
-              dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer);
-              tick();
-            }, 200);
-            return;
-          }
-        }
-
         // Auto-advance when the player has no meaningful choices
         // (only ADVANCE_PHASE and CONCEDE available) — EXCEPT "end" phase
         // which needs an explicit "End Turn" click
@@ -104,65 +82,37 @@ export function useGameLoop() {
       }
     };
 
-    const unsubscribe = useGameStore.subscribe(
+    const unsubscribeGame = useGameStore.subscribe(
       (s) => s.state,
       () => tick(),
+    );
+
+    // Re-trigger tick when animations finish
+    const unsubscribeAnim = useAnimationStore.subscribe(
+      (s) => s.isAnimating,
+      (isAnimating) => { if (!isAnimating) tick(); },
     );
 
     tick();
 
     return () => {
-      unsubscribe();
+      unsubscribeGame();
+      unsubscribeAnim();
       clearTimers();
     };
-  }, []);
+  }, [controller, dispatch]);
 }
 
 /** Check if the only meaningful actions are ADVANCE_PHASE and CONCEDE. */
 function shouldAutoAdvance(state: GameState, legalActions: GameAction[], humanPlayer: PlayerId): boolean {
   if (state.activePlayer !== humanPlayer) return false;
 
-  // During battle declare_attackers: auto-skip if no creatures can attack
-  if (state.phase.type === 'battle') {
-    const hasAttackActions = legalActions.some((a) => a.type === 'DECLARE_ATTACKER');
-    if (!hasAttackActions && legalActions.some((a) => a.type === 'CONFIRM_ATTACKERS')) {
-      // No creatures to declare — auto-confirm with 0 attackers
-      return false; // We need to dispatch CONFIRM_ATTACKERS, not ADVANCE_PHASE
-    }
-    return false;
-  }
+  // Never auto-skip battle — player always sees attack/block controls
+  if (state.phase.type === 'battle') return false;
 
   // For play phase: auto-advance if no cards are playable
   const meaningfulActions = legalActions.filter(
     (a) => a.type !== 'ADVANCE_PHASE' && a.type !== 'CONCEDE',
   );
   return meaningfulActions.length === 0;
-}
-
-function isAIPhase(
-  state: { phase: { type: string; player?: string; casterId?: string; step?: string }; activePlayer: string },
-  aiPlayer: string,
-): boolean {
-  const { phase } = state;
-
-  switch (phase.type) {
-    case 'mulligan':
-      return phase.player === aiPlayer;
-    case 'discard':
-      return phase.player === aiPlayer;
-    case 'targeting':
-      return phase.casterId === aiPlayer;
-    case 'battle':
-      if (phase.step === 'declare_attackers') {
-        return state.activePlayer === aiPlayer;
-      }
-      if (phase.step === 'declare_blockers') {
-        return getOpponent(state.activePlayer as 'player1' | 'player2') === aiPlayer;
-      }
-      return false;
-    case 'game_over':
-      return false;
-    default:
-      return state.activePlayer === aiPlayer;
-  }
 }

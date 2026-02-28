@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
+import { useGameDispatch } from '@game/GameDispatchContext';
 import type { GameAction } from '@engine/types';
 
 const PHASES = [
@@ -34,7 +35,7 @@ export function PhaseStrip() {
   const phase = useGameStore((s) => s.state?.phase);
   const legalActions = useGameStore((s) => s.legalActions);
   const humanPlayer = useGameStore((s) => s.humanPlayer);
-  const dispatch = useGameStore((s) => s.dispatch);
+  const dispatch = useGameDispatch();
 
   if (!phase) return null;
 

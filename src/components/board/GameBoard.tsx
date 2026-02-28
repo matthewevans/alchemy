@@ -1,4 +1,6 @@
+import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
+import { useUIStore } from '@game/uiStore';
 import { getOpponent } from '@engine/types';
 import { PlayerInfo } from './PlayerInfo';
 import { CreatureSlots } from './CreatureSlots';
@@ -6,11 +8,15 @@ import { BattleLine } from './BattleLine';
 import { PlayerHand, OpponentHand } from '@components/hand';
 import { CombatControls } from '@components/combat';
 import { PhaseStrip, TurnBanner } from '@components/phase';
+import { AnimationOverlay } from '@components/animation';
+import { CardPreview } from '@components/card';
 
 export function GameBoard() {
   const humanPlayer = useGameStore((s) => s.humanPlayer);
   const state = useGameStore((s) => s.state);
   const opponentPlayer = getOpponent(humanPlayer);
+  const inspectedCardId = useUIStore((s) => s.inspectedCardId);
+  const inspectCard = useUIStore((s) => s.inspectCard);
 
   if (!state) {
     return (
@@ -44,13 +50,13 @@ export function GameBoard() {
           </div>
 
           {/* Player board */}
-          <div className="flex-1 flex items-start justify-center pt-1 min-h-0">
+          <div className="flex-1 flex items-start justify-center pt-1 min-h-0" data-player-board={humanPlayer}>
             <CreatureSlots playerId={humanPlayer} isOpponent={false} />
           </div>
         </div>
 
         {/* Right sidebar — MTGA-style avatar panels */}
-        <div className="shrink-0 w-16 flex flex-col justify-between border-l border-white/5 bg-slate-950/50">
+        <div className="shrink-0 w-24 flex flex-col justify-between border-l border-white/5 bg-slate-950/50">
           <PlayerInfo playerId={opponentPlayer} isOpponent />
           <PlayerInfo playerId={humanPlayer} isOpponent={false} />
         </div>
@@ -63,6 +69,16 @@ export function GameBoard() {
 
       {/* Turn banner overlay */}
       <TurnBanner />
+
+      {/* Animation overlay */}
+      <AnimationOverlay />
+
+      {/* Card inspection overlay (long-press) */}
+      <AnimatePresence>
+        {inspectedCardId && (
+          <CardPreview cardId={inspectedCardId} onDismiss={() => inspectCard(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
