@@ -38,11 +38,13 @@ export function GameBoard() {
 
   const phase = state?.phase;
   const isTargetingPhase = phase?.type === 'targeting';
-  const playerTargetActions = legalActions.filter(
-    (a): a is Extract<(typeof legalActions)[number], { type: 'SELECT_TARGET' }> =>
-      a.type === 'SELECT_TARGET' && a.targetRef.type === 'player',
+  const validTargetPlayerIds = new Set(
+    legalActions.flatMap((action) =>
+      action.type === 'SELECT_TARGET' && action.targetRef.type === 'player'
+        ? [action.targetRef.playerId]
+        : [],
+    ),
   );
-  const validTargetPlayerIds = new Set(playerTargetActions.map((a) => a.targetRef.playerId));
   const canCancelTargeting = legalActions.some((a) => a.type === 'CANCEL_TARGETING');
 
   const targetingCardName = isTargetingPhase ? CARD_REGISTRY[phase.sourceCardId].name : null;

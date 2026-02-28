@@ -120,7 +120,7 @@ export function PlayerInfo({
     return (
       <button
         type="button"
-        className="flex flex-col items-center gap-2 py-3 px-2 w-full cursor-pointer rounded-xl transition-colors hover:bg-white/6 focus-visible:bg-white/8"
+        className="appearance-none border-0 bg-transparent flex flex-col items-center gap-2 py-3 px-2 w-full cursor-pointer rounded-xl transition-colors hover:bg-white/6 focus-visible:bg-white/8"
         onClick={onClick}
         aria-label={`Target ${isOpponent ? 'opponent' : 'your'} hero`}
       >

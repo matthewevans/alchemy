@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { PlayerId } from '@engine/types';
 import { createRNG } from '@engine/prng';
@@ -8,9 +8,32 @@ import { getCardsByElement } from '@engine/cards';
 import { useGameStore } from '@game/gameStore';
 import { clearSavedGame } from '@storage/persistence';
 import type { PeerSession } from '@network/peer';
-import { TitleScreen, DeckSelector, DeckBuilder, MultiplayerLobby } from '@components/ui';
+import { TitleScreen } from '@components/ui';
 
 type SubScreen = 'title' | 'deck_select' | 'deck_builder' | 'multiplayer_lobby';
+
+const DeckSelectorScreen = lazy(async () => {
+  const module = await import('@components/ui/DeckSelector');
+  return { default: module.DeckSelector };
+});
+
+const DeckBuilderScreen = lazy(async () => {
+  const module = await import('@components/ui/DeckBuilder');
+  return { default: module.DeckBuilder };
+});
+
+const MultiplayerLobbyScreen = lazy(async () => {
+  const module = await import('@components/ui/MultiplayerLobby');
+  return { default: module.MultiplayerLobby };
+});
+
+function HomeLoading({ label }: { label: string }) {
+  return (
+    <div className="h-screen w-screen flex items-center justify-center bg-slate-950 text-white/70 text-sm">
+      {label}
+    </div>
+  );
+}
 
 export function HomePage() {
   const [subScreen, setSubScreen] = useState<SubScreen>('title');
@@ -90,10 +113,22 @@ export function HomePage() {
     case 'title':
       return <TitleScreen onPlay={handlePlay} onMultiplayer={handleMultiplayer} onDeckBuilder={handleDeckBuilder} />;
     case 'deck_select':
-      return <DeckSelector onSelectDeck={handleSelectDeck} onBack={handleBack} />;
+      return (
+        <Suspense fallback={<HomeLoading label="Loading decks..." />}>
+          <DeckSelectorScreen onSelectDeck={handleSelectDeck} onBack={handleBack} />
+        </Suspense>
+      );
     case 'deck_builder':
-      return <DeckBuilder onSelectDeck={handleSelectDeck} onBack={handleBack} />;
+      return (
+        <Suspense fallback={<HomeLoading label="Loading deck builder..." />}>
+          <DeckBuilderScreen onSelectDeck={handleSelectDeck} onBack={handleBack} />
+        </Suspense>
+      );
     case 'multiplayer_lobby':
-      return <MultiplayerLobby onStartGame={handleMultiplayerStart} onBack={handleBack} />;
+      return (
+        <Suspense fallback={<HomeLoading label="Loading multiplayer..." />}>
+          <MultiplayerLobbyScreen onStartGame={handleMultiplayerStart} onBack={handleBack} />
+        </Suspense>
+      );
   }
 }
