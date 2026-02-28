@@ -2,8 +2,6 @@
   <img src="./public/logo_wordmark.webp" alt="Alchemy logo wordmark" width="420" />
 </p>
 
-<h1 align="center">Alchemy</h1>
-
 <p align="center">
   Browser-based elemental card battler inspired by MTG-style gameplay.
 </p>
