@@ -1,4 +1,5 @@
 import { registerSW } from 'virtual:pwa-register';
+import { markPendingAutoUpdate } from './updateMarker';
 
 let isRegistered = false;
 
@@ -12,6 +13,7 @@ export function registerServiceWorker() {
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
+      markPendingAutoUpdate();
       void updateSW(true);
     },
     onRegisterError(error) {
