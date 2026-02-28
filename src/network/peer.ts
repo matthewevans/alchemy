@@ -5,19 +5,20 @@ import { encodeMessage, decodeMessage } from './protocol';
 export interface PeerSession {
   /** Send a message. Returns false if the message was dropped (channel closed). */
   send(msg: NetworkMessage): boolean;
-  onMessage(handler: (msg: NetworkMessage) => void): void;
-  onDisconnect(handler: (reason: string) => void): void;
+  onMessage(handler: (msg: NetworkMessage) => void): () => void;
+  onDisconnect(handler: (reason: string) => void): () => void;
   close(reason?: string): void;
 }
 
 export function createPeerSession(conn: PeerConnection): PeerSession {
   const { pc, channel } = conn;
-  let messageHandler: ((msg: NetworkMessage) => void) | null = null;
-  let disconnectHandler: ((reason: string) => void) | null = null;
+  const messageHandlers = new Set<(msg: NetworkMessage) => void>();
+  const disconnectHandlers = new Set<(reason: string) => void>();
   let closed = false;
+  let disconnectReason: string | null = null;
 
-  // Queues messages received before the first handler is installed
-  let pendingMessages: NetworkMessage[] | null = [];
+  // Queues messages received while no handlers are installed
+  const pendingMessages: NetworkMessage[] = [];
 
   // Ping/pong keep-alive
   let pingInterval: ReturnType<typeof setInterval> | null = null;
@@ -62,9 +63,12 @@ export function createPeerSession(conn: PeerConnection): PeerSession {
   const handleDisconnect = (reason: string) => {
     if (closed) return;
     closed = true;
+    disconnectReason = reason;
     clearKeepAlive();
     window.removeEventListener('beforeunload', beforeUnloadHandler);
-    disconnectHandler?.(reason);
+    for (const handler of disconnectHandlers) {
+      handler(reason);
+    }
     try { pc.close(); } catch (e) {
       console.warn('Error closing RTCPeerConnection:', e);
     }
@@ -97,11 +101,14 @@ export function createPeerSession(conn: PeerConnection): PeerSession {
       return;
     }
 
-    // Fix #7 (partial): Queue messages until a handler is installed
-    if (messageHandler) {
-      messageHandler(msg);
-    } else if (pendingMessages) {
+    // Queue messages until at least one handler is installed
+    if (messageHandlers.size === 0) {
       pendingMessages.push(msg);
+      return;
+    }
+
+    for (const handler of messageHandlers) {
+      handler(msg);
     }
   });
 
@@ -126,20 +133,30 @@ export function createPeerSession(conn: PeerConnection): PeerSession {
       }
     },
     onMessage(handler) {
-      messageHandler = handler;
-      // Flush any messages that arrived before the handler was installed
-      if (pendingMessages && pendingMessages.length > 0) {
-        const queued = pendingMessages;
-        pendingMessages = null;
+      messageHandlers.add(handler);
+
+      // Flush messages that arrived while no handler was installed
+      if (pendingMessages.length > 0) {
+        const queued = pendingMessages.splice(0);
         for (const msg of queued) {
           handler(msg);
         }
-      } else {
-        pendingMessages = null;
       }
+
+      return () => {
+        messageHandlers.delete(handler);
+      };
     },
     onDisconnect(handler) {
-      disconnectHandler = handler;
+      disconnectHandlers.add(handler);
+
+      if (disconnectReason !== null) {
+        handler(disconnectReason);
+      }
+
+      return () => {
+        disconnectHandlers.delete(handler);
+      };
     },
     close(reason = 'Left game') {
       if (!closed && channel.readyState === 'open') {

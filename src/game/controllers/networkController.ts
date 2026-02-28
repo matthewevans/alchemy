@@ -40,12 +40,16 @@ export function createNetworkController(
 
     onLocalAction(action, actingPlayer) {
       if (disposed) return;
-      session.send({
+      const sent = session.send({
         type: 'action',
         action,
         actingPlayer,
         seq: sendSeq++,
       });
+      if (!sent) {
+        console.warn('Failed to send action; closing session to prevent desync.');
+        session.close('Connection lost while sending action');
+      }
     },
 
     dispose() {

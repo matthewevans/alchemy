@@ -86,16 +86,25 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
       // Wait for guest to send deck
       const guestDeckIds = await new Promise<string[]>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Timeout waiting for guest deck')), 30_000);
-        session.onMessage((msg) => {
+        let unsubscribeMessage = () => {};
+        let unsubscribeDisconnect = () => {};
+        const fail = (error: Error) => {
+          clearTimeout(timeout);
+          unsubscribeMessage();
+          unsubscribeDisconnect();
+          reject(error);
+        };
+        const timeout = setTimeout(() => fail(new Error('Timeout waiting for guest deck')), 30_000);
+        unsubscribeMessage = session.onMessage((msg) => {
           if (msg.type === 'guest_deck') {
             clearTimeout(timeout);
+            unsubscribeMessage();
+            unsubscribeDisconnect();
             resolve(msg.deckIds);
           }
         });
-        session.onDisconnect((reason) => {
-          clearTimeout(timeout);
-          reject(new Error(`Peer disconnected: ${reason}`));
+        unsubscribeDisconnect = session.onDisconnect((reason) => {
+          fail(new Error(`Peer disconnected: ${reason}`));
         });
       });
 
@@ -103,13 +112,16 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
       // Send game setup with shared seed
       const seed = Date.now();
-      session.send({
+      const setupSent = session.send({
         type: 'game_setup',
         seed,
         hostDeckIds,
         guestDeckIds,
         tier: 'apprentice',
       });
+      if (!setupSent) {
+        throw new Error('Failed to send game setup. Connection may have been lost.');
+      }
 
       onStartGame(session, true, hostDeckIds, guestDeckIds, seed);
     } catch (err) {
@@ -156,20 +168,32 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
       const session = createPeerSession(conn);
 
       // Send our deck
-      session.send({ type: 'guest_deck', deckIds: guestDeckIds });
+      const guestDeckSent = session.send({ type: 'guest_deck', deckIds: guestDeckIds });
+      if (!guestDeckSent) {
+        throw new Error('Failed to send deck selection. Connection may have been lost.');
+      }
 
       // Wait for game setup from host
       const setup = await new Promise<{ seed: number; hostDeckIds: string[]; guestDeckIds: string[] }>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Timeout waiting for game setup')), 30_000);
-        session.onMessage((msg) => {
+        let unsubscribeMessage = () => {};
+        let unsubscribeDisconnect = () => {};
+        const fail = (error: Error) => {
+          clearTimeout(timeout);
+          unsubscribeMessage();
+          unsubscribeDisconnect();
+          reject(error);
+        };
+        const timeout = setTimeout(() => fail(new Error('Timeout waiting for game setup')), 30_000);
+        unsubscribeMessage = session.onMessage((msg) => {
           if (msg.type === 'game_setup') {
             clearTimeout(timeout);
+            unsubscribeMessage();
+            unsubscribeDisconnect();
             resolve({ seed: msg.seed, hostDeckIds: msg.hostDeckIds, guestDeckIds: msg.guestDeckIds });
           }
         });
-        session.onDisconnect((reason) => {
-          clearTimeout(timeout);
-          reject(new Error(`Peer disconnected: ${reason}`));
+        unsubscribeDisconnect = session.onDisconnect((reason) => {
+          fail(new Error(`Peer disconnected: ${reason}`));
         });
       });
 
