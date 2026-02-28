@@ -611,7 +611,7 @@ function CollectionCardBar({
       </div>
 
       {/* Element icon */}
-      <img src={iconPath} alt="" className="w-4.5 h-4.5 shrink-0 opacity-70" />
+      <img src={iconPath} alt="" className="w-4 h-4 shrink-0 opacity-70" />
 
       {/* Name + info */}
       <div className="flex-1 flex items-center gap-2 px-2 min-w-0">
