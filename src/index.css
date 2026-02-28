@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+/* ─── Card Sizing (responsive via CSS custom properties) ─── */
+:root {
+  --card-width: 80px;
+  --card-height: 112px;
+  --card-font-scale: 0.75;
+  --board-card-width: 64px;
+  --board-card-height: 90px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --card-width: 96px;
+    --card-height: 134px;
+    --card-font-scale: 0.875;
+    --board-card-width: 80px;
+    --board-card-height: 112px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --card-width: 120px;
+    --card-height: 168px;
+    --card-font-scale: 1;
+    --board-card-width: 96px;
+    --board-card-height: 134px;
+  }
+}
+
+/* ─── Element Colors ─── */
+:root {
+  --fire: #ef4444;
+  --water: #3b82f6;
+  --earth: #22c55e;
+  --air: #a855f7;
+  --shadow: #64748b;
+}
+
+/* ─── Touch Target Expansion ─── */
+.touch-target {
+  position: relative;
+}
+.touch-target::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  min-width: 48px;
+  min-height: 48px;
+}
+
+/* ─── Base ─── */
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
