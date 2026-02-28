@@ -25,9 +25,6 @@ function getAdvanceAction(phaseType: string): { action: GameAction; label: strin
       return { action: { type: 'ADVANCE_PHASE' }, label: 'Battle!' };
     case 'end':
       return { action: { type: 'ADVANCE_PHASE' }, label: 'End Turn' };
-    case 'draw':
-    case 'energy':
-      return { action: { type: 'ADVANCE_PHASE' }, label: 'Continue' };
     default:
       return null;
   }

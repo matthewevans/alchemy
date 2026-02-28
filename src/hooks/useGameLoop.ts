@@ -3,13 +3,13 @@ import { useGameStore } from '@game/gameStore';
 import { useUIStore } from '@game/uiStore';
 import { chooseAction } from '@engine/ai';
 import { getOpponent } from '@engine/types';
+import type { GameAction, GameState, PlayerId } from '@engine/types';
 
 export function useGameLoop() {
   const prevActivePlayerRef = useRef<string | null>(null);
   const aiLoopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoAdvanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Subscribe to state changes and drive AI + auto-advance
   useEffect(() => {
     const clearTimers = () => {
       if (aiLoopTimeoutRef.current !== null) {
@@ -25,7 +25,7 @@ export function useGameLoop() {
     const tick = () => {
       clearTimers();
 
-      const { state, rng, humanPlayer, dispatch } = useGameStore.getState();
+      const { state, rng, humanPlayer, dispatch, legalActions } = useGameStore.getState();
       if (!state || !rng) return;
       if (state.phase.type === 'game_over') return;
 
@@ -50,13 +50,12 @@ export function useGameLoop() {
 
           const action = chooseAction(fresh.state, aiPlayer, fresh.rng);
           dispatch(action, aiPlayer);
-          // Schedule next tick
           tick();
         }, delay);
         return;
       }
 
-      // Human auto-advance for draw/energy phases
+      // Human auto-advance: draw and energy phases always auto-advance
       if (state.activePlayer === humanPlayer) {
         if (state.phase.type === 'draw' || state.phase.type === 'energy') {
           autoAdvanceTimeoutRef.current = setTimeout(() => {
@@ -72,31 +71,78 @@ export function useGameLoop() {
           }, 300);
           return;
         }
+
+        // Auto-skip battle if no creatures can attack
+        if (state.phase.type === 'battle' && 'step' in state.phase && state.phase.step === 'declare_attackers') {
+          const canDeclare = legalActions.some((a) => a.type === 'DECLARE_ATTACKER');
+          if (!canDeclare) {
+            autoAdvanceTimeoutRef.current = setTimeout(() => {
+              const fresh = useGameStore.getState();
+              if (!fresh.state || fresh.state.phase.type !== 'battle') return;
+              dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer);
+              tick();
+            }, 200);
+            return;
+          }
+        }
+
+        // Auto-advance when the player has no meaningful choices
+        // (only ADVANCE_PHASE and CONCEDE available) — EXCEPT "end" phase
+        // which needs an explicit "End Turn" click
+        if (state.phase.type !== 'end' && shouldAutoAdvance(state, legalActions, humanPlayer)) {
+          autoAdvanceTimeoutRef.current = setTimeout(() => {
+            const fresh = useGameStore.getState();
+            if (!fresh.state) return;
+            if (fresh.state.phase.type === 'end' || fresh.state.phase.type === 'game_over') return;
+            if (shouldAutoAdvance(fresh.state, fresh.legalActions, humanPlayer)) {
+              dispatch({ type: 'ADVANCE_PHASE' }, humanPlayer);
+              tick();
+            }
+          }, 200);
+          return;
+        }
       }
     };
 
-    // Subscribe to state changes — re-run tick on every game state update
     const unsubscribe = useGameStore.subscribe(
       (s) => s.state,
       () => tick(),
     );
 
-    // Run initial tick in case game was already initialized
     tick();
 
     return () => {
       unsubscribe();
-      if (aiLoopTimeoutRef.current !== null) {
-        clearTimeout(aiLoopTimeoutRef.current);
-      }
-      if (autoAdvanceTimeoutRef.current !== null) {
-        clearTimeout(autoAdvanceTimeoutRef.current);
-      }
+      clearTimers();
     };
   }, []);
 }
 
-function isAIPhase(state: { phase: { type: string; player?: string; casterId?: string; step?: string }; activePlayer: string }, aiPlayer: string): boolean {
+/** Check if the only meaningful actions are ADVANCE_PHASE and CONCEDE. */
+function shouldAutoAdvance(state: GameState, legalActions: GameAction[], humanPlayer: PlayerId): boolean {
+  if (state.activePlayer !== humanPlayer) return false;
+
+  // During battle declare_attackers: auto-skip if no creatures can attack
+  if (state.phase.type === 'battle') {
+    const hasAttackActions = legalActions.some((a) => a.type === 'DECLARE_ATTACKER');
+    if (!hasAttackActions && legalActions.some((a) => a.type === 'CONFIRM_ATTACKERS')) {
+      // No creatures to declare — auto-confirm with 0 attackers
+      return false; // We need to dispatch CONFIRM_ATTACKERS, not ADVANCE_PHASE
+    }
+    return false;
+  }
+
+  // For play phase: auto-advance if no cards are playable
+  const meaningfulActions = legalActions.filter(
+    (a) => a.type !== 'ADVANCE_PHASE' && a.type !== 'CONCEDE',
+  );
+  return meaningfulActions.length === 0;
+}
+
+function isAIPhase(
+  state: { phase: { type: string; player?: string; casterId?: string; step?: string }; activePlayer: string },
+  aiPlayer: string,
+): boolean {
   const { phase } = state;
 
   switch (phase.type) {
@@ -113,12 +159,10 @@ function isAIPhase(state: { phase: { type: string; player?: string; casterId?: s
       if (phase.step === 'declare_blockers') {
         return getOpponent(state.activePlayer as 'player1' | 'player2') === aiPlayer;
       }
-      // resolving step: no one acts, it auto-resolves
       return false;
     case 'game_over':
       return false;
     default:
-      // draw, energy, play, end — active player acts
       return state.activePlayer === aiPlayer;
   }
 }
