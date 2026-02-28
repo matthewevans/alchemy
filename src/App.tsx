@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { useGameStore } from '@game/gameStore';
 import { loadGame, loadActiveGameId } from '@storage/persistence';
+import { checkForServiceWorkerUpdate } from './pwa/registerServiceWorker';
 import { consumeRecentAutoUpdateMarker } from './pwa/updateMarker';
 import { router } from './router';
 import './index.css';
@@ -13,6 +14,7 @@ function App() {
   const restoreGame = useGameStore((s) => s.restoreGame);
   const gameId = useGameStore((s) => s.gameId);
   const [showUpdatedLabel, setShowUpdatedLabel] = useState(didAutoUpdate);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
 
   // On mount, if there's an active game but store is empty, restore + navigate
   useEffect(() => {
@@ -41,14 +43,33 @@ function App() {
     };
   }, [showUpdatedLabel]);
 
+  const handleManualUpdateCheck = () => {
+    const didCheck = checkForServiceWorkerUpdate();
+    if (!didCheck) return;
+
+    setIsCheckingUpdate(true);
+    window.setTimeout(() => {
+      setIsCheckingUpdate(false);
+    }, 900);
+  };
+
   return (
     <>
       <RouterProvider router={router} />
-      <div className="fixed left-2 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-[60] pointer-events-none">
-        <div className="rounded-md border border-slate-600/60 bg-slate-950/75 px-2 py-1 text-[10px] text-slate-300 shadow-lg shadow-black/40 backdrop-blur-sm">
+      <div className="fixed left-2 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-[60]">
+        <div className="rounded-md border border-slate-600/60 bg-slate-950/75 px-2 py-1 text-[10px] text-slate-300 shadow-lg shadow-black/40 backdrop-blur-sm flex items-center gap-1">
           <span>{`v${__APP_VERSION__}`}</span>
-          <span className="ml-1 text-slate-400">{__BUILD_HASH__}</span>
-          {showUpdatedLabel && <span className="ml-2 text-emerald-300">updated</span>}
+          <span className="text-slate-400">{__BUILD_HASH__}</span>
+          <button
+            type="button"
+            onClick={handleManualUpdateCheck}
+            className={`ml-1 text-slate-300/90 hover:text-white transition-colors cursor-pointer ${isCheckingUpdate ? 'animate-spin' : ''}`}
+            aria-label="Check for updates"
+            title="Check for updates"
+          >
+            ↻
+          </button>
+          {showUpdatedLabel && <span className="ml-1 text-emerald-300">updated</span>}
         </div>
       </div>
     </>
