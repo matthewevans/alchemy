@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./public/logo_wordmark.png" alt="Alchemy logo wordmark" width="420" />
+  <img src="./public/logo_wordmark.webp" alt="Alchemy logo wordmark" width="420" />
 </p>
 
 <h1 align="center">Alchemy</h1>
