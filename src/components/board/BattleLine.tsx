@@ -1,8 +1,9 @@
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 
 export function BattleLine() {
   const isBattlePhase = useGameStore((s) => s.state?.phase.type === 'battle');
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <div className="relative flex items-center justify-center px-8 py-1">
@@ -12,7 +13,7 @@ export function BattleLine() {
           background: 'linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.4), transparent)',
         }}
         animate={
-          isBattlePhase
+          isBattlePhase && !shouldReduceMotion
             ? {
                 boxShadow: [
                   '0 0 8px 2px rgba(239, 68, 68, 0.3)',
@@ -30,7 +31,7 @@ export function BattleLine() {
               }
         }
         transition={
-          isBattlePhase
+          isBattlePhase && !shouldReduceMotion
             ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }
             : { duration: 0.3 }
         }

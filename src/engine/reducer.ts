@@ -298,7 +298,9 @@ function advanceFromEnd(state: GameState): ReducerResult {
         temporaryAttackBonus: 0,
         temporaryHealthBonus: 0,
         summonedThisTurn: false,
-        cantAttackThisTurn: false,
+        // "Cannot attack this turn" effects should expire after that creature's
+        // controller finishes their turn, not globally every end step.
+        cantAttackThisTurn: playerId === state.activePlayer ? false : p.cantAttackThisTurn,
         armorUsedThisTurn: false,
       };
     });

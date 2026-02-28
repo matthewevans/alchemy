@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { gameButtonClass } from './buttonStyles';
+import { useDialogA11y } from '@hooks/useDialogA11y';
 
 interface GameMenuProps {
   onResume: () => void;
@@ -10,6 +11,7 @@ interface GameMenuProps {
 
 export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
   const [confirmingConcede, setConfirmingConcede] = useState(false);
+  const dialogRef = useDialogA11y({ open: true, onClose: onResume });
 
   return (
     <motion.div
@@ -21,6 +23,11 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
       onClick={onResume}
     >
       <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="game-menu-title"
+        tabIndex={-1}
         className="bg-slate-800 rounded-2xl p-8 flex flex-col items-center gap-4 min-w-[240px] shadow-2xl border border-slate-700/50"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -28,7 +35,7 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-bold text-white mb-2">Menu</h2>
+        <h2 id="game-menu-title" className="text-xl font-bold text-white mb-2">Menu</h2>
 
         {/* Resume */}
         <button

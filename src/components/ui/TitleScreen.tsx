@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { gameButtonClass } from './buttonStyles';
 
 interface TitleScreenProps {
@@ -48,7 +48,8 @@ function MultiPlayerIcon() {
 }
 
 export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScreenProps) {
-  const particles = useSparkles(30);
+  const shouldReduceMotion = useReducedMotion();
+  const particles = useSparkles(shouldReduceMotion ? 0 : 30);
   const [mounted, setMounted] = useState(false);
   const logoWordmarkSrc = `${import.meta.env.BASE_URL}logo_wordmark.webp`;
 
@@ -57,7 +58,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScree
   }, []);
 
   return (
-    <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 overflow-hidden relative">
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 overflow-hidden relative pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {/* Sparkle particles */}
       {mounted &&
         particles.map((p) => (
@@ -107,8 +108,8 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScree
             size: 'lg',
             className: 'w-64 text-2xl font-bold flex items-center justify-center gap-2',
           })}
-          whileHover={{ scale: 1.06 }}
-          whileTap={{ scale: 0.96 }}
+          whileHover={shouldReduceMotion ? undefined : { scale: 1.06 }}
+          whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
           onClick={onPlay}
         >
           <SinglePlayerIcon />
@@ -120,8 +121,8 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScree
             size: 'lg',
             className: 'w-64 text-xl font-bold flex items-center justify-center gap-2',
           })}
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
+          whileHover={shouldReduceMotion ? undefined : { scale: 1.04 }}
+          whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
           onClick={onMultiplayer}
         >
           <MultiPlayerIcon />
@@ -133,8 +134,8 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScree
             size: 'sm',
             className: 'px-8 py-2.5 rounded-xl text-sm font-medium',
           })}
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
+          whileHover={shouldReduceMotion ? undefined : { scale: 1.04 }}
+          whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
           onClick={onDeckBuilder}
         >
           Deck Builder

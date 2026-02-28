@@ -14,6 +14,7 @@ import { GameBoard } from '@components/board';
 import { GameOverScreen, MulliganOverlay } from '@components/ui';
 import { GameMenu } from '@components/ui/GameMenu';
 import { gameButtonClass } from '@components/ui/buttonStyles';
+import { useDialogA11y } from '@hooks/useDialogA11y';
 
 type GamePhase = 'playing' | 'game_over';
 
@@ -180,6 +181,13 @@ function PlayingScreenInner({
 
   const phase = useGameStore((s) => s.state?.phase);
   const [showMenu, setShowMenu] = useState(false);
+  const disconnectPrimaryRef = useRef<HTMLButtonElement | null>(null);
+  const disconnectDialogRef = useDialogA11y({
+    open: disconnectReason !== null,
+    closeOnEscape: false,
+    onClose: onDisconnectAck,
+    initialFocusRef: disconnectPrimaryRef,
+  });
 
   useEffect(() => {
     if (phase?.type === 'game_over') {
@@ -198,7 +206,7 @@ function PlayingScreenInner({
           tone: 'slate',
           size: 'sm',
           className:
-            'fixed top-3 right-3 z-30 w-10 h-10 p-0 rounded-full flex items-center justify-center text-white/70 hover:text-white',
+            'fixed right-3 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] lg:top-[calc(env(safe-area-inset-top)+0.75rem)] lg:bottom-auto z-30 w-11 h-11 p-0 rounded-full flex items-center justify-center text-white/70 hover:text-white',
         })}
         onClick={() => setShowMenu(true)}
         aria-label="Game menu"
@@ -227,10 +235,18 @@ function PlayingScreenInner({
 
       {disconnectReason && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-slate-800 rounded-2xl p-8 flex flex-col items-center gap-4 max-w-sm">
-            <h3 className="text-xl font-bold text-red-400">Disconnected</h3>
+          <div
+            ref={disconnectDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="disconnect-title"
+            tabIndex={-1}
+            className="bg-slate-800 rounded-2xl p-8 flex flex-col items-center gap-4 max-w-sm"
+          >
+            <h3 id="disconnect-title" className="text-xl font-bold text-red-400">Disconnected</h3>
             <p className="text-white/70 text-sm text-center">{disconnectReason}</p>
             <button
+              ref={disconnectPrimaryRef}
               className={gameButtonClass({
                 tone: 'slate',
                 size: 'md',

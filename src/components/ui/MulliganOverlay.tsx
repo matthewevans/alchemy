@@ -1,15 +1,22 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { HandCard } from '@components/card';
 import { gameButtonClass } from './buttonStyles';
+import { useDialogA11y } from '@hooks/useDialogA11y';
 
 export function MulliganOverlay() {
   const state = useGameStore((s) => s.state);
   const humanPlayer = useGameStore((s) => s.humanPlayer);
   const dispatch = useGameDispatch();
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+  const keepButtonRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useDialogA11y({
+    open: true,
+    closeOnEscape: false,
+    initialFocusRef: keepButtonRef,
+  });
 
   const toggleCard = useCallback((index: number) => {
     setSelectedIndices((prev) => {
@@ -41,12 +48,18 @@ export function MulliganOverlay() {
 
   return (
     <motion.div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mulligan-title"
+      tabIndex={-1}
       className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-black/70"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
       <motion.h2
+        id="mulligan-title"
         className="text-2xl font-bold text-white mb-2"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -99,6 +112,7 @@ export function MulliganOverlay() {
       {/* Buttons */}
       <div className="flex gap-4">
         <motion.button
+          ref={keepButtonRef}
           className={gameButtonClass({
             tone: 'emerald',
             size: 'md',

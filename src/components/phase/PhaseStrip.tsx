@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import type { GameAction } from '@engine/types';
@@ -37,6 +37,7 @@ export function PhaseStrip() {
   const legalActions = useGameStore((s) => s.legalActions);
   const humanPlayer = useGameStore((s) => s.humanPlayer);
   const dispatch = useGameDispatch();
+  const shouldReduceMotion = useReducedMotion();
 
   if (!phase) return null;
 
@@ -58,18 +59,22 @@ export function PhaseStrip() {
             <motion.div
               key={p.key}
               className={`
-                flex flex-col items-center px-1.5 py-0.5 rounded-md text-xs select-none
+                flex flex-col items-center px-2 py-1 rounded-md text-xs select-none
                 ${isActive ? 'text-amber-300' : isCompleted ? 'text-slate-500' : 'text-white/50'}
               `}
               animate={
-                isActive
+                !shouldReduceMotion && isActive
                   ? { scale: [1, 1.08, 1], filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.6))' }
                   : { scale: 1, filter: 'drop-shadow(0 0 0px transparent)' }
               }
-              transition={isActive ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.2 }}
+              transition={
+                !shouldReduceMotion && isActive
+                  ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }
+                  : { duration: 0.2 }
+              }
             >
               <span className="text-base leading-none">{p.icon}</span>
-              <span className="text-[9px] mt-0.5 font-medium">{p.label}</span>
+              <span className="text-[11px] mt-0.5 font-medium">{p.label}</span>
             </motion.div>
           );
         })}

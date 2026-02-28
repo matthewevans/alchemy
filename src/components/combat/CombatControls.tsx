@@ -74,7 +74,7 @@ export function CombatControls() {
 
         {phase.step === 'declare_blockers' && isDefender && (
           <>
-            <span className="text-blue-300 font-medium text-xs">Assign blockers</span>
+            <span className="text-blue-300 font-medium text-sm">Assign blockers</span>
             <motion.button
               className={gameButtonClass({
                 tone: 'blue',
@@ -92,7 +92,7 @@ export function CombatControls() {
 
         {phase.step === 'resolving' && (
           <motion.span
-            className="text-orange-300 font-bold text-xs"
+            className="text-orange-300 font-bold text-sm"
             animate={{ opacity: [1, 0.5, 1] }}
             transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
           >

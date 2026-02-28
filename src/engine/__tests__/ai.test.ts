@@ -134,6 +134,48 @@ describe('play phase', () => {
     expect(action).toEqual({ type: 'ADVANCE_PHASE' });
   });
 
+  it('skips targeted spells with no legal targets', () => {
+    const state = createTestGameState({
+      phase: { type: 'play' },
+      activePlayer: 'player2',
+      player2: {
+        currentEnergy: 2,
+        maxEnergy: 2,
+        hand: [
+          makeCardInstance('fire_fireball'), // targeted spell, no enemy creatures
+          makeCardInstance('water_splash'),  // untargeted spell
+        ],
+      },
+      player1: {
+        board: [null, null, null, null, null],
+      },
+    });
+
+    const action = chooseAction(state, 'player2', createRNG(42));
+    expect(action.type).toBe('PLAY_CARD');
+    if (action.type === 'PLAY_CARD') {
+      expect(state.players.player2.hand[action.cardIndex].cardId).toBe('water_splash');
+    }
+  });
+
+  it('advances when only targetless targeted spells are available', () => {
+    const state = createTestGameState({
+      phase: { type: 'play' },
+      activePlayer: 'player2',
+      player2: {
+        currentEnergy: 2,
+        maxEnergy: 2,
+        hand: [makeCardInstance('fire_fireball')],
+      },
+      player1: {
+        board: [null, null, null, null, null],
+      },
+    });
+
+    const action = chooseAction(state, 'player2', createRNG(42));
+    expect(action).toEqual({ type: 'ADVANCE_PHASE' });
+  });
+
   it('prefers leftmost slot for creatures', () => {
     const board: (ReturnType<typeof makePermanent> | null)[] = [
       null,

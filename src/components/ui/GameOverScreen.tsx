@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { useMemo, useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { PlayerId } from '@engine/types';
 import { gameButtonClass } from './buttonStyles';
+import { useDialogA11y } from '@hooks/useDialogA11y';
 
 interface GameOverScreenProps {
   winner: PlayerId;
@@ -38,11 +39,23 @@ function useConfetti(count: number): ConfettiPiece[] {
 
 export function GameOverScreen({ winner, humanPlayer, onPlayAgain, onMainMenu }: GameOverScreenProps) {
   const isVictory = winner === humanPlayer;
-  const confetti = useConfetti(isVictory ? 40 : 0);
+  const shouldReduceMotion = useReducedMotion();
+  const confetti = useConfetti(isVictory && !shouldReduceMotion ? 40 : 0);
+  const playAgainRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useDialogA11y({
+    open: true,
+    closeOnEscape: false,
+    initialFocusRef: playAgainRef,
+  });
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80"
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="game-over-title"
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -76,6 +89,7 @@ export function GameOverScreen({ winner, humanPlayer, onPlayAgain, onMainMenu }:
 
       {/* Main content */}
       <motion.h1
+        id="game-over-title"
         className={`text-6xl font-black mb-8 ${
           isVictory
             ? 'text-amber-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.5)]'
@@ -96,6 +110,7 @@ export function GameOverScreen({ winner, humanPlayer, onPlayAgain, onMainMenu }:
         transition={{ duration: 0.4, delay: 0.6 }}
       >
         <motion.button
+          ref={playAgainRef}
           className={gameButtonClass({
             tone: 'emerald',
             size: 'md',

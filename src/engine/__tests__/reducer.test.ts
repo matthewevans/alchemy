@@ -530,6 +530,54 @@ describe('SELECT_TARGET', () => {
     expect(newState.players.player2.board[0]).toBeNull();
     expect(events).toContainEqual(expect.objectContaining({ type: 'CREATURE_DIED' }));
   });
+
+  it('entangle prevents attacking on the target creature next turn only', () => {
+    const enemyPerm = makePermanent('fire_lava_hound', 'player2', {
+      attack: 2,
+      health: 3,
+    });
+
+    const state = createTestGameState({
+      turn: 3,
+      activePlayer: 'player1',
+      phase: {
+        type: 'targeting',
+        effectId: 'entangle',
+        casterId: 'player1',
+        sourceCardId: 'earth_entangle',
+        validTargets: [{ type: 'creature', permanentId: enemyPerm.permanentId }],
+      },
+      player2: {
+        board: [enemyPerm, null, null, null, null],
+      },
+    });
+
+    const { newState: afterEntangle } = reduce(
+      state,
+      { type: 'SELECT_TARGET', targetRef: { type: 'creature', permanentId: enemyPerm.permanentId } },
+      'player1',
+      rng,
+    );
+    expect(afterEntangle.players.player2.board[0]?.cantAttackThisTurn).toBe(true);
+
+    const { newState: p1Battle } = reduce(afterEntangle, { type: 'ADVANCE_PHASE' }, 'player1', rng);
+    const { newState: p1End } = reduce(p1Battle, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
+    const { newState: p2Draw } = reduce(p1End, { type: 'ADVANCE_PHASE' }, 'player1', rng);
+    const { newState: p2Energy } = reduce(p2Draw, { type: 'ADVANCE_PHASE' }, 'player2', rng);
+    const { newState: p2Play } = reduce(p2Energy, { type: 'ADVANCE_PHASE' }, 'player2', rng);
+    const { newState: p2Battle } = reduce(p2Play, { type: 'ADVANCE_PHASE' }, 'player2', rng);
+
+    expect(() => reduce(
+      p2Battle,
+      { type: 'DECLARE_ATTACKER', permanentId: enemyPerm.permanentId },
+      'player2',
+      rng,
+    )).toThrow();
+
+    const { newState: p2End } = reduce(p2Battle, { type: 'CONFIRM_ATTACKERS' }, 'player2', rng);
+    const { newState: nextTurn } = reduce(p2End, { type: 'ADVANCE_PHASE' }, 'player2', rng);
+    expect(nextTurn.players.player2.board[0]?.cantAttackThisTurn).toBe(false);
+  });
 });
 
 // ─── Cancel Targeting ───

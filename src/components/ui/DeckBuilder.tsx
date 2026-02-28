@@ -32,6 +32,7 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
   const [shareCode, setShareCode] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const [showSaved, setShowSaved] = useState(false);
+  const [showMobileDeckPanel, setShowMobileDeckPanel] = useState(false);
 
   const filteredCards = useMemo(
     () =>
@@ -139,6 +140,7 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
     }
     setDeckCounts(counts);
     setShowSaved(false);
+    setShowMobileDeckPanel(false);
   }, []);
 
   const handleDelete = useCallback(
@@ -176,6 +178,7 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
 
   const handlePlay = useCallback(() => {
     if (!validation.valid) return;
+    setShowMobileDeckPanel(false);
     onSelectDeck(deckCardIds);
   }, [validation.valid, deckCardIds, onSelectDeck]);
 
@@ -183,15 +186,164 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
     setDeckCounts({});
   }, []);
 
+  const renderDeckPanel = (showCloseButton: boolean) => (
+    <>
+      {showCloseButton && (
+        <div className="shrink-0 px-3 pt-3 pb-2 border-b border-white/10 flex items-center justify-between">
+          <h2 className="text-white text-base font-semibold">Deck</h2>
+          <button
+            className={gameButtonClass({
+              tone: 'neutral',
+              size: 'sm',
+              className: 'px-4 text-sm',
+            })}
+            onClick={() => setShowMobileDeckPanel(false)}
+          >
+            Close
+          </button>
+        </div>
+      )}
+
+      {/* Deck header + count */}
+      <div className="shrink-0 px-3 pt-3 pb-2">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-white/70 text-sm font-medium uppercase tracking-wider">Deck</span>
+          <span
+            className={`text-sm font-bold tabular-nums ${
+              totalCards === RULESET.deckSize ? 'text-emerald-400' : 'text-white/60'
+            }`}
+          >
+            {totalCards} / {RULESET.deckSize}
+          </span>
+        </div>
+
+        {/* Mana curve */}
+        <div className="flex items-end gap-1 h-12 mb-1">
+          {Array.from({ length: 6 }, (_, i) => {
+            const cost = i + 1;
+            const count = manaCurve[cost] ?? 0;
+            const height = count > 0 ? Math.max(4, (count / maxCurveHeight) * 32) : 0;
+            return (
+              <div key={cost} className="flex-1 flex flex-col items-center gap-0.5">
+                <div
+                  className="w-full rounded-t transition-all duration-200"
+                  style={{
+                    height,
+                    backgroundColor: count > 0 ? '#f59e0b' : 'transparent',
+                    opacity: count > 0 ? 0.6 : 0,
+                  }}
+                />
+                <span className="text-white/40 text-[11px] tabular-nums">{cost}{i === 5 ? '+' : ''}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {!validation.valid && totalCards > 0 && (
+          <div className="mt-2 space-y-0.5">
+            {validation.errors.map((err) => (
+              <p key={err} className="text-red-300 text-xs leading-snug">{err}</p>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Deck card list — MTGA horizontal bars */}
+      <div className="flex-1 overflow-y-auto px-2">
+        {deckEntries.length === 0 ? (
+          <p className="text-white/30 text-sm text-center mt-6">Add cards from the collection</p>
+        ) : (
+          <div className="space-y-px">
+            {deckEntries.map(({ card, count }) => (
+              <DeckCardBar
+                key={card.id}
+                card={card}
+                count={count}
+                maxCopies={RULESET.maxCopiesPerCard}
+                onClick={() => removeCard(card.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Share + actions */}
+      <div className="shrink-0 p-3 border-t border-white/5 space-y-2">
+        {/* Share code row */}
+        <div className="flex gap-2">
+          <input
+            className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-amber-500/40"
+            value={shareInput}
+            onChange={(e) => setShareInput(e.target.value)}
+            placeholder="Paste share code..."
+          />
+          <button
+            className={gameButtonClass({
+              tone: 'neutral',
+              size: 'sm',
+              className: 'px-4 text-sm',
+            })}
+            onClick={handleImport}
+          >
+            Import
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <button
+            className={gameButtonClass({
+              tone: 'neutral',
+              size: 'sm',
+              className: 'flex-1 text-sm',
+            })}
+            onClick={handleExport}
+          >
+            Export
+          </button>
+          <button
+            className={gameButtonClass({
+              tone: 'neutral',
+              size: 'sm',
+              className: 'flex-1 text-sm',
+            })}
+            onClick={handleClear}
+          >
+            Clear
+          </button>
+        </div>
+        {shareCode && (
+          <div className="px-2 py-2 rounded bg-amber-500/10 border border-amber-500/20">
+            <p className="text-amber-300 text-xs font-mono break-all">{shareCode}</p>
+          </div>
+        )}
+
+        {/* Play button */}
+        <motion.button
+          className={gameButtonClass({
+            tone: 'amber',
+            size: 'md',
+            disabled: !validation.valid,
+            className: 'w-full font-bold',
+          })}
+          whileHover={validation.valid ? { scale: 1.02 } : {}}
+          whileTap={validation.valid ? { scale: 0.98 } : {}}
+          onClick={handlePlay}
+          disabled={!validation.valid}
+        >
+          Play
+        </motion.button>
+      </div>
+    </>
+  );
+
   return (
-    <div className="h-screen w-screen bg-slate-950 flex flex-col overflow-hidden">
+    <div className="h-screen w-screen bg-slate-950 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {/* ═══ Top Bar ═══ */}
-      <div className="shrink-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-b from-slate-900 to-slate-950 border-b border-white/5">
+      <div className="shrink-0 flex flex-wrap items-center gap-2 px-3 py-2 bg-gradient-to-b from-slate-900 to-slate-950 border-b border-white/5">
         <motion.button
           className={gameButtonClass({
             tone: 'neutral',
             size: 'sm',
-            className: 'px-3 py-1.5 text-sm',
+            className: 'px-4 text-sm',
           })}
           whileTap={{ scale: 0.95 }}
           onClick={onBack}
@@ -199,14 +351,14 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
           Back
         </motion.button>
 
-        <div className="w-px h-6 bg-white/10 mx-1" />
+        <div className="hidden md:block w-px h-6 bg-white/10 mx-1" />
 
         {/* Element filter pills */}
         <button
           className={gameButtonClass({
             tone: 'neutral',
             size: 'xs',
-            className: `px-2 py-1 rounded text-xs font-medium ${
+            className: `text-xs font-medium ${
               elementFilter === 'all'
                 ? 'border-white/40 bg-white/16 text-white'
                 : 'text-white/40 hover:text-white/70'
@@ -224,7 +376,7 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
               className={gameButtonClass({
                 tone: 'neutral',
                 size: 'xs',
-                className: 'flex items-center gap-1 px-2 py-1 rounded text-xs font-medium',
+                className: 'flex items-center gap-1 text-xs font-medium',
               })}
               style={{
                 backgroundColor: elementFilter === el ? color + '22' : undefined,
@@ -243,7 +395,7 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
 
         {/* Deck name */}
         <input
-          className="px-2 py-1 rounded bg-white/5 border border-white/10 text-white text-sm w-40 focus:outline-none focus:border-amber-500/40"
+          className="px-3 py-2 rounded bg-white/5 border border-white/10 text-white text-sm w-full md:w-40 focus:outline-none focus:border-amber-500/40"
           value={deckName}
           onChange={(e) => setDeckName(e.target.value)}
         />
@@ -252,7 +404,7 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
           className={gameButtonClass({
             tone: 'amber',
             size: 'sm',
-            className: 'px-3 py-1.5 text-sm font-medium',
+            className: 'px-4 text-sm font-medium',
           })}
           whileTap={{ scale: 0.95 }}
           onClick={handleSave}
@@ -264,7 +416,7 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
           className={gameButtonClass({
             tone: 'neutral',
             size: 'sm',
-            className: 'px-3 py-1.5 text-sm',
+            className: 'px-4 text-sm',
           })}
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowSaved(!showSaved)}
@@ -276,7 +428,7 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
       {/* ═══ Main Area ═══ */}
       <div className="flex-1 flex min-h-0 relative">
         {/* ── Collection (left) ── */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pb-24 lg:pb-0">
           <div className="px-4 py-3 space-y-4">
             {groupedCards.map(([cost, cards]) => (
               <div key={cost}>
@@ -286,7 +438,7 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
                     <span className="text-amber-300 text-xs font-bold">{cost}</span>
                   </div>
                   <div className="flex-1 h-px bg-white/5" />
-                  <span className="text-white/20 text-xs">{cards.length} cards</span>
+                  <span className="text-white/40 text-xs">{cards.length} cards</span>
                 </div>
 
                 {/* MTGA-style card bars */}
@@ -309,142 +461,15 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
         </div>
 
         {/* ── Deck Panel (right) — MTGA-style narrow sidebar ── */}
-        <div className="w-64 shrink-0 flex flex-col min-h-0 bg-black/40 border-l border-white/5">
-          {/* Deck header + count */}
-          <div className="shrink-0 px-3 pt-3 pb-2">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-white/60 text-xs font-medium uppercase tracking-wider">Deck</span>
-              <span
-                className={`text-xs font-bold tabular-nums ${
-                  totalCards === RULESET.deckSize ? 'text-emerald-400' : 'text-white/50'
-                }`}
-              >
-                {totalCards} / {RULESET.deckSize}
-              </span>
-            </div>
-
-            {/* Mana curve */}
-            <div className="flex items-end gap-px h-10 mb-1">
-              {Array.from({ length: 6 }, (_, i) => {
-                const cost = i + 1;
-                const count = manaCurve[cost] ?? 0;
-                const height = count > 0 ? Math.max(4, (count / maxCurveHeight) * 32) : 0;
-                return (
-                  <div key={cost} className="flex-1 flex flex-col items-center gap-0.5">
-                    <div
-                      className="w-full rounded-t transition-all duration-200"
-                      style={{
-                        height,
-                        backgroundColor: count > 0 ? '#f59e0b' : 'transparent',
-                        opacity: count > 0 ? 0.6 : 0,
-                      }}
-                    />
-                    <span className="text-white/30 text-[9px] tabular-nums">{cost}{i === 5 ? '+' : ''}</span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {!validation.valid && totalCards > 0 && (
-              <div className="mt-1">
-                {validation.errors.map((err) => (
-                  <p key={err} className="text-red-400/80 text-[10px]">{err}</p>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Deck card list — MTGA horizontal bars */}
-          <div className="flex-1 overflow-y-auto px-2">
-            {deckEntries.length === 0 ? (
-              <p className="text-white/20 text-xs text-center mt-6">Add cards from the collection</p>
-            ) : (
-              <div className="space-y-px">
-                {deckEntries.map(({ card, count }) => (
-                  <DeckCardBar
-                    key={card.id}
-                    card={card}
-                    count={count}
-                    maxCopies={RULESET.maxCopiesPerCard}
-                    onClick={() => removeCard(card.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Share + actions */}
-          <div className="shrink-0 p-2 border-t border-white/5 space-y-1.5">
-            {/* Share code row */}
-            <div className="flex gap-1">
-              <input
-                className="flex-1 px-2 py-1 rounded bg-white/5 border border-white/10 text-white text-[10px] font-mono focus:outline-none focus:border-amber-500/40"
-                value={shareInput}
-                onChange={(e) => setShareInput(e.target.value)}
-                placeholder="Paste share code..."
-              />
-              <button
-                className={gameButtonClass({
-                  tone: 'neutral',
-                  size: 'xs',
-                  className: 'px-2 py-1 text-[10px]',
-                })}
-                onClick={handleImport}
-              >
-                Import
-              </button>
-            </div>
-            <div className="flex gap-1">
-              <button
-                className={gameButtonClass({
-                  tone: 'neutral',
-                  size: 'xs',
-                  className: 'flex-1 px-2 py-1 text-[10px]',
-                })}
-                onClick={handleExport}
-              >
-                Export
-              </button>
-              <button
-                className={gameButtonClass({
-                  tone: 'neutral',
-                  size: 'xs',
-                  className: 'flex-1 px-2 py-1 text-[10px]',
-                })}
-                onClick={handleClear}
-              >
-                Clear
-              </button>
-            </div>
-            {shareCode && (
-              <div className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20">
-                <p className="text-amber-300 text-[10px] font-mono break-all">{shareCode}</p>
-              </div>
-            )}
-
-            {/* Play button */}
-            <motion.button
-              className={gameButtonClass({
-                tone: 'amber',
-                size: 'sm',
-                disabled: !validation.valid,
-                className: 'w-full py-2 font-bold text-sm',
-              })}
-              whileHover={validation.valid ? { scale: 1.02 } : {}}
-              whileTap={validation.valid ? { scale: 0.98 } : {}}
-              onClick={handlePlay}
-              disabled={!validation.valid}
-            >
-              Play
-            </motion.button>
-          </div>
+        <div className="hidden lg:flex w-72 shrink-0 flex-col min-h-0 bg-black/40 border-l border-white/5">
+          {renderDeckPanel(false)}
         </div>
 
         {/* ── Saved Decks Dropdown ── */}
         <AnimatePresence>
           {showSaved && (
             <motion.div
-              className="absolute top-0 right-64 w-56 bg-slate-900 border border-white/10 rounded-lg shadow-2xl overflow-hidden z-20"
+              className="absolute top-2 right-2 lg:top-0 lg:right-72 w-[min(22rem,calc(100vw-1rem))] bg-slate-900 border border-white/10 rounded-lg shadow-2xl overflow-hidden z-20"
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
@@ -461,26 +486,26 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
                       key={deck.id}
                       className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 group"
                     >
-                      <button
-                        className={gameButtonClass({
-                          tone: 'neutral',
-                          size: 'xs',
-                          className: 'flex-1 text-left text-white/70 hover:text-white truncate',
-                        })}
-                        onClick={() => handleLoad(deck)}
-                      >
+                        <button
+                          className={gameButtonClass({
+                            tone: 'neutral',
+                            size: 'xs',
+                            className: 'flex-1 text-left text-white/70 hover:text-white truncate',
+                          })}
+                          onClick={() => handleLoad(deck)}
+                        >
                         {deck.name}
                         <span className="text-white/30 ml-1">({deck.cardIds.length})</span>
                       </button>
-                      <button
-                        className={gameButtonClass({
-                          tone: 'red',
-                          size: 'xs',
-                          className:
-                            'opacity-0 group-hover:opacity-100 text-red-400/70 hover:text-red-300 transition-opacity px-1.5 py-0.5',
-                        })}
-                        onClick={() => handleDelete(deck.id)}
-                      >
+                        <button
+                          className={gameButtonClass({
+                            tone: 'red',
+                            size: 'xs',
+                            className:
+                              'opacity-100 lg:opacity-0 lg:group-hover:opacity-100 text-red-400/70 hover:text-red-300 transition-opacity px-2 text-sm',
+                          })}
+                          onClick={() => handleDelete(deck.id)}
+                        >
                         x
                       </button>
                     </div>
@@ -492,11 +517,51 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
         </AnimatePresence>
       </div>
 
+      {/* Mobile deck toggle */}
+      <button
+        className={gameButtonClass({
+          tone: 'amber',
+          size: 'md',
+          className:
+            'lg:hidden fixed right-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 px-5 font-bold shadow-lg shadow-black/40',
+        })}
+        onClick={() => setShowMobileDeckPanel(true)}
+      >
+        Deck {totalCards}/{RULESET.deckSize}
+      </button>
+
+      {/* Mobile deck panel */}
+      <AnimatePresence>
+        {showMobileDeckPanel && (
+          <motion.div
+            className="lg:hidden fixed inset-0 z-40 bg-black/65"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowMobileDeckPanel(false)}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Deck panel"
+              className="absolute inset-x-0 bottom-0 max-h-[78vh] bg-slate-900 border-t border-white/10 rounded-t-2xl flex flex-col"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {renderDeckPanel(true)}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Toast */}
       <AnimatePresence>
         {toastMessage && (
           <motion.div
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-slate-800 border border-white/20 text-white text-sm shadow-xl z-50"
+            className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-slate-800 border border-white/20 text-white text-sm shadow-xl z-50"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
@@ -533,7 +598,7 @@ function CollectionCardBar({
 
   return (
     <div
-      className="group flex items-center h-9 rounded overflow-hidden transition-colors hover:brightness-125 cursor-pointer"
+      className="group flex items-center h-11 rounded overflow-hidden transition-colors hover:brightness-125 cursor-pointer"
       style={{
         background: `linear-gradient(90deg, ${color}15 0%, ${color}08 60%, transparent 100%)`,
         borderLeft: `2px solid ${color}`,
@@ -541,31 +606,31 @@ function CollectionCardBar({
       onClick={canAdd ? onAdd : undefined}
     >
       {/* Cost */}
-      <div className="shrink-0 w-7 flex items-center justify-center">
-        <span className="text-white font-bold text-xs">{card.cost}</span>
+      <div className="shrink-0 w-8 flex items-center justify-center">
+        <span className="text-white font-bold text-sm">{card.cost}</span>
       </div>
 
       {/* Element icon */}
-      <img src={iconPath} alt="" className="w-4 h-4 shrink-0 opacity-60" />
+      <img src={iconPath} alt="" className="w-4.5 h-4.5 shrink-0 opacity-70" />
 
       {/* Name + info */}
       <div className="flex-1 flex items-center gap-2 px-2 min-w-0">
-        <span className="text-white text-xs font-medium truncate">{card.name}</span>
+        <span className="text-white text-sm font-medium truncate">{card.name}</span>
         {card.type === 'creature' && (
-          <span className="text-white/30 text-[10px] shrink-0">{card.attack}/{card.health}</span>
+          <span className="text-white/40 text-xs shrink-0">{card.attack}/{card.health}</span>
         )}
         {card.keywords.length > 0 && (
-          <span className="text-amber-300/50 text-[10px] shrink-0 truncate">
+          <span className="text-amber-300/60 text-xs shrink-0 truncate">
             {card.keywords.map((kw) => KEYWORD_REGISTRY[kw].name).join(', ')}
           </span>
         )}
         {effect && !card.keywords.length && (
-          <span className="text-white/25 text-[10px] truncate">{effect.description}</span>
+          <span className="text-white/30 text-xs truncate">{effect.description}</span>
         )}
       </div>
 
       {/* Quantity dots (MTGA style) */}
-      <div className="shrink-0 flex items-center gap-0.5 px-1">
+      <div className="shrink-0 flex items-center gap-1 px-1">
         {Array.from({ length: maxCopies }, (_, i) => (
           <div
             key={i}
@@ -579,13 +644,13 @@ function CollectionCardBar({
       </div>
 
       {/* +/- buttons on hover */}
-      <div className="shrink-0 flex opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="shrink-0 flex opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
         <button
           className={gameButtonClass({
             tone: 'neutral',
             size: 'xs',
             className:
-              'w-6 h-9 px-0 py-0 rounded-none border-l-0 text-sm flex items-center justify-center text-white/40 hover:text-white disabled:opacity-20',
+              'w-11 h-11 min-h-0 px-0 py-0 rounded-none border-l-0 text-base flex items-center justify-center text-white/70 hover:text-white disabled:opacity-20',
           })}
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
           disabled={count === 0}
@@ -597,7 +662,7 @@ function CollectionCardBar({
             tone: 'neutral',
             size: 'xs',
             className:
-              'w-6 h-9 px-0 py-0 rounded-none border-l-0 text-sm flex items-center justify-center text-white/40 hover:text-white disabled:opacity-20',
+              'w-11 h-11 min-h-0 px-0 py-0 rounded-none border-l-0 text-base flex items-center justify-center text-white/70 hover:text-white disabled:opacity-20',
           })}
           onClick={(e) => { e.stopPropagation(); onAdd(); }}
           disabled={!canAdd}
@@ -629,7 +694,7 @@ function DeckCardBar({
       className={gameButtonClass({
         tone: 'neutral',
         size: 'xs',
-        className: 'group w-full flex items-center h-7 px-0 py-0 rounded overflow-hidden hover:brightness-110',
+        className: 'group w-full flex items-center h-10 px-0 py-0 rounded overflow-hidden hover:brightness-110',
       })}
       style={{
         borderColor: `${color}88`,
@@ -639,14 +704,14 @@ function DeckCardBar({
     >
       {/* Cost badge */}
       <div
-        className="shrink-0 w-5 h-full flex items-center justify-center"
+        className="shrink-0 w-7 h-full flex items-center justify-center"
         style={{ backgroundColor: color + '44' }}
       >
-        <span className="text-white font-bold text-[10px]">{card.cost}</span>
+        <span className="text-white font-bold text-xs">{card.cost}</span>
       </div>
 
       {/* Name */}
-      <span className="flex-1 text-white/80 text-[11px] font-medium truncate px-1.5">
+      <span className="flex-1 text-white/85 text-xs font-medium truncate px-2">
         {card.name}
       </span>
 

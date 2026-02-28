@@ -3,7 +3,7 @@ import { CARD_REGISTRY } from './cards';
 import { EFFECT_REGISTRY } from './effects';
 import { getCurrentHealth, getEffectiveAttack, getOpponent } from './types';
 import { enumerateLegalActions } from './validation';
-import { reduce } from './reducer';
+import { computeValidTargets, reduce } from './reducer';
 
 // ─── Core AI Function ───
 
@@ -105,6 +105,14 @@ function choosePlayAction(
     if (action.type !== 'PLAY_CARD') continue;
     const cardInstance = playerState.hand[action.cardIndex];
     const cardDef = CARD_REGISTRY[cardInstance.cardId];
+
+    // Skip targeted spells that currently have no legal targets.
+    if (cardDef.type === 'spell' && cardDef.targetingType) {
+      const validTargets = computeValidTargets(state, aiPlayer, cardDef.targetingType);
+      if (validTargets.length === 0) {
+        continue;
+      }
+    }
 
     if (cardDef.cost > bestCost) {
       bestCost = cardDef.cost;

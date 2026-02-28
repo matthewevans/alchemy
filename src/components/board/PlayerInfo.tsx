@@ -7,9 +7,16 @@ import { usePositionRegistry } from '@hooks/usePositionRegistry';
 interface PlayerInfoProps {
   playerId: PlayerId;
   isOpponent: boolean;
+  isValidTarget?: boolean;
+  onClick?: () => void;
 }
 
-export function PlayerInfo({ playerId, isOpponent }: PlayerInfoProps) {
+export function PlayerInfo({
+  playerId,
+  isOpponent,
+  isValidTarget = false,
+  onClick,
+}: PlayerInfoProps) {
   const player = useGameStore((s) => s.state?.players[playerId]);
   const energyCap = useGameStore((s) => s.state?.ruleset.energyCap ?? 10);
   const healthControls = useAnimationControls();
@@ -31,16 +38,17 @@ export function PlayerInfo({ playerId, isOpponent }: PlayerInfoProps) {
 
   if (!player) return null;
 
-  return (
-    <div className="flex flex-col items-center gap-2 py-3 px-2 w-full">
+  const content = (
+    <>
       {/* Avatar circle */}
       <div
         className={`
-          w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold
+          w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold transition-all
           ${isOpponent
             ? 'bg-gradient-to-br from-red-900 to-red-950 border-2 border-red-700/50'
             : 'bg-gradient-to-br from-blue-900 to-blue-950 border-2 border-blue-700/50'
           }
+          ${isValidTarget ? 'ring-4 ring-amber-300/75 shadow-[0_0_18px_rgba(251,191,36,0.65)] scale-105' : ''}
         `}
       >
         <span className="text-white/80">{isOpponent ? '👹' : '🧙'}</span>
@@ -105,6 +113,21 @@ export function PlayerInfo({ playerId, isOpponent }: PlayerInfoProps) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className="flex flex-col items-center gap-2 py-3 px-2 w-full cursor-pointer rounded-xl transition-colors hover:bg-white/6 focus-visible:bg-white/8"
+        onClick={onClick}
+        aria-label={`Target ${isOpponent ? 'opponent' : 'your'} hero`}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className="flex flex-col items-center gap-2 py-3 px-2 w-full">{content}</div>;
 }

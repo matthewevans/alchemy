@@ -37,7 +37,7 @@ export function OpponentHand() {
           );
         })}
       </div>
-      <span className="text-white/30 text-xs mt-0.5">
+      <span className="text-white/55 text-sm mt-0.5">
         {opponentHandSize} {opponentHandSize === 1 ? 'card' : 'cards'}
       </span>
     </div>

@@ -195,7 +195,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
   // ─── Main Lobby UI ───
 
   return (
-    <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 text-white">
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 text-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <AnimatePresence mode="wait">
         {step.type === 'choose_role' && (
           <motion.div

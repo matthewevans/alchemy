@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { CARD_REGISTRY } from '@engine/cards';
 import { EFFECT_REGISTRY } from '@engine/effects';
 import { KEYWORD_REGISTRY } from '@engine/keywords';
+import { useDialogA11y } from '@hooks/useDialogA11y';
 import {
   getElementColor,
   getElementBg,
@@ -21,6 +22,7 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
   const artGradient = getElementArtGradient(card.element);
   const artPath = getCardArtPath(card.id, card.element);
   const effect = card.effectId ? EFFECT_REGISTRY[card.effectId] : null;
+  const dialogRef = useDialogA11y({ open: true, onClose: onDismiss });
 
   return (
     <motion.div
@@ -36,6 +38,11 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
 
       {/* Card */}
       <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${card.name} details`}
+        tabIndex={-1}
         className="relative flex flex-col rounded-xl overflow-hidden shadow-2xl"
         style={{
           width: 'calc(var(--card-width) * 1.5)',

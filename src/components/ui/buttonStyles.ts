@@ -2,7 +2,7 @@ export type GameButtonTone = 'neutral' | 'emerald' | 'amber' | 'blue' | 'red' | 
 export type GameButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
 const GAME_BUTTON_BASE =
-  'border border-solid font-semibold backdrop-blur-sm transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40';
+  'min-h-11 border border-solid font-semibold backdrop-blur-sm transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 inline-flex items-center justify-center';
 
 const GAME_BUTTON_TONES: Record<GameButtonTone, string> = {
   neutral: 'border-white/25 bg-white/8 text-white/80 hover:bg-white/14 hover:text-white',
@@ -15,8 +15,8 @@ const GAME_BUTTON_TONES: Record<GameButtonTone, string> = {
 };
 
 const GAME_BUTTON_SIZES: Record<GameButtonSize, string> = {
-  xs: 'px-2 py-1 rounded-md text-[10px]',
-  sm: 'px-3 py-1.5 rounded-lg text-sm',
+  xs: 'px-3 py-2 rounded-md text-xs',
+  sm: 'px-4 py-2 rounded-lg text-sm',
   md: 'px-6 py-3 rounded-xl text-base',
   lg: 'px-10 py-4 rounded-2xl text-xl',
 };
