@@ -44,4 +44,25 @@ describe('createNetworkController', () => {
 
     expect(session.close).toHaveBeenCalledWith('Connection lost while sending action');
   });
+
+  it('closes the session when applying a remote action throws', () => {
+    let onMessageHandler: ((msg: any) => void) | null = null;
+    const session = createSessionMock({
+      onMessage: vi.fn((handler) => {
+        onMessageHandler = handler;
+        return () => {};
+      }),
+    });
+    const store = { dispatch: vi.fn(() => { throw new Error('invalid action'); }) };
+    createNetworkController(session, store);
+
+    onMessageHandler?.({
+      type: 'action',
+      action: { type: 'ADVANCE_PHASE' },
+      actingPlayer: 'player2',
+      seq: 0,
+    });
+
+    expect(session.close).toHaveBeenCalledWith('Game state desynchronized');
+  });
 });

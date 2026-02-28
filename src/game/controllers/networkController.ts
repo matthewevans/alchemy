@@ -29,6 +29,7 @@ export function createNetworkController(
         store.dispatch(msg.action, msg.actingPlayer);
       } catch (e) {
         console.warn('Failed to dispatch remote action:', e);
+        session.close('Game state desynchronized');
       }
     }
   });
