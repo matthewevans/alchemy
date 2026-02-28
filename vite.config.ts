@@ -21,7 +21,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: [
         'logo.webp',
         'logo_wordmark.webp',
@@ -39,8 +39,8 @@ export default defineConfig({
         name: 'Alchemy',
         short_name: 'Alchemy',
         description: 'Elemental card battler',
-        start_url: '/',
-        scope: '/',
+        start_url: './',
+        scope: './',
         display: 'standalone',
         theme_color: '#020617',
         background_color: '#020617',
