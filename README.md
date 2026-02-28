@@ -1,8 +1,37 @@
-# Alchemy
+<p align="center">
+  <img src="./public/logo.png" alt="Alchemy logo" width="180" />
+</p>
 
-Alchemy is a browser-based, MTG-inspired elemental card battler built with React, TypeScript, and Vite.
+<h1 align="center">Alchemy</h1>
 
-## Tech Stack
+<p align="center">
+  Browser-based elemental card battler inspired by MTG-style gameplay.
+</p>
+
+<p align="center">
+  <a href="https://github.com/matthewevans/alchemy/actions/workflows/deploy-pages.yml">
+    <img src="https://github.com/matthewevans/alchemy/actions/workflows/deploy-pages.yml/badge.svg" alt="Deploy status" />
+  </a>
+  <a href="https://matthewevans.github.io/alchemy/">
+    <img src="https://img.shields.io/badge/Live-GitHub%20Pages-1f6feb" alt="Live on GitHub Pages" />
+  </a>
+  <img src="https://img.shields.io/badge/React-19-149eca" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6" alt="TypeScript 5.9" />
+</p>
+
+## Live
+
+- https://matthewevans.github.io/alchemy/
+
+## Features
+
+- Fast, browser-native 1v1 elemental card battles
+- MTG-inspired combat flow with kid-friendly simplifications
+- Persistent local game state
+- Deck-building support
+- PWA support for installable gameplay
+
+## Stack
 
 - React 19
 - TypeScript
@@ -11,32 +40,31 @@ Alchemy is a browser-based, MTG-inspired elemental card battler built with React
 - Tailwind CSS
 - Vitest + Testing Library
 
-## Development
+## Quick Start
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-## Build
+## Build and Preview
 
 ```bash
 pnpm build
 pnpm preview
 ```
 
-## Test
+## Testing
 
 ```bash
 pnpm test
 ```
 
-## GitHub Pages
+## Deployment
 
-This repository includes a GitHub Actions workflow that deploys the built app to GitHub Pages on pushes to `main`.
-
-Planned URL: `https://matthewevans.github.io/alchemy/`
+- GitHub Pages deploys automatically from `main` via `.github/workflows/deploy-pages.yml`.
+- Build command used for Pages: `pnpm exec vite build --base=/alchemy/`
 
 ## License
 
-MIT. See `LICENSE`.
+MIT. See [LICENSE](./LICENSE).
