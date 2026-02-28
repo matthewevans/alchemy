@@ -134,7 +134,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   const slots = Array.from({ length: maxBoardSize }, (_, i) => board[i] ?? null);
 
   return (
-    <div className="flex items-center justify-center gap-2 px-4 py-1">
+    <div className="flex items-center justify-center gap-3 px-6 py-1">
       {slots.map((permanent, slotIndex) => {
         if (permanent) {
           const isAttacking = allAttackers.includes(permanent.permanentId);
@@ -161,9 +161,11 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
           <div
             key={`empty-${slotIndex}`}
             className={`
-              flex items-center justify-center rounded-lg
-              border-2 border-dashed border-slate-600/40
-              ${showPlusOnEmpty ? 'border-green-500/40 cursor-pointer hover:border-green-400/60 hover:bg-green-900/10' : ''}
+              flex items-center justify-center rounded-xl transition-colors
+              ${showPlusOnEmpty
+                ? 'border-2 border-dashed border-green-500/30 cursor-pointer hover:border-green-400/50 hover:bg-green-900/10'
+                : 'border border-dashed border-slate-700/30'
+              }
               ${isOpponent ? 'cursor-default' : ''}
             `}
             style={{
@@ -173,7 +175,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
             onClick={() => handleEmptySlotClick(slotIndex)}
           >
             {showPlusOnEmpty && (
-              <span className="text-green-500/40 text-xl select-none">+</span>
+              <span className="text-green-500/30 text-lg select-none">+</span>
             )}
           </div>
         );

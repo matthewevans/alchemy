@@ -3,7 +3,12 @@ import type { Permanent } from '@engine/types';
 import { getCurrentHealth, getEffectiveAttack } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
 import { KEYWORD_REGISTRY } from '@engine/keywords';
-import { getElementColor, getElementBg } from './cardUtils';
+import {
+  getElementColor,
+  getElementArtGradient,
+  getElementIconPath,
+  getElementFrameGradient,
+} from './cardUtils';
 
 interface BoardCardProps {
   permanent: Permanent;
@@ -26,7 +31,9 @@ export function BoardCard({
 }: BoardCardProps) {
   const card = CARD_REGISTRY[permanent.cardId];
   const elementColor = getElementColor(card.element);
-  const elementBg = getElementBg(card.element);
+  const artGradient = getElementArtGradient(card.element);
+  const elementIconPath = getElementIconPath(card.element);
+  const frameGradient = getElementFrameGradient(card.element);
   const currentHealth = getCurrentHealth(permanent);
   const effectiveAttack = getEffectiveAttack(permanent);
   const isDamaged = permanent.damage > 0;
@@ -34,85 +41,155 @@ export function BoardCard({
   const isSummoningSick = permanent.summonedThisTurn && !hasSwift;
   const isInteractable = isValidAttacker || isValidBlocker;
 
-  const displayName =
-    card.name.length > 10 ? card.name.slice(0, 9) + '\u2026' : card.name;
-
   return (
     <motion.div
       className={`
-        touch-target relative flex flex-col items-center rounded-lg cursor-pointer select-none overflow-hidden
-        ${isValidTarget ? 'ring-2 ring-amber-400 animate-pulse' : ''}
-        ${isInteractable ? 'ring-1 ring-white/40' : ''}
-        ${isSummoningSick ? 'saturate-50' : ''}
+        touch-target relative flex flex-col cursor-pointer select-none
+        ${isSummoningSick ? 'saturate-50 brightness-75' : ''}
       `}
       style={{
         width: 'var(--board-card-width)',
         height: 'var(--board-card-height)',
-        borderWidth: 2,
-        borderStyle: 'solid',
-        borderColor: elementColor,
-        backgroundColor: elementBg,
         fontSize: 'calc(var(--card-font-scale) * 1rem)',
       }}
       animate={{
         rotate: permanent.isTapped ? 15 : 0,
         x: isAttacking ? 4 : 0,
-        y: isAttacking ? -4 : 0,
-        boxShadow: isAttacking
-          ? `0 0 12px 4px rgba(239, 68, 68, 0.5)`
-          : isBlocking
-            ? `0 0 12px 4px rgba(59, 130, 246, 0.5)`
-            : '0 2px 8px rgba(0,0,0,0.3)',
+        y: isAttacking ? -6 : 0,
       }}
       whileTap={{ scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       onClick={onClick}
     >
-      {/* Card name */}
-      <div
-        className="w-full text-center text-white font-semibold truncate px-1 pt-1"
-        style={{ fontSize: 'calc(var(--card-font-scale) * 0.55rem)' }}
-      >
-        {displayName}
-      </div>
-
-      {/* Attack / Health - large */}
-      <div className="flex-1 flex items-center justify-center gap-2">
-        <span
-          className="text-white font-bold"
-          style={{ fontSize: 'calc(var(--card-font-scale) * 1.25rem)' }}
-          title="Attack"
-        >
-          {effectiveAttack}
-        </span>
-        <span
-          className="text-slate-400"
-          style={{ fontSize: 'calc(var(--card-font-scale) * 0.75rem)' }}
-        >
-          /
-        </span>
-        <span
-          className={`font-bold ${isDamaged ? 'text-red-400' : 'text-white'}`}
-          style={{ fontSize: 'calc(var(--card-font-scale) * 1.25rem)' }}
-          title="Health"
-        >
-          {currentHealth}
-        </span>
-      </div>
-
-      {/* Keyword icons */}
-      {card.keywords.length > 0 && (
-        <div
-          className="flex gap-0.5 pb-1"
-          style={{ fontSize: 'calc(var(--card-font-scale) * 0.6rem)' }}
-        >
-          {card.keywords.map((kw) => (
-            <span key={kw} title={KEYWORD_REGISTRY[kw].description}>
-              {KEYWORD_REGISTRY[kw].icon}
-            </span>
-          ))}
-        </div>
+      {/* Combat / interaction glow ring */}
+      {(isAttacking || isBlocking || isValidTarget || isInteractable) && (
+        <motion.div
+          className="absolute -inset-[2px] rounded-xl z-0 pointer-events-none"
+          style={{
+            background: isAttacking
+              ? 'linear-gradient(135deg, #ef4444, #f97316, #ef4444)'
+              : isBlocking
+                ? 'linear-gradient(135deg, #3b82f6, #60a5fa, #3b82f6)'
+                : isValidTarget
+                  ? 'linear-gradient(135deg, #f59e0b, #fbbf24, #f59e0b)'
+                  : 'linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.5), rgba(255,255,255,0.3))',
+            backgroundSize: '200% 200%',
+          }}
+          animate={{
+            backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+            opacity: isAttacking || isBlocking ? [0.7, 1, 0.7] : [0.4, 0.7, 0.4],
+          }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+        />
       )}
+
+      {/* Card frame */}
+      <div
+        className="absolute inset-0 rounded-xl z-[1]"
+        style={{ background: frameGradient, opacity: 0.6 }}
+      />
+
+      {/* Card inner body */}
+      <div className="relative z-[2] flex flex-col m-[2px] rounded-[10px] overflow-hidden h-full bg-slate-900">
+        {/* ── Name bar ── */}
+        <div
+          className="flex items-center gap-0.5 px-1 py-[1px]"
+          style={{
+            background: `linear-gradient(90deg, ${elementColor}33, ${elementColor}11)`,
+            borderBottom: `1px solid ${elementColor}33`,
+          }}
+        >
+          <img
+            src={elementIconPath}
+            alt={card.element}
+            className="shrink-0 select-none"
+            style={{
+              width: 'calc(var(--card-font-scale) * 0.6rem)',
+              height: 'calc(var(--card-font-scale) * 0.6rem)',
+              objectFit: 'contain',
+            }}
+          />
+          <span
+            className="text-white font-bold truncate text-center flex-1"
+            style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
+          >
+            {card.name}
+          </span>
+        </div>
+
+        {/* ── Art area ── */}
+        <div
+          className="relative mx-[3px] mt-[3px] rounded flex items-center justify-center"
+          style={{
+            flex: '1 1 0',
+            background: artGradient,
+          }}
+        >
+          {/* Art placeholder — will be replaced by generated card art */}
+          <div className="w-full h-full" />
+
+          {/* Keyword icons overlay */}
+          {card.keywords.length > 0 && (
+            <div
+              className="absolute top-0.5 right-0.5 flex gap-0.5"
+              style={{ fontSize: 'calc(var(--card-font-scale) * 0.55rem)' }}
+            >
+              {card.keywords.map((kw) => (
+                <span
+                  key={kw}
+                  title={KEYWORD_REGISTRY[kw].description}
+                  className="drop-shadow-md"
+                >
+                  {KEYWORD_REGISTRY[kw].icon}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Art frame border */}
+          <div
+            className="absolute inset-0 rounded pointer-events-none"
+            style={{ border: `1px solid ${elementColor}44` }}
+          />
+        </div>
+
+        {/* ── Stat bar ── */}
+        <div className="flex justify-between items-center px-[3px] py-[2px]">
+          {/* Attack - bottom left */}
+          <div
+            className="flex items-center justify-center rounded text-white font-black"
+            style={{
+              minWidth: 'calc(var(--card-font-scale) * 1.3rem)',
+              height: 'calc(var(--card-font-scale) * 1.1rem)',
+              fontSize: 'calc(var(--card-font-scale) * 0.7rem)',
+              background: effectiveAttack > (card.attack ?? 0)
+                ? 'linear-gradient(135deg, #16a34a, #059669)'
+                : 'linear-gradient(135deg, #dc2626, #991b1b)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+              padding: '0 3px',
+            }}
+          >
+            {effectiveAttack}
+          </div>
+
+          {/* Health - bottom right */}
+          <div
+            className="flex items-center justify-center rounded text-white font-black"
+            style={{
+              minWidth: 'calc(var(--card-font-scale) * 1.3rem)',
+              height: 'calc(var(--card-font-scale) * 1.1rem)',
+              fontSize: 'calc(var(--card-font-scale) * 0.7rem)',
+              background: isDamaged
+                ? 'linear-gradient(135deg, #dc2626, #7f1d1d)'
+                : 'linear-gradient(135deg, #16a34a, #14532d)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+              padding: '0 3px',
+            }}
+          >
+            {currentHealth}
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 }

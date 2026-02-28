@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 
 interface TitleScreenProps {
   onPlay: () => void;
+  onDeckBuilder: () => void;
 }
 
 interface Particle {
@@ -28,7 +29,7 @@ function useSparkles(count: number): Particle[] {
   return particles;
 }
 
-export function TitleScreen({ onPlay }: TitleScreenProps) {
+export function TitleScreen({ onPlay, onDeckBuilder }: TitleScreenProps) {
   const particles = useSparkles(30);
   const [mounted, setMounted] = useState(false);
 
@@ -74,18 +75,30 @@ export function TitleScreen({ onPlay }: TitleScreenProps) {
         transition={{ duration: 0.8, ease: 'easeOut' }}
       />
 
-      {/* Play button */}
-      <motion.button
-        className="px-12 py-4 rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 text-white text-2xl font-bold shadow-lg shadow-emerald-500/40 cursor-pointer"
+      {/* Buttons */}
+      <motion.div
+        className="flex flex-col items-center gap-3"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
-        whileHover={{ scale: 1.06, boxShadow: '0 0 30px rgba(52, 211, 153, 0.5)' }}
-        whileTap={{ scale: 0.96 }}
-        onClick={onPlay}
       >
-        Play
-      </motion.button>
+        <motion.button
+          className="px-12 py-4 rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 text-white text-2xl font-bold shadow-lg shadow-emerald-500/40 cursor-pointer"
+          whileHover={{ scale: 1.06, boxShadow: '0 0 30px rgba(52, 211, 153, 0.5)' }}
+          whileTap={{ scale: 0.96 }}
+          onClick={onPlay}
+        >
+          Play
+        </motion.button>
+        <motion.button
+          className="px-8 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm font-medium hover:bg-white/10 hover:text-white cursor-pointer"
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={onDeckBuilder}
+        >
+          Deck Builder
+        </motion.button>
+      </motion.div>
 
       {/* Subtitle */}
       <motion.p

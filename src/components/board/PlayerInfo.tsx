@@ -19,7 +19,7 @@ export function PlayerInfo({ playerId, isOpponent }: PlayerInfoProps) {
     if (prevHealthRef.current !== undefined && player.health < prevHealthRef.current) {
       healthControls.start({
         color: ['#ef4444', '#ffffff'],
-        scale: [1.2, 1],
+        scale: [1.3, 1],
         transition: { duration: 0.4 },
       });
     }
@@ -28,20 +28,26 @@ export function PlayerInfo({ playerId, isOpponent }: PlayerInfoProps) {
 
   if (!player) return null;
 
-  const label = isOpponent ? 'Opponent' : 'You';
-
   return (
-    <div className="flex items-center gap-4 px-4 py-2">
-      {/* Name label */}
-      <span className="text-white/70 text-sm font-medium min-w-12">{label}</span>
+    <div className="flex flex-col items-center gap-1 py-2 px-1 w-full">
+      {/* Avatar circle */}
+      <div
+        className={`
+          w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold
+          ${isOpponent
+            ? 'bg-gradient-to-br from-red-900 to-red-950 border-2 border-red-700/50'
+            : 'bg-gradient-to-br from-blue-900 to-blue-950 border-2 border-blue-700/50'
+          }
+        `}
+      >
+        <span className="text-white/80">{isOpponent ? '👹' : '🧙'}</span>
+      </div>
 
       {/* Health */}
-      <div className="flex items-center gap-1.5">
-        <span className="text-red-400 text-lg" aria-label="Health">
-          ♥
-        </span>
+      <div className="flex items-center gap-0.5">
+        <span className="text-red-400 text-xs">♥</span>
         <motion.span
-          className="text-white font-bold text-2xl tabular-nums min-w-8 text-center"
+          className="text-white font-black text-lg tabular-nums leading-none"
           animate={healthControls}
         >
           {player.health}
@@ -49,55 +55,53 @@ export function PlayerInfo({ playerId, isOpponent }: PlayerInfoProps) {
       </div>
 
       {/* Energy orbs */}
-      <div className="flex items-center gap-1" aria-label="Energy">
-        {Array.from({ length: energyCap }, (_, i) => {
+      <div className="flex flex-wrap justify-center gap-0.5 max-w-[44px]" aria-label="Energy">
+        {Array.from({ length: Math.min(player.maxEnergy, energyCap) }, (_, i) => {
           const isFilled = i < player.currentEnergy;
-          const isEarned = i < player.maxEnergy;
           return (
             <div
               key={i}
-              className={`w-3 h-3 rounded-full border transition-colors ${
+              className={`w-2 h-2 rounded-full border transition-colors ${
                 isFilled
                   ? 'bg-amber-400 border-amber-300 shadow-sm shadow-amber-400/50'
-                  : isEarned
-                    ? 'bg-amber-900/50 border-amber-600/50'
-                    : 'bg-slate-700/30 border-slate-600/30'
+                  : 'bg-amber-900/40 border-amber-700/40'
               }`}
             />
           );
         })}
       </div>
 
-      {/* Deck count */}
-      <div className="flex items-center gap-1 text-slate-400 text-xs" title="Deck">
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 16 16"
-          fill="none"
-          className="text-slate-400"
-        >
-          <rect x="2" y="1" width="10" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-          <rect x="4" y="3" width="10" height="14" rx="1.5" fill="currentColor" opacity="0.3" />
-        </svg>
-        <span className="tabular-nums">{player.deck.length}</span>
+      {/* Library (deck) — mini card-back stack */}
+      <div className="relative w-10 h-14 mt-1" title={`Deck: ${player.deck.length}`}>
+        {/* Stacked card-back layers */}
+        {player.deck.length > 2 && (
+          <div className="absolute inset-0 translate-x-[2px] translate-y-[-2px] rounded bg-slate-800 border border-slate-700/40" />
+        )}
+        {player.deck.length > 0 && (
+          <div className="absolute inset-0 rounded overflow-hidden bg-slate-900 border border-slate-600/40">
+            <img
+              src="/cardback.png"
+              alt="Deck"
+              className="w-full h-full object-contain p-0.5 opacity-60"
+              draggable={false}
+            />
+          </div>
+        )}
+        {/* Count badge */}
+        <div className="absolute -bottom-1 -right-1 bg-slate-800 border border-slate-600/50 rounded-full w-5 h-5 flex items-center justify-center">
+          <span className="text-white text-[9px] font-bold tabular-nums">{player.deck.length}</span>
+        </div>
       </div>
 
-      {/* Discard count */}
-      <div className="flex items-center gap-1 text-slate-500 text-xs" title="Discard">
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 16 16"
-          fill="none"
-          className="text-slate-500"
-        >
-          <rect x="1" y="3" width="10" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-          <rect x="3" y="1" width="10" height="12" rx="1.5" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-          <rect x="5" y="0" width="10" height="12" rx="1.5" stroke="currentColor" strokeWidth="0.5" opacity="0.2" />
-        </svg>
-        <span className="tabular-nums">{player.discard.length}</span>
-      </div>
+      {/* Discard pile */}
+      {player.discard.length > 0 && (
+        <div className="relative w-10 h-14 mt-0.5" title={`Discard: ${player.discard.length}`}>
+          <div className="absolute inset-0 rounded bg-slate-900/80 border border-slate-600/30" />
+          <div className="absolute -bottom-1 -right-1 bg-slate-800 border border-slate-600/50 rounded-full w-5 h-5 flex items-center justify-center">
+            <span className="text-slate-400 text-[9px] font-bold tabular-nums">{player.discard.length}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

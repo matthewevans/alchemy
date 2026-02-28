@@ -25,7 +25,6 @@ export function PlayerHand() {
       const cardInstance = hand[index];
       const cardDef = CARD_REGISTRY[cardInstance.cardId];
       if (cardDef.type === 'spell' && playableIndices.has(index)) {
-        // Check if any PLAY_CARD action for this index has no targetSlot (spell)
         const spellAction = legalActions.find(
           (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
             a.type === 'PLAY_CARD' && a.cardIndex === index && a.targetSlot === undefined,
@@ -45,18 +44,16 @@ export function PlayerHand() {
   };
 
   const cardCount = hand.length;
-  const maxFanAngle = 15;
+  const maxFanAngle = 12;
   const fanStep = cardCount > 1 ? (maxFanAngle * 2) / (cardCount - 1) : 0;
 
   return (
     <div className="relative flex flex-col items-center">
-      {/* Card count label */}
-      <div className="text-white/40 text-xs mb-1">
-        {cardCount} {cardCount === 1 ? 'card' : 'cards'}
-      </div>
-
-      {/* Fan layout */}
-      <div className="relative flex items-end justify-center" style={{ height: 'var(--card-height)' }}>
+      {/* Fan layout — cards peek from bottom, hover/select lifts them */}
+      <div
+        className="relative flex items-end justify-center"
+        style={{ height: 'calc(var(--card-height) * 0.55)' }}
+      >
         {hand.map((cardInstance, index) => {
           const angle = cardCount > 1 ? -maxFanAngle + fanStep * index : 0;
           const isPlayable = playableIndices.has(index);
@@ -68,8 +65,9 @@ export function PlayerHand() {
               className="transition-transform duration-200"
               style={{
                 transform: `rotate(${angle}deg)`,
-                marginLeft: index === 0 ? 0 : 'calc(var(--card-width) * -0.4)',
+                marginLeft: index === 0 ? 0 : 'calc(var(--card-width) * -0.45)',
                 zIndex: isSelected ? 50 : index,
+                transformOrigin: 'bottom center',
               }}
             >
               <HandCard

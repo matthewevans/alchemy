@@ -16,41 +16,37 @@ export function CombatControls() {
   return (
     <AnimatePresence>
       <motion.div
-        className="flex flex-col items-center gap-2 py-2"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.25 }}
+        className="flex items-center justify-center gap-3 py-1"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
       >
         {phase.step === 'declare_attackers' && isAttacker && (
           <>
-            <p className="text-amber-300 font-bold text-sm">Select creatures to attack</p>
-            <div className="flex gap-3">
-              <motion.button
-                className="px-5 py-2 rounded-xl bg-gradient-to-b from-red-500 to-orange-600 text-white font-bold text-lg shadow-lg shadow-red-500/30 active:scale-95"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer)}
-              >
-                Attack!
-              </motion.button>
-              <motion.button
-                className="px-4 py-2 rounded-xl bg-slate-700 text-white/70 font-medium text-sm hover:bg-slate-600"
-                whileTap={{ scale: 0.95 }}
-                onClick={() => dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer)}
-              >
-                Skip
-              </motion.button>
-            </div>
+            <motion.button
+              className="px-5 py-1.5 rounded-lg bg-gradient-to-b from-red-500 to-orange-600 text-white font-bold text-sm shadow-lg shadow-red-500/30 cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer)}
+            >
+              Attack!
+            </motion.button>
+            <motion.button
+              className="px-3 py-1.5 rounded-lg bg-slate-700 text-white/60 font-medium text-xs cursor-pointer hover:bg-slate-600"
+              whileTap={{ scale: 0.95 }}
+              onClick={() => dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer)}
+            >
+              Skip
+            </motion.button>
           </>
         )}
 
         {phase.step === 'declare_blockers' && isDefender && (
           <>
-            <p className="text-blue-300 font-bold text-sm">Assign blockers to defend!</p>
-            <p className="text-white/50 text-xs">Tap your creature, then tap an attacker to block it</p>
+            <span className="text-blue-300 font-medium text-xs">Assign blockers</span>
             <motion.button
-              className="px-5 py-2 rounded-xl bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold text-base shadow-lg shadow-blue-500/30 active:scale-95"
+              className="px-5 py-1.5 rounded-lg bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/30 cursor-pointer"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => dispatch({ type: 'CONFIRM_BLOCKERS' }, humanPlayer)}
@@ -61,13 +57,13 @@ export function CombatControls() {
         )}
 
         {phase.step === 'resolving' && (
-          <motion.p
-            className="text-orange-300 font-bold text-sm"
+          <motion.span
+            className="text-orange-300 font-bold text-xs"
             animate={{ opacity: [1, 0.5, 1] }}
             transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
           >
             Resolving combat...
-          </motion.p>
+          </motion.span>
         )}
       </motion.div>
     </AnimatePresence>

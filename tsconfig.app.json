@@ -29,6 +29,7 @@
       "@game/*": ["src/game/*"],
       "@components/*": ["src/components/*"],
       "@hooks/*": ["src/hooks/*"],
+      "@storage/*": ["src/storage/*"],
       "@network/*": ["src/network/*"]
     }
   },

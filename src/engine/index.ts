@@ -42,5 +42,6 @@ export type { GameInitConfig } from './gameInit';
 export { chooseAction, runAITurn } from './ai';
 
 // Utilities
-export { createRNG, shuffle } from './prng';
+export { createRNG, restoreRNG, shuffle } from './prng';
+export type { SeededRNG } from './prng';
 export { buildDeck, drawCards, drawOpeningHand, performMulligan, validateDeck } from './deck';

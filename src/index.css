@@ -2,30 +2,30 @@
 
 /* ─── Card Sizing (responsive via CSS custom properties) ─── */
 :root {
-  --card-width: 80px;
-  --card-height: 112px;
-  --card-font-scale: 0.75;
-  --board-card-width: 64px;
-  --board-card-height: 90px;
+  --card-width: 90px;
+  --card-height: 130px;
+  --card-font-scale: 0.8;
+  --board-card-width: 82px;
+  --board-card-height: 115px;
 }
 
 @media (min-width: 768px) {
   :root {
-    --card-width: 96px;
-    --card-height: 134px;
-    --card-font-scale: 0.875;
-    --board-card-width: 80px;
-    --board-card-height: 112px;
+    --card-width: 115px;
+    --card-height: 165px;
+    --card-font-scale: 0.92;
+    --board-card-width: 100px;
+    --board-card-height: 140px;
   }
 }
 
 @media (min-width: 1024px) {
   :root {
-    --card-width: 120px;
-    --card-height: 168px;
-    --card-font-scale: 1;
-    --board-card-width: 96px;
-    --board-card-height: 134px;
+    --card-width: 140px;
+    --card-height: 200px;
+    --card-font-scale: 1.05;
+    --board-card-width: 120px;
+    --board-card-height: 168px;
   }
 }
 

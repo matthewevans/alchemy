@@ -12,6 +12,7 @@ export default defineConfig({
       '@game': path.resolve(__dirname, 'src/game'),
       '@components': path.resolve(__dirname, 'src/components'),
       '@hooks': path.resolve(__dirname, 'src/hooks'),
+      '@storage': path.resolve(__dirname, 'src/storage'),
       '@network': path.resolve(__dirname, 'src/network'),
     },
   },

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { PlayerId } from '@engine/types';
 import { createRNG } from '@engine/prng';
 import { TIER_CONFIGS } from '@engine/ruleset';
@@ -6,11 +6,12 @@ import { ELEMENTS } from '@engine/elements';
 import { getCardsByElement } from '@engine/cards';
 import { useGameStore } from '@game/gameStore';
 import { useGameLoop } from '@hooks/useGameLoop';
-import { TitleScreen, DeckSelector, GameOverScreen, MulliganOverlay } from '@components/ui';
+import { loadGame, clearSavedGame, saveHistoryEntry } from '@storage/persistence';
+import { TitleScreen, DeckSelector, DeckBuilder, GameOverScreen, MulliganOverlay } from '@components/ui';
 import { GameBoard } from '@components/board';
 import './index.css';
 
-type AppScreen = 'title' | 'deck_select' | 'playing' | 'game_over';
+type AppScreen = 'title' | 'deck_select' | 'deck_builder' | 'playing' | 'game_over';
 
 function PlayingScreen({ onGameOver }: { onGameOver: (winner: PlayerId) => void }) {
   useGameLoop();
@@ -36,10 +37,28 @@ function App() {
   const [gameOverWinner, setGameOverWinner] = useState<PlayerId>('player1');
 
   const initGame = useGameStore((s) => s.initGame);
+  const restoreGame = useGameStore((s) => s.restoreGame);
   const resetGame = useGameStore((s) => s.reset);
+  const humanPlayer = useGameStore((s) => s.humanPlayer);
+  const player1DeckIds = useGameStore((s) => s.player1DeckIds);
+  const player2DeckIds = useGameStore((s) => s.player2DeckIds);
+  const turn = useGameStore((s) => s.state?.turn ?? 0);
+
+  // Restore saved game on mount
+  useEffect(() => {
+    const saved = loadGame();
+    if (saved) {
+      restoreGame(saved.gameState, saved.rngState, saved.persisted);
+      setScreen('playing');
+    }
+  }, [restoreGame]);
 
   const handlePlay = useCallback(() => {
     setScreen('deck_select');
+  }, []);
+
+  const handleDeckBuilder = useCallback(() => {
+    setScreen('deck_builder');
   }, []);
 
   const handleSelectDeck = useCallback(
@@ -76,10 +95,24 @@ function App() {
     setScreen('title');
   }, []);
 
-  const handleGameOver = useCallback((winner: PlayerId) => {
-    setGameOverWinner(winner);
-    setScreen('game_over');
-  }, []);
+  const handleGameOver = useCallback(
+    (winner: PlayerId) => {
+      setGameOverWinner(winner);
+      setScreen('game_over');
+
+      clearSavedGame();
+      saveHistoryEntry({
+        id: crypto.randomUUID(),
+        playedAt: Date.now(),
+        outcome: winner === humanPlayer ? 'win' : 'loss',
+        humanPlayer,
+        player1DeckIds,
+        player2DeckIds,
+        turns: turn,
+      });
+    },
+    [humanPlayer, player1DeckIds, player2DeckIds, turn],
+  );
 
   const handlePlayAgain = useCallback(() => {
     resetGame();
@@ -93,9 +126,11 @@ function App() {
 
   switch (screen) {
     case 'title':
-      return <TitleScreen onPlay={handlePlay} />;
+      return <TitleScreen onPlay={handlePlay} onDeckBuilder={handleDeckBuilder} />;
     case 'deck_select':
       return <DeckSelector onSelectDeck={handleSelectDeck} onBack={handleBack} />;
+    case 'deck_builder':
+      return <DeckBuilder onSelectDeck={handleSelectDeck} onBack={handleBack} />;
     case 'playing':
       return <PlayingScreen onGameOver={handleGameOver} />;
     case 'game_over':
