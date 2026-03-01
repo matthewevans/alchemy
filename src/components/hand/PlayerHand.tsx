@@ -151,7 +151,7 @@ export function PlayerHand() {
   }, [handleDrop, selectHandCard]);
 
   const cardCount = hand.length;
-  const maxFanAngle = 12;
+  const maxFanAngle = 6;
   const fanStep = cardCount > 1 ? (maxFanAngle * 2) / (cardCount - 1) : 0;
   const centerIndex = (cardCount - 1) / 2;
 
@@ -181,7 +181,7 @@ export function PlayerHand() {
                 transform: `rotate(${angle}deg)`,
                 marginLeft: index === 0 ? 0 : 'calc(var(--card-width) * -0.45)',
                 zIndex,
-                transformOrigin: 'bottom center',
+                transformOrigin: 'center calc(100% + var(--card-height) * 2)',
                 visibility: isDragged ? 'hidden' : 'visible',
               }}
             >

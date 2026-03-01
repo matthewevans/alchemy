@@ -6,6 +6,7 @@ interface TitleScreenProps {
   onPlay: () => void;
   onMultiplayer: () => void;
   onDeckBuilder: () => void;
+  onResume?: () => void;
 }
 
 interface Particle {
@@ -47,7 +48,7 @@ function MultiPlayerIcon() {
   );
 }
 
-export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScreenProps) {
+export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: TitleScreenProps) {
   const shouldReduceMotion = useReducedMotion();
   const particles = useSparkles(shouldReduceMotion ? 0 : 30);
   const [mounted, setMounted] = useState(false);
@@ -102,18 +103,44 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScree
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
       >
+        {onResume && (
+          <motion.button
+            className={gameButtonClass({
+              tone: 'blue',
+              size: 'lg',
+              className: 'w-64 text-2xl font-bold',
+            })}
+            whileHover={shouldReduceMotion ? undefined : { scale: 1.06 }}
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
+            onClick={onResume}
+            animate={shouldReduceMotion ? undefined : {
+              boxShadow: [
+                '0 0 0 0 rgba(96, 165, 250, 0)',
+                '0 0 12px 2px rgba(96, 165, 250, 0.3)',
+                '0 0 0 0 rgba(96, 165, 250, 0)',
+              ],
+            }}
+            transition={shouldReduceMotion ? undefined : {
+              duration: 2,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+          >
+            Resume Game
+          </motion.button>
+        )}
         <motion.button
           className={gameButtonClass({
             tone: 'emerald',
-            size: 'lg',
-            className: 'w-64 text-2xl font-bold flex items-center justify-center gap-2',
+            size: onResume ? 'md' : 'lg',
+            className: `w-64 ${onResume ? 'text-lg' : 'text-2xl'} font-bold flex items-center justify-center gap-2`,
           })}
           whileHover={shouldReduceMotion ? undefined : { scale: 1.06 }}
           whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
           onClick={onPlay}
         >
           <SinglePlayerIcon />
-          <span>Play</span>
+          <span>{onResume ? 'New Game' : 'Play'}</span>
         </motion.button>
         <motion.button
           className={gameButtonClass({

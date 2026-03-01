@@ -7,6 +7,7 @@ export interface KeywordDefinition {
   tier: Tier;
   icon: string;
   description: string;
+  value?: number;
 }
 
 export const KEYWORD_REGISTRY: Record<Keyword, KeywordDefinition> = {
@@ -23,6 +24,7 @@ export const KEYWORD_REGISTRY: Record<Keyword, KeywordDefinition> = {
     tier: 'apprentice',
     icon: '\uD83D\uDCA5',
     description: 'Hurts all enemies for 1 when played',
+    value: 1,
   },
   heal: {
     name: 'heal',
@@ -30,6 +32,7 @@ export const KEYWORD_REGISTRY: Record<Keyword, KeywordDefinition> = {
     tier: 'apprentice',
     icon: '\u2764\uFE0F',
     description: 'Heals you for 2 when played',
+    value: 2,
   },
   draw: {
     name: 'draw',

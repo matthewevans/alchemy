@@ -71,8 +71,8 @@ export function PhaseStrip() {
               `}
               animate={
                 !shouldReduceMotion && isActive
-                  ? { scale: [1, 1.08, 1], filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.6))' }
-                  : { scale: 1, filter: 'drop-shadow(0 0 0px transparent)' }
+                  ? { scale: [1, 1.08, 1], filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.6)) grayscale(0) brightness(1)' }
+                  : { scale: 1, filter: 'drop-shadow(0 0 0px transparent) grayscale(1) brightness(0.5)' }
               }
               transition={
                 !shouldReduceMotion && isActive

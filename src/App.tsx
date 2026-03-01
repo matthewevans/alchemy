@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { useGameStore } from '@game/gameStore';
 import { loadGame, loadActiveGameId } from '@storage/persistence';
@@ -12,13 +12,16 @@ const didAutoUpdate = consumeRecentAutoUpdateMarker();
 
 function App() {
   const restoreGame = useGameStore((s) => s.restoreGame);
-  const gameId = useGameStore((s) => s.gameId);
   const [showUpdatedLabel, setShowUpdatedLabel] = useState(didAutoUpdate);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const didRestore = useRef(false);
 
-  // On mount, if there's an active game but store is empty, restore + navigate
+  // On cold start only, restore an in-progress game from localStorage
   useEffect(() => {
-    if (gameId) return; // Already loaded
+    if (didRestore.current) return;
+    didRestore.current = true;
+
+    if (useGameStore.getState().gameId) return;
 
     const activeId = loadActiveGameId();
     if (!activeId) return;
@@ -26,10 +29,9 @@ function App() {
     const saved = loadGame(activeId);
     if (saved) {
       restoreGame(saved.gameState, saved.rngState, saved.persisted);
-      // GamePage will pick this up via store and set up controller
       router.navigate(`/game/${activeId}`, { replace: true });
     }
-  }, [restoreGame, gameId]);
+  }, [restoreGame]);
 
   useEffect(() => {
     if (!showUpdatedLabel) return;

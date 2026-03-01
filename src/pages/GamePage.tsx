@@ -32,6 +32,7 @@ export function GamePage() {
   const storeGameId = useGameStore((s) => s.gameId);
   const restoreGame = useGameStore((s) => s.restoreGame);
   const resetGame = useGameStore((s) => s.reset);
+  const suspendGame = useGameStore((s) => s.suspend);
 
   const [phase, setPhase] = useState<GamePhase>('playing');
   const [gameOverWinner, setGameOverWinner] = useState<PlayerId>('player1');
@@ -128,9 +129,13 @@ export function GamePage() {
   const handleMainMenu = useCallback(() => {
     controllerRef.current?.dispose();
     setController(null);
-    resetGame();
+    if (isMultiplayer) {
+      resetGame();
+    } else {
+      suspendGame();
+    }
     navigate('/');
-  }, [resetGame, navigate]);
+  }, [isMultiplayer, resetGame, suspendGame, navigate]);
 
   const handleDisconnectAck = useCallback(() => {
     handleMainMenu();
@@ -152,6 +157,7 @@ export function GamePage() {
       <PlayingScreenInner
         onGameOver={handleGameOver}
         onMainMenu={handleMainMenu}
+        isMultiplayer={isMultiplayer}
         disconnectReason={disconnectReason}
         onDisconnectAck={handleDisconnectAck}
       />
@@ -162,11 +168,13 @@ export function GamePage() {
 function PlayingScreenInner({
   onGameOver,
   onMainMenu,
+  isMultiplayer,
   disconnectReason,
   onDisconnectAck,
 }: {
   onGameOver: (winner: PlayerId) => void;
   onMainMenu: () => void;
+  isMultiplayer: boolean;
   disconnectReason: string | null;
   onDisconnectAck: () => void;
 }) {
@@ -220,7 +228,7 @@ function PlayingScreenInner({
               setShowMenu(false);
               dispatch({ type: 'CONCEDE' }, humanPlayer);
             }}
-            onMainMenu={() => {
+            onMainMenu={isMultiplayer ? undefined : () => {
               setShowMenu(false);
               onMainMenu();
             }}

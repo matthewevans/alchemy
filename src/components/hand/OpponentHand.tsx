@@ -9,7 +9,7 @@ export function OpponentHand() {
 
   if (opponentHandSize === 0) return null;
 
-  const maxFanAngle = 12;
+  const maxFanAngle = 6;
   const fanStep = opponentHandSize > 1 ? (maxFanAngle * 2) / (opponentHandSize - 1) : 0;
 
   return (
@@ -19,14 +19,14 @@ export function OpponentHand() {
         style={{ height: 'calc(var(--card-height) * 0.24)' }}
       >
         {Array.from({ length: opponentHandSize }, (_, index) => {
-          const angle = opponentHandSize > 1 ? -maxFanAngle + fanStep * index : 0;
+          const angle = opponentHandSize > 1 ? maxFanAngle - fanStep * index : 0;
           return (
             <div
               key={index}
               style={{
                 transform: `translateY(calc(var(--card-height) * -0.35)) rotate(${angle}deg)`,
                 marginLeft: index === 0 ? 0 : 'calc(var(--card-width) * -0.68)',
-                transformOrigin: 'bottom center',
+                transformOrigin: 'center calc(0% - var(--card-height) * 2)',
                 zIndex: index,
               }}
             >

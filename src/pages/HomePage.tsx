@@ -6,7 +6,7 @@ import { TIER_CONFIGS } from '@engine/ruleset';
 import { ELEMENTS } from '@engine/elements';
 import { getCardsByElement } from '@engine/cards';
 import { useGameStore } from '@game/gameStore';
-import { clearSavedGame } from '@storage/persistence';
+import { clearSavedGame, loadActiveGameId, loadGame } from '@storage/persistence';
 import type { PeerSession } from '@network/peer';
 import { setPendingSession } from '@network/sessionTransfer';
 import { TitleScreen } from '@components/ui';
@@ -47,9 +47,22 @@ export function HomePage() {
   const navigate = useNavigate();
   const initGame = useGameStore((s) => s.initGame);
 
+  const savedGameId = loadActiveGameId();
+  const hasSavedGame = savedGameId ? loadGame(savedGameId) !== null : false;
+
+  const handleResume = useCallback(() => {
+    if (savedGameId) {
+      navigate(`/game/${savedGameId}`);
+    }
+  }, [savedGameId, navigate]);
+
   const handlePlay = useCallback(() => {
+    // Clear any suspended game before starting a new one
+    if (savedGameId) {
+      clearSavedGame(savedGameId);
+    }
     setSubScreen('deck_select');
-  }, []);
+  }, [savedGameId]);
 
   const handleMultiplayer = useCallback(() => {
     setSubScreen('multiplayer_lobby');
@@ -119,7 +132,7 @@ export function HomePage() {
 
   switch (subScreen) {
     case 'title':
-      return <TitleScreen onPlay={handlePlay} onMultiplayer={handleMultiplayer} onDeckBuilder={handleDeckBuilder} />;
+      return <TitleScreen onPlay={handlePlay} onMultiplayer={handleMultiplayer} onDeckBuilder={handleDeckBuilder} onResume={hasSavedGame ? handleResume : undefined} />;
     case 'deck_select':
       return (
         <Suspense fallback={<HomeLoading label="Loading decks..." />}>

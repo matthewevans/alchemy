@@ -27,6 +27,7 @@ interface GameStore {
   initGame: (config: GameInitConfig, humanPlayer: PlayerId) => string;
   restoreGame: (gameState: GameState, rngState: number, persisted: PersistedGame) => void;
   dispatch: (action: GameAction, actingPlayer: PlayerId) => GameEvent[];
+  suspend: () => void;
   reset: () => void;
 }
 
@@ -100,6 +101,18 @@ export const useGameStore = create<GameStore>()(
       }
 
       return result.events;
+    },
+
+    suspend: () => {
+      set({
+        state: null,
+        events: [],
+        rng: null,
+        gameId: null,
+        player1DeckIds: [],
+        player2DeckIds: [],
+        legalActions: [],
+      });
     },
 
     reset: () => {

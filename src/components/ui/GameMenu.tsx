@@ -6,7 +6,7 @@ import { useDialogA11y } from '@hooks/useDialogA11y';
 interface GameMenuProps {
   onResume: () => void;
   onConcede: () => void;
-  onMainMenu: () => void;
+  onMainMenu?: () => void;
 }
 
 export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
@@ -101,17 +101,19 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
           )}
         </AnimatePresence>
 
-        {/* Main Menu */}
-        <button
-          className={gameButtonClass({
-            tone: 'slate',
-            size: 'md',
-            className: 'w-full font-bold',
-          })}
-          onClick={onMainMenu}
-        >
-          Main Menu
-        </button>
+        {/* Main Menu — hidden during multiplayer */}
+        {onMainMenu && (
+          <button
+            className={gameButtonClass({
+              tone: 'slate',
+              size: 'md',
+              className: 'w-full font-bold',
+            })}
+            onClick={onMainMenu}
+          >
+            Main Menu
+          </button>
+        )}
       </motion.div>
     </motion.div>
   );
