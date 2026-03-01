@@ -1,6 +1,10 @@
 interface CypressWindow extends Window {
-  __gameStore?: { getState: () => { state: { players: Record<string, { board: unknown[] }> } } };
+  __gameStore?: { getState: () => {
+    state: { players: Record<string, { board: unknown[] }> };
+    legalActions: Array<{ type: string; cardIndex?: number; targetSlot?: number }>;
+  }};
   __animationStore?: { getState: () => { isAnimating: boolean } };
+  __uiStore?: { getState: () => { showTurnBanner: boolean } };
 }
 
 // ─── Game Setup ───
@@ -17,12 +21,16 @@ Cypress.Commands.add('keepHand', () => {
 
 Cypress.Commands.add('waitForAnimations', () => {
   cy.window().then((win) => {
-    const store = (win as CypressWindow).__animationStore;
-    if (!store) return;
+    const typedWin = win as CypressWindow;
+    const animStore = typedWin.__animationStore;
+    const uiStore = typedWin.__uiStore;
+    if (!animStore) return;
 
     return new Cypress.Promise((resolve) => {
       const check = () => {
-        if (!store.getState().isAnimating) {
+        const animating = animStore.getState().isAnimating;
+        const banner = uiStore?.getState().showTurnBanner ?? false;
+        if (!animating && !banner) {
           resolve();
         } else {
           setTimeout(check, 50);
@@ -71,8 +79,8 @@ Cypress.Commands.add('assertBoardCount', (player: 'player1' | 'player2', n: numb
   cy.window().then((win) => {
     const store = (win as CypressWindow).__gameStore;
     const state = store!.getState().state;
-    const board = state.players[player].board;
-    expect(board).to.have.length(n);
+    const creatures = state.players[player].board.filter(Boolean);
+    expect(creatures).to.have.length(n);
   });
 });
 

@@ -5,14 +5,16 @@ import App from './App.tsx'
 import { registerServiceWorker } from './pwa/registerServiceWorker'
 import { useGameStore } from '@game/gameStore'
 import { useAnimationStore } from '@game/animationStore'
+import { useUIStore } from '@game/uiStore'
 import { setAIDelay } from '@game/controllers/aiController'
 
 if (import.meta.env.DEV) {
-  Object.assign(window, { __gameStore: useGameStore, __animationStore: useAnimationStore });
+  Object.assign(window, { __gameStore: useGameStore, __animationStore: useAnimationStore, __uiStore: useUIStore });
 
   if ((window as Window & { __CYPRESS?: boolean }).__CYPRESS) {
     useAnimationStore.getState().setSpeedMultiplier(0.05);
     setAIDelay(50);
+    useUIStore.setState({ flashTurnBanner: () => {} });
   }
 }
 
