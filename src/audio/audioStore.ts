@@ -13,7 +13,7 @@ interface AudioState {
   setMusicVolume: (v: number) => void;
 }
 
-function loadPersistedAudio(): { sfxVolume: number; musicVolume: number } {
+export function loadPersistedAudio(): { sfxVolume: number; musicVolume: number } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {

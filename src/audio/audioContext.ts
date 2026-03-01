@@ -2,7 +2,7 @@
 // Module-level singleton — not in Zustand because it's only used imperatively.
 // Follows the same pattern as positionRegistry in animationStore.ts.
 
-const AUDIO_STORAGE_KEY = 'alchemy:audio';
+import { loadPersistedAudio } from './audioStore';
 
 /** Music is mixed quieter than SFX — this scales user 0–1 to the music bus ceiling. */
 const MUSIC_GAIN_CEILING = 0.18;
@@ -11,28 +11,12 @@ let ctx: AudioContext | null = null;
 let sfxGain: GainNode | null = null;
 let musicGain: GainNode | null = null;
 
-function loadPersistedVolumes(): { sfxVolume: number; musicVolume: number } {
-  try {
-    const raw = localStorage.getItem(AUDIO_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return {
-        sfxVolume: typeof parsed.sfxVolume === 'number' ? parsed.sfxVolume : 0.7,
-        musicVolume: typeof parsed.musicVolume === 'number' ? parsed.musicVolume : 0.3,
-      };
-    }
-  } catch {
-    // corrupt data — fall through
-  }
-  return { sfxVolume: 0.7, musicVolume: 0.3 };
-}
-
 function ensureContext(): AudioContext {
   if (!ctx) {
     ctx = new AudioContext();
 
     // Apply persisted volumes immediately so the first sound uses correct levels
-    const { sfxVolume, musicVolume } = loadPersistedVolumes();
+    const { sfxVolume, musicVolume } = loadPersistedAudio();
 
     sfxGain = ctx.createGain();
     sfxGain.gain.value = sfxVolume;

@@ -27,6 +27,7 @@ export function startAmbientMusic(): void {
   let chordIndex = 0;
   let currentOscillators: OscillatorNode[] = [];
   let currentChordGain: GainNode | null = null;
+  let crossfadeTimeout: ReturnType<typeof setTimeout> | null = null;
 
   function buildChord(freqs: number[]): { oscillators: OscillatorNode[]; gain: GainNode } {
     const chordGain = ctx.createGain();
@@ -58,7 +59,8 @@ export function startAmbientMusic(): void {
       const oldGain = currentChordGain;
       const oldOscs = currentOscillators;
       oldGain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 2);
-      setTimeout(() => {
+      crossfadeTimeout = setTimeout(() => {
+        crossfadeTimeout = null;
         oldOscs.forEach((o) => { try { o.stop(); } catch { /* already stopped */ } });
         oldGain.disconnect();
       }, 2500);
@@ -100,6 +102,7 @@ export function startAmbientMusic(): void {
 
   cleanupFn = () => {
     clearInterval(chordInterval);
+    if (crossfadeTimeout) clearTimeout(crossfadeTimeout);
     allNodes.forEach((node) => {
       try {
         if ('stop' in node && typeof node.stop === 'function') {
