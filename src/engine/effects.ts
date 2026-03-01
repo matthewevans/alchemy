@@ -123,4 +123,53 @@ export const EFFECT_REGISTRY: Record<string, EffectDefinition> = {
     steps: [{ type: 'destroy', target: 'selected' }],
     targetingType: { kind: 'creature', controller: 'any' },
   },
+
+  // ─── Angel/Priest Effects ───
+  soothe: {
+    id: 'soothe',
+    name: 'Soothe',
+    description: 'Restore 3 health to your hero',
+    steps: [{ type: 'heal', amount: 3, target: 'self' }],
+  },
+  blessing: {
+    id: 'blessing',
+    name: 'Blessing',
+    description: 'Give a creature +1/+3 until end of turn',
+    steps: [{ type: 'buff', attack: 1, health: 3, target: 'selected', duration: 'end_of_turn' }],
+    targetingType: { kind: 'creature', controller: 'own' },
+  },
+  radiance: {
+    id: 'radiance',
+    name: 'Radiance',
+    description: 'Restore 5 health and draw a card',
+    steps: [
+      { type: 'heal', amount: 5, target: 'self' },
+      { type: 'draw', amount: 1 },
+    ],
+  },
+
+  // ─── Dinosaur Effects ───
+  primal_roar: {
+    id: 'primal_roar',
+    name: 'Primal Roar',
+    description: 'Give a creature +2/+1 until end of turn',
+    steps: [{ type: 'buff', attack: 2, health: 1, target: 'selected', duration: 'end_of_turn' }],
+    targetingType: { kind: 'creature', controller: 'own' },
+  },
+  tar_pit: {
+    id: 'tar_pit',
+    name: 'Tar Pit',
+    description: 'Deal 1 damage to a creature and prevent its attack',
+    steps: [
+      { type: 'damage', amount: 1, target: 'selected' },
+      { type: 'prevent_attack', target: 'selected' },
+    ],
+    targetingType: { kind: 'creature', controller: 'opponent' },
+  },
+  meteor_strike: {
+    id: 'meteor_strike',
+    name: 'Meteor Strike',
+    description: 'Deal 3 damage to all enemy creatures',
+    steps: [{ type: 'damage', amount: 3, target: 'all_enemy_creatures' }],
+  },
 };

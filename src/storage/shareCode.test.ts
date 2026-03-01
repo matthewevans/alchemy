@@ -35,10 +35,11 @@ describe('shareCode', () => {
     expect(result!.cardIds.sort()).toEqual([...cardIds].sort());
   });
 
-  it('produces a compact string (~19 chars)', () => {
+  it('produces a compact string (~26 chars)', () => {
     const cardIds = ALL_CARDS.slice(0, 10).map((c) => c.id);
     const code = encodeDeck(cardIds, 'apprentice');
-    expect(code.length).toBeLessThanOrEqual(25);
+    // 70 cards × 2 bits = 18 data bytes + 1 header = 19 bytes → ~26 base64 chars
+    expect(code.length).toBeLessThanOrEqual(30);
   });
 
   it('returns null for invalid codes', () => {

@@ -72,8 +72,9 @@ function buildAlliedDecks(): DeckConfig[] {
   return ALLIED_PAIRS.map(([first, second]) => ({
     id: `${first}_${second}`,
     cardIds: [
-      ...getCardsByElement(first).map((card) => card.id),
-      ...getCardsByElement(second).map((card) => card.id),
+      // Use the first 10 cards per element (original set) for balanced allied decks
+      ...getCardsByElement(first).slice(0, 10).map((card) => card.id),
+      ...getCardsByElement(second).slice(0, 10).map((card) => card.id),
     ],
   }));
 }

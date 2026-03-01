@@ -15,6 +15,19 @@ export type Keyword =
 
 // ─── Cards ───
 
+export type CreatureType =
+  | 'angel'
+  | 'beast'
+  | 'dinosaur'
+  | 'dragon'
+  | 'elemental'
+  | 'fairy'
+  | 'giant'
+  | 'golem'
+  | 'human'
+  | 'plant'
+  | 'undead';
+
 export interface CardDefinition {
   id: string;
   name: string;
@@ -23,6 +36,7 @@ export interface CardDefinition {
   cost: number;
   attack?: number;
   health?: number;
+  creatureType?: CreatureType;
   keywords: Keyword[];
   tier: Tier;
   effectId?: string;

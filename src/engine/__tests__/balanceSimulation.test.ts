@@ -36,7 +36,8 @@ interface BalanceSummary {
 }
 
 function buildMonoDeck(element: Element): string[] {
-  return getCardsByElement(element).flatMap((card) => [card.id, card.id]);
+  // Use the first 10 cards per element (original set) for balanced mono decks
+  return getCardsByElement(element).slice(0, 10).flatMap((card) => [card.id, card.id]);
 }
 
 function getActingPlayer(state: GameState): PlayerId {

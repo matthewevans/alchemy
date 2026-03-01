@@ -1,31 +1,36 @@
 import { describe, it, expect } from 'vitest';
-import { ALL_CARDS, CARD_REGISTRY, getCardsByElement, getCardsByTier } from '../cards';
+import { ALL_CARDS, CARD_REGISTRY, getCardsByElement, getCardsByTier, getCardsByCreatureType } from '../cards';
 import { EFFECT_REGISTRY } from '../effects';
-import type { Element } from '../types';
+import type { CreatureType, Element } from '../types';
 
 const ELEMENTS: Element[] = ['fire', 'water', 'earth', 'air', 'shadow'];
 
 const FUTURE_EFFECT_IDS = ['ghost_knight_etb', 'shadow_dragon_etb'];
 
 describe('ALL_CARDS', () => {
-  it('has exactly 50 cards', () => {
-    expect(ALL_CARDS).toHaveLength(50);
+  it('has exactly 70 cards', () => {
+    expect(ALL_CARDS).toHaveLength(70);
   });
 
-  it('each element has exactly 10 cards', () => {
+  it('each element has the expected number of cards', () => {
+    const expectedCounts: Record<Element, number> = {
+      fire: 10, water: 10, earth: 20, air: 20, shadow: 10,
+    };
     for (const element of ELEMENTS) {
       const cards = ALL_CARDS.filter((c) => c.element === element);
-      expect(cards).toHaveLength(10);
+      expect(cards).toHaveLength(expectedCounts[element]);
     }
   });
 
-  it('each element has 7 creatures and 3 spells', () => {
+  it('each element has correct creature and spell ratio (7:3 per set of 10)', () => {
     for (const element of ELEMENTS) {
       const cards = ALL_CARDS.filter((c) => c.element === element);
       const creatures = cards.filter((c) => c.type === 'creature');
       const spells = cards.filter((c) => c.type === 'spell');
-      expect(creatures).toHaveLength(7);
-      expect(spells).toHaveLength(3);
+      // Each set of 10 has 7 creatures and 3 spells
+      expect(creatures.length % 7).toBe(0);
+      expect(spells.length % 3).toBe(0);
+      expect(creatures.length / 7).toBe(spells.length / 3);
     }
   });
 
@@ -62,6 +67,20 @@ describe('ALL_CARDS', () => {
     }
   });
 
+  it('all creatures have a creatureType', () => {
+    const creatures = ALL_CARDS.filter((c) => c.type === 'creature');
+    for (const creature of creatures) {
+      expect(creature.creatureType).toBeDefined();
+    }
+  });
+
+  it('spells have no creatureType', () => {
+    const spells = ALL_CARDS.filter((c) => c.type === 'spell');
+    for (const spell of spells) {
+      expect(spell.creatureType).toBeUndefined();
+    }
+  });
+
   it('cards with effectId have matching entries in EFFECT_REGISTRY (excluding future ETBs)', () => {
     const cardsWithEffects = ALL_CARDS.filter(
       (c) => c.effectId && !FUTURE_EFFECT_IDS.includes(c.effectId),
@@ -93,8 +112,11 @@ describe('CARD_REGISTRY', () => {
 
 describe('getCardsByElement', () => {
   it('returns correct count per element', () => {
+    const expectedCounts: Record<Element, number> = {
+      fire: 10, water: 10, earth: 20, air: 20, shadow: 10,
+    };
     for (const element of ELEMENTS) {
-      expect(getCardsByElement(element)).toHaveLength(10);
+      expect(getCardsByElement(element)).toHaveLength(expectedCounts[element]);
     }
   });
 
@@ -108,9 +130,28 @@ describe('getCardsByElement', () => {
   });
 });
 
+describe('getCardsByCreatureType', () => {
+  it('returns correct tribal counts', () => {
+    const expectedCounts: Partial<Record<CreatureType, number>> = {
+      angel: 3, dinosaur: 7, dragon: 3, beast: 18, elemental: 5,
+      fairy: 1, giant: 1, golem: 1, human: 4, plant: 3, undead: 3,
+    };
+    for (const [type, count] of Object.entries(expectedCounts)) {
+      expect(getCardsByCreatureType(type as CreatureType)).toHaveLength(count);
+    }
+  });
+
+  it('returns only creatures of the requested type', () => {
+    const angels = getCardsByCreatureType('angel');
+    for (const card of angels) {
+      expect(card.creatureType).toBe('angel');
+    }
+  });
+});
+
 describe('getCardsByTier', () => {
-  it('returns all 50 cards for apprentice', () => {
-    expect(getCardsByTier('apprentice')).toHaveLength(50);
+  it('returns all 70 cards for apprentice', () => {
+    expect(getCardsByTier('apprentice')).toHaveLength(70);
   });
 
   it('returns 0 cards for alchemist and archmage (no cards yet)', () => {

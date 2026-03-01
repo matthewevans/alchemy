@@ -5,21 +5,27 @@ const ALL_EFFECT_IDS = [
   'fireball', 'eruption', 'blazing_speed', 'splash', 'tidal_wave',
   'healing_rain', 'entangle', 'earthquake', 'growth', 'gust',
   'lightning_bolt', 'tailwind', 'dark_bolt', 'life_drain', 'doom',
+  // Angel/Priest effects
+  'soothe', 'blessing', 'radiance',
+  // Dinosaur effects
+  'primal_roar', 'tar_pit', 'meteor_strike',
 ];
 
 const TARGETED_EFFECTS = [
   'fireball', 'blazing_speed', 'entangle', 'growth', 'gust',
   'lightning_bolt', 'dark_bolt', 'doom',
+  'blessing', 'primal_roar', 'tar_pit',
 ];
 
 const UNTARGETED_EFFECTS = [
   'eruption', 'splash', 'tidal_wave', 'healing_rain',
   'earthquake', 'tailwind', 'life_drain',
+  'soothe', 'radiance', 'meteor_strike',
 ];
 
 describe('EFFECT_REGISTRY', () => {
-  it('registers all 15 effects', () => {
-    expect(Object.keys(EFFECT_REGISTRY)).toHaveLength(15);
+  it('registers all 21 effects', () => {
+    expect(Object.keys(EFFECT_REGISTRY)).toHaveLength(21);
     for (const id of ALL_EFFECT_IDS) {
       expect(EFFECT_REGISTRY[id]).toBeDefined();
     }
@@ -52,6 +58,8 @@ describe('EFFECT_REGISTRY', () => {
   it('multi-step effects have correct step count', () => {
     expect(EFFECT_REGISTRY.dark_bolt.steps).toHaveLength(2);
     expect(EFFECT_REGISTRY.life_drain.steps).toHaveLength(2);
+    expect(EFFECT_REGISTRY.radiance.steps).toHaveLength(2);
+    expect(EFFECT_REGISTRY.tar_pit.steps).toHaveLength(2);
   });
 
   it('every effect has a non-empty description', () => {
