@@ -56,13 +56,14 @@ export type Phase =
   | { type: 'mulligan'; player: PlayerId }
   | { type: 'draw' }
   | { type: 'energy' }
-  | { type: 'play' }
+  | { type: 'play'; postCombat?: boolean }
   | {
       type: 'targeting';
       effectId: string;
       casterId: PlayerId;
       sourceCardId: string;
       validTargets: TargetRef[];
+      postCombat?: boolean;
     }
   | {
       type: 'battle';

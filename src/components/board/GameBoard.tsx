@@ -242,7 +242,7 @@ export function GameBoard() {
       <AnimatePresence>
         {showHints && (
           <motion.div
-            className="fixed left-2 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-20 max-w-xs rounded-xl border border-white/20 bg-slate-900/88 p-3 shadow-xl shadow-black/30 backdrop-blur-sm"
+            className="fixed left-2 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-[45] max-w-xs rounded-xl border border-white/20 bg-slate-900/88 p-3 shadow-xl shadow-black/30 backdrop-blur-sm"
             initial={{ opacity: 0, x: -20, scale: 0.95 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: -20, scale: 0.95 }}

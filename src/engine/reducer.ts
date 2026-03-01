@@ -274,6 +274,13 @@ function advanceFromEnergy(state: GameState): ReducerResult {
 }
 
 function advanceFromPlay(state: GameState): ReducerResult {
+  const phase = state.phase as Extract<Phase, { type: 'play' }>;
+
+  // Post-combat main phase → end-of-turn processing
+  if (phase.postCombat) {
+    return performEndOfTurnProcessing(state);
+  }
+
   return {
     newState: {
       ...state,
@@ -414,12 +421,14 @@ function handlePlayCard(
       actingPlayer,
       cardDef.targetingType,
     );
+    const playPhase = state.phase as Extract<Phase, { type: 'play' }>;
     const newPhase: Phase = {
       type: 'targeting',
       effectId: cardDef.effectId!,
       casterId: actingPlayer,
       sourceCardId: cardInstance.cardId,
       validTargets,
+      postCombat: playPhase.postCombat,
     };
     return {
       newState: { ...state, players, phase: newPhase },
@@ -489,7 +498,7 @@ function handleSelectTarget(
   });
 
   return {
-    newState: { ...newState, players, phase: { type: 'play' } },
+    newState: { ...newState, players, phase: { type: 'play', postCombat: phase.postCombat } },
     events,
   };
 }
@@ -505,7 +514,7 @@ function handleCancelTargeting(state: GameState): ReducerResult {
   casterPs.currentEnergy += cardDef.cost;
 
   return {
-    newState: { ...state, players, phase: { type: 'play' } },
+    newState: { ...state, players, phase: { type: 'play', postCombat: phase.postCombat } },
     events: [],
   };
 }
@@ -1102,9 +1111,12 @@ function handleUndeclareAttacker(
 function handleConfirmAttackers(state: GameState): ReducerResult {
   const phase = state.phase as Extract<Phase, { type: 'battle'; step: 'declare_attackers' }>;
 
-  // No attackers — skip combat, go to end-of-turn processing
+  // No attackers — skip combat, go to post-combat main phase
   if (phase.tentativeAttackers.length === 0) {
-    return performEndOfTurnProcessing(state);
+    return {
+      newState: { ...state, phase: { type: 'play', postCombat: true } },
+      events: [],
+    };
   }
 
   const events: GameEvent[] = [];
@@ -1128,10 +1140,31 @@ function handleConfirmAttackers(state: GameState): ReducerResult {
     attackerIds: phase.tentativeAttackers,
   });
 
+  const tappedState: GameState = { ...state, players };
+
+  // Skip blockers if defender has no untapped creatures
+  const defender = getOpponent(state.activePlayer);
+  const defenderBoard = players[defender].board;
+  const hasEligibleBlockers = defenderBoard.some((p) => p !== null && !p.isTapped);
+
+  if (!hasEligibleBlockers) {
+    // Resolve combat immediately with no blockers
+    const combatResult = resolveCombat(tappedState, phase.tentativeAttackers, {});
+    events.push(...combatResult.events);
+
+    if (combatResult.newState.phase.type === 'game_over') {
+      return { newState: combatResult.newState, events };
+    }
+
+    return {
+      newState: { ...combatResult.newState, phase: { type: 'play', postCombat: true } },
+      events,
+    };
+  }
+
   return {
     newState: {
-      ...state,
-      players,
+      ...tappedState,
       phase: {
         type: 'battle',
         step: 'declare_blockers',
@@ -1203,11 +1236,11 @@ function handleConfirmBlockers(state: GameState, _rng: RNG): ReducerResult {
     return { newState: combatResult.newState, events };
   }
 
-  // End-of-turn processing after combat
-  const endResult = performEndOfTurnProcessing(combatResult.newState);
-  events.push(...endResult.events);
-
-  return { newState: endResult.newState, events };
+  // Post-combat main phase — player can play more cards
+  return {
+    newState: { ...combatResult.newState, phase: { type: 'play', postCombat: true } },
+    events,
+  };
 }
 
 // ─── Combat Resolution ───

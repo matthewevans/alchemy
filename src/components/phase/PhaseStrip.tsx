@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
-import type { GameAction } from '@engine/types';
+import type { GameAction, Phase } from '@engine/types';
 import { gameButtonClass } from '@components/ui/buttonStyles';
 
 const PHASES = [
@@ -10,7 +10,7 @@ const PHASES = [
   { key: 'energy', label: 'Energy', icon: '⚡' },
   { key: 'play', label: 'Play', icon: '🃏' },
   { key: 'battle', label: 'Battle', icon: '⚔️' },
-  { key: 'end', label: 'End', icon: '🏁' },
+  { key: 'play2', label: 'Play', icon: '🃏' },
 ] as const;
 
 const PHASE_ORDER: Record<string, number> = {
@@ -19,14 +19,22 @@ const PHASE_ORDER: Record<string, number> = {
   play: 2,
   targeting: 2, // targeting is sub-phase of play
   battle: 3,
-  end: 4,
+  play2: 4,
+  end: 5, // auto-advances, not shown in strip
 };
 
-function getAdvanceAction(phaseType: string): { action: GameAction; label: string } | null {
-  switch (phaseType) {
+/** Map raw phase to a display key that accounts for post-combat play. */
+function getDisplayPhaseKey(phase: Phase): string {
+  if (phase.type === 'play' && phase.postCombat) return 'play2';
+  if (phase.type === 'targeting' && phase.postCombat) return 'play2';
+  return phase.type;
+}
+
+function getAdvanceAction(displayKey: string): { action: GameAction; label: string } | null {
+  switch (displayKey) {
     case 'play':
       return { action: { type: 'ADVANCE_PHASE' }, label: 'Battle!' };
-    case 'end':
+    case 'play2':
       return { action: { type: 'ADVANCE_PHASE' }, label: 'End Turn' };
     default:
       return null;
@@ -57,10 +65,10 @@ export function PhaseStrip() {
 
   if (!phase) return null;
 
-  const currentPhaseType = phase.type;
-  const currentOrder = PHASE_ORDER[currentPhaseType] ?? -1;
+  const displayKey = getDisplayPhaseKey(phase);
+  const currentOrder = PHASE_ORDER[displayKey] ?? -1;
   const canAdvance = legalActions.some((a) => a.type === 'ADVANCE_PHASE');
-  const advanceInfo = getAdvanceAction(currentPhaseType);
+  const advanceInfo = getAdvanceAction(displayKey);
 
   return (
     <div
@@ -75,7 +83,7 @@ export function PhaseStrip() {
       <div className="flex items-center gap-0.5 pointer-events-none relative">
         {PHASES.map((p) => {
           const order = PHASE_ORDER[p.key];
-          const isActive = p.key === currentPhaseType || (currentPhaseType === 'targeting' && p.key === 'play');
+          const isActive = p.key === displayKey;
           const isCompleted = order < currentOrder;
 
           return (
@@ -144,9 +152,9 @@ export function PhaseStrip() {
         <motion.button
           className={gameButtonClass({
             tone:
-              currentPhaseType === 'play'
+              displayKey === 'play'
                 ? 'red'
-                : currentPhaseType === 'end'
+                : displayKey === 'play2'
                   ? 'indigo'
                   : 'slate',
             size: 'sm',

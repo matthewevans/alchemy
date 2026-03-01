@@ -103,7 +103,7 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
         className="relative"
         style={{
           '--card-width': '210px',
-          '--card-height': '300px',
+          '--card-height': '370px',
           '--card-font-scale': '1.5',
           filter: `drop-shadow(0 0 30px ${elementColor}55) drop-shadow(0 8px 24px rgba(0,0,0,0.5))`,
         } as React.CSSProperties}

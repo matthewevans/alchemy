@@ -128,7 +128,7 @@ describe('auto-advance: battle phase with no attackers', () => {
 });
 
 describe('auto-advance: confirm attackers with 0 attackers skips combat', () => {
-  it('confirming with 0 attackers goes directly to end-of-turn', () => {
+  it('confirming with 0 attackers goes to post-combat play', () => {
     const rng = createRNG(42);
     const state = createTestGameState({
       phase: { type: 'battle', step: 'declare_attackers', tentativeAttackers: [] },
@@ -138,8 +138,7 @@ describe('auto-advance: confirm attackers with 0 attackers skips combat', () => 
     });
 
     const result = reduce(state, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
-    // Should skip to end phase (or directly to opponent's turn if no discard needed)
-    expect(result.newState.phase.type).toBe('end');
+    expect(result.newState.phase).toEqual({ type: 'play', postCombat: true });
   });
 });
 

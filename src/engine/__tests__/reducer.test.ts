@@ -664,7 +664,8 @@ describe('SELECT_TARGET', () => {
     expect(afterEntangle.players.player2.board[0]?.cantAttackThisTurn).toBe(true);
 
     const { newState: p1Battle } = reduce(afterEntangle, { type: 'ADVANCE_PHASE' }, 'player1', rng);
-    const { newState: p1End } = reduce(p1Battle, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
+    const { newState: p1PostCombat } = reduce(p1Battle, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
+    const { newState: p1End } = reduce(p1PostCombat, { type: 'ADVANCE_PHASE' }, 'player1', rng);
     const { newState: p2Draw } = reduce(p1End, { type: 'ADVANCE_PHASE' }, 'player1', rng);
     const { newState: p2Energy } = reduce(p2Draw, { type: 'ADVANCE_PHASE' }, 'player2', rng);
     const { newState: p2Play } = reduce(p2Energy, { type: 'ADVANCE_PHASE' }, 'player2', rng);
@@ -677,7 +678,8 @@ describe('SELECT_TARGET', () => {
       rng,
     )).toThrow();
 
-    const { newState: p2End } = reduce(p2Battle, { type: 'CONFIRM_ATTACKERS' }, 'player2', rng);
+    const { newState: p2PostCombat } = reduce(p2Battle, { type: 'CONFIRM_ATTACKERS' }, 'player2', rng);
+    const { newState: p2End } = reduce(p2PostCombat, { type: 'ADVANCE_PHASE' }, 'player2', rng);
     const { newState: nextTurn } = reduce(p2End, { type: 'ADVANCE_PHASE' }, 'player2', rng);
     expect(nextTurn.players.player2.board[0]?.cantAttackThisTurn).toBe(false);
   });
@@ -773,14 +775,14 @@ describe('CONFIRM_ATTACKERS with no attackers', () => {
 
     const { newState } = reduce(state, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
 
-    expect(newState.phase.type).toBe('end');
+    expect(newState.phase).toEqual({ type: 'play', postCombat: true });
   });
 });
 
 // ─── Combat: Unblocked ───
 
 describe('Combat - unblocked attacker', () => {
-  it('damages defending player', () => {
+  it('damages defending player when no blockers available (auto-skips blockers)', () => {
     const attacker = makePermanent('fire_lava_hound', 'player1', {
       attack: 2,
       health: 3,
@@ -798,14 +800,49 @@ describe('Combat - unblocked attacker', () => {
       player2: { health: 20 },
     });
 
-    // Confirm attackers
+    // Confirm attackers — blockers auto-skipped (no defender creatures)
+    const { newState, events } = reduce(state, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
+
+    expect(newState.players.player2.health).toBe(18); // 20 - 2
+    expect(newState.phase).toEqual({ type: 'play', postCombat: true });
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'PLAYER_DAMAGED',
+      player: 'player2',
+      amount: 2,
+    }));
+  });
+
+  it('damages defending player when blockers decline to block', () => {
+    const attacker = makePermanent('fire_lava_hound', 'player1', {
+      attack: 2,
+      health: 3,
+    });
+    const defender = makePermanent('water_tidal_sprite', 'player2', {
+      attack: 1,
+      health: 2,
+    });
+
+    const state = createTestGameState({
+      phase: {
+        type: 'battle',
+        step: 'declare_attackers',
+        tentativeAttackers: [attacker.permanentId],
+      },
+      player1: {
+        board: [attacker, null, null, null, null],
+      },
+      player2: { health: 20, board: [defender, null, null, null, null] },
+    });
+
+    // Confirm attackers — goes to declare_blockers since defender has creatures
     const { newState: s1 } = reduce(state, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
     expect(s1.phase.type).toBe('battle');
 
-    // Confirm blockers (none)
+    // Confirm blockers (none assigned)
     const { newState: s2, events } = reduce(s1, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
 
     expect(s2.players.player2.health).toBe(18); // 20 - 2
+    expect(s2.phase).toEqual({ type: 'play', postCombat: true });
     expect(events).toContainEqual(expect.objectContaining({
       type: 'PLAYER_DAMAGED',
       player: 'player2',
@@ -1241,8 +1278,12 @@ describe('End-of-turn with hand overflow', () => {
       ruleset: { maxHandSize: 7 },
     });
 
-    const { newState } = reduce(state, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
+    // No attackers → post-combat play phase
+    const { newState: postCombat } = reduce(state, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
+    expect(postCombat.phase).toEqual({ type: 'play', postCombat: true });
 
+    // Advance from post-combat play → triggers discard check
+    const { newState } = reduce(postCombat, { type: 'ADVANCE_PHASE' }, 'player1', rng);
     expect(newState.phase).toEqual({
       type: 'discard',
       player: 'player1',

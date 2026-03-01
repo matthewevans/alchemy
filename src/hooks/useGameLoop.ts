@@ -47,15 +47,15 @@ export function useGameLoop() {
         return;
       }
 
-      // Human auto-advance: draw and energy phases always auto-advance
+      // Human auto-advance: draw, energy, and end phases always auto-advance
       if (state.activePlayer === humanPlayer) {
-        if (state.phase.type === 'draw' || state.phase.type === 'energy') {
+        if (state.phase.type === 'draw' || state.phase.type === 'energy' || state.phase.type === 'end') {
           autoAdvanceTimeoutRef.current = setTimeout(() => {
             const fresh = useGameStore.getState();
             if (!fresh.state) return;
             if (
               fresh.state.activePlayer === humanPlayer &&
-              (fresh.state.phase.type === 'draw' || fresh.state.phase.type === 'energy')
+              (fresh.state.phase.type === 'draw' || fresh.state.phase.type === 'energy' || fresh.state.phase.type === 'end')
             ) {
               dispatch({ type: 'ADVANCE_PHASE' }, humanPlayer);
               tick();
@@ -65,13 +65,12 @@ export function useGameLoop() {
         }
 
         // Auto-advance when the player has no meaningful choices
-        // (only ADVANCE_PHASE and CONCEDE available) — EXCEPT "end" phase
-        // which needs an explicit "End Turn" click
-        if (state.phase.type !== 'end' && shouldAutoAdvance(state, legalActions, humanPlayer)) {
+        // (only ADVANCE_PHASE and CONCEDE available)
+        if (shouldAutoAdvance(state, legalActions, humanPlayer)) {
           autoAdvanceTimeoutRef.current = setTimeout(() => {
             const fresh = useGameStore.getState();
             if (!fresh.state) return;
-            if (fresh.state.phase.type === 'end' || fresh.state.phase.type === 'game_over') return;
+            if (fresh.state.phase.type === 'game_over') return;
             if (shouldAutoAdvance(fresh.state, fresh.legalActions, humanPlayer)) {
               dispatch({ type: 'ADVANCE_PHASE' }, humanPlayer);
               tick();
