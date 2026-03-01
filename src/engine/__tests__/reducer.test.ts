@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { reduce } from '../reducer';
+import { enumerateLegalActions } from '../validation';
 import { createTestGameState, makeCardInstance, makePermanent, resetTestCounters } from './__fixtures__/testHelpers';
 import { createRNG } from '../prng';
 import type { Phase, RNG } from '../types';
@@ -984,6 +985,99 @@ describe('Combat - blocked attacker', () => {
     const { newState: s4 } = reduce(s3, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
 
     expect(s4.players.player2.health).toBe(18);
+  });
+});
+
+// ─── Combat: Double Block (two blockers on two different attackers) ───
+
+describe('Combat - double block', () => {
+  it('two blockers can be assigned to two different attackers', () => {
+    const attacker1 = makePermanent('fire_magma_golem', 'player1', {
+      attack: 3,
+      health: 4,
+    });
+    const attacker2 = makePermanent('fire_flame_fox', 'player1', {
+      attack: 1,
+      health: 1,
+    });
+    const blocker1 = makePermanent('earth_treant_sapling', 'player2', {
+      attack: 2,
+      health: 5,
+    });
+    const blocker2 = makePermanent('earth_pebble_pup', 'player2', {
+      attack: 1,
+      health: 1,
+    });
+
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_attackers',
+        tentativeAttackers: [attacker1.permanentId, attacker2.permanentId],
+      },
+      player1: {
+        board: [attacker1, attacker2, null, null, null],
+      },
+      player2: {
+        board: [blocker1, blocker2, null, null, null],
+        health: 20,
+      },
+    });
+
+    // Confirm attackers → goes to declare_blockers
+    const { newState: s1 } = reduce(state, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
+    expect(s1.phase.type).toBe('battle');
+    expect((s1.phase as { step: string }).step).toBe('declare_blockers');
+
+    // Assign first blocker (treant → magma golem)
+    const { newState: s2 } = reduce(
+      s1,
+      {
+        type: 'ASSIGN_BLOCKER',
+        blockerPermanentId: blocker1.permanentId,
+        attackerPermanentId: attacker1.permanentId,
+      },
+      'player2',
+      rng,
+    );
+
+    // Verify first block is in tentativeBlockers
+    const phase2 = s2.phase as { tentativeBlockers: Record<string, string> };
+    expect(phase2.tentativeBlockers[blocker1.permanentId]).toBe(attacker1.permanentId);
+
+    // Enumerate legal actions — should still include ASSIGN_BLOCKER for blocker2
+    const legalAfterBlock1 = enumerateLegalActions(s2, 'player2');
+    const assignActions = legalAfterBlock1.filter(
+      (a) => a.type === 'ASSIGN_BLOCKER',
+    );
+    expect(assignActions.length).toBeGreaterThan(0);
+    expect(assignActions).toContainEqual({
+      type: 'ASSIGN_BLOCKER',
+      blockerPermanentId: blocker2.permanentId,
+      attackerPermanentId: attacker2.permanentId,
+    });
+
+    // Assign second blocker (pebble pup → flame fox)
+    const { newState: s3 } = reduce(
+      s2,
+      {
+        type: 'ASSIGN_BLOCKER',
+        blockerPermanentId: blocker2.permanentId,
+        attackerPermanentId: attacker2.permanentId,
+      },
+      'player2',
+      rng,
+    );
+
+    // Verify both blocks are in tentativeBlockers
+    const phase3 = s3.phase as { tentativeBlockers: Record<string, string> };
+    expect(phase3.tentativeBlockers[blocker1.permanentId]).toBe(attacker1.permanentId);
+    expect(phase3.tentativeBlockers[blocker2.permanentId]).toBe(attacker2.permanentId);
+
+    // Confirm blockers — combat resolves with no face damage
+    const { newState: s4 } = reduce(s3, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+    expect(s4.players.player2.health).toBe(20); // No face damage — both attackers blocked
   });
 });
 
