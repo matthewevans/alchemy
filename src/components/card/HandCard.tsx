@@ -53,6 +53,7 @@ export function HandCard({
         width: 'var(--card-width)',
         height: 'var(--card-height)',
         fontSize: 'calc(var(--card-font-scale) * 1rem)',
+        touchAction: 'none',
       }}
       animate={{
         y: isSelected ? -20 : 0,
