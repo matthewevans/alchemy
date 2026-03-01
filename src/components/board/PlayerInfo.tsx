@@ -191,7 +191,7 @@ export function PlayerInfo({
       {heroNode}
 
       {/* Health */}
-      <div ref={healthRef} className="flex items-center gap-1.5">
+      <div ref={healthRef} data-testid={`health-${playerId}`} className="flex items-center gap-1.5">
         <span className="text-red-400 text-base leading-none">♥</span>
         <motion.span
           className="text-white font-black text-xl tabular-nums leading-none"

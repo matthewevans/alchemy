@@ -144,6 +144,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
           </motion.button>
         )}
         <motion.button
+          data-testid="play-btn"
           className={gameButtonClass({
             tone: 'emerald',
             size: onResume ? 'md' : 'lg',

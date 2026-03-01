@@ -70,7 +70,9 @@ interface AnimationStore {
   queue: AnimationStep[];
   activeStep: AnimationStep | null;
   isAnimating: boolean;
+  speedMultiplier: number;
 
+  setSpeedMultiplier: (m: number) => void;
   enqueueSteps: (steps: AnimationStep[]) => void;
   advanceStep: () => void;
   clear: () => void;
@@ -81,15 +83,22 @@ export const useAnimationStore = create<AnimationStore>()(
     queue: [],
     activeStep: null,
     isAnimating: false,
+    speedMultiplier: 1,
+
+    setSpeedMultiplier: (m) => set({ speedMultiplier: m }),
 
     enqueueSteps: (steps) => {
       if (steps.length === 0) return;
 
-      const { activeStep, queue } = get();
+      const { activeStep, queue, speedMultiplier } = get();
+      const scaled = speedMultiplier === 1
+        ? steps
+        : steps.map((s) => ({ ...s, durationMs: Math.round(s.durationMs * speedMultiplier) }));
+
       if (activeStep) {
-        set({ queue: [...queue, ...steps] });
+        set({ queue: [...queue, ...scaled] });
       } else {
-        const [first, ...rest] = steps;
+        const [first, ...rest] = scaled;
         set({ activeStep: first, queue: rest, isAnimating: true });
       }
     },

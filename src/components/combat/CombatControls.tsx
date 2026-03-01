@@ -76,6 +76,7 @@ export function CombatControls() {
                   ],
                 }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                data-testid="all-attack-btn"
                 onClick={handleAllAttack}
               >
                 ⚔ All Attack
@@ -89,6 +90,7 @@ export function CombatControls() {
               })}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              data-testid="skip-attack-btn"
               onClick={() => dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer)}
             >
               {hasTentativeAttackers ? '⚔ Attack!' : 'Skip'}

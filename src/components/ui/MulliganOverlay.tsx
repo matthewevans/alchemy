@@ -166,6 +166,7 @@ export function MulliganOverlay() {
       >
         <motion.button
           ref={keepButtonRef}
+          data-testid="keep-hand-btn"
           className={gameButtonClass({
             tone: 'emerald',
             size: 'md',
@@ -178,6 +179,7 @@ export function MulliganOverlay() {
           Keep Hand
         </motion.button>
         <motion.button
+          data-testid="mulligan-btn"
           className={gameButtonClass({
             tone: 'red',
             size: 'md',

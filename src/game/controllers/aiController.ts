@@ -6,6 +6,12 @@ import { useAnimationStore } from '@game/animationStore';
 import type { OpponentController } from './types';
 import { isOpponentPhase } from './types';
 
+let aiBaseDelay = 500;
+
+export function setAIDelay(ms: number) {
+  aiBaseDelay = ms;
+}
+
 interface StoreAccessor {
   getState: () => {
     state: GameState | null;
@@ -21,7 +27,7 @@ export function createAIController(store: StoreAccessor): OpponentController {
   const scheduleAIAction = () => {
     if (timeoutId !== null) return;
 
-    const delay = 500 + Math.random() * 500;
+    const delay = aiBaseDelay + Math.random() * aiBaseDelay;
     timeoutId = setTimeout(() => {
       timeoutId = null;
 

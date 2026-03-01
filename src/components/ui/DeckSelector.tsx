@@ -140,6 +140,7 @@ export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
             return (
               <motion.button
                 key={deck.name}
+                data-testid={`deck-option-${deck.elements[0]}`}
                 className={gameButtonClass({
                   tone: 'neutral',
                   size: 'md',

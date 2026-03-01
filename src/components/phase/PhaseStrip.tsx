@@ -72,6 +72,8 @@ export function PhaseStrip() {
 
   return (
     <div
+      data-testid="phase-strip"
+      data-phase={displayKey}
       className="fixed z-40 pointer-events-none rounded-lg border border-white/15 bg-slate-950/85 backdrop-blur-sm px-1.5 py-0.5"
       style={{
         right: 'calc(env(safe-area-inset-right) + 7rem)',

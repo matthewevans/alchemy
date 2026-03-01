@@ -193,6 +193,7 @@ export function PlayerHand() {
           return (
             <div
               key={cardInstance.instanceId}
+              data-testid={`hand-card-${index}`}
               className="transition-transform duration-200"
               style={{
                 transform: `rotate(${angle}deg)`,
