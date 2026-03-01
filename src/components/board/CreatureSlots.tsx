@@ -270,6 +270,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
               isValidAttacker={isValidAttacker}
               isValidBlocker={isValidBlocker}
               isSelectedForBlock={isSelectedForBlock}
+              isOpponentCard={isOpponent}
               cardWidth={cardWidth}
               cardHeight={cardHeight}
               onClick={() => handleCreatureClick(permanent.permanentId)}

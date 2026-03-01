@@ -22,6 +22,7 @@ interface BoardCardProps {
   isValidAttacker: boolean;
   isValidBlocker: boolean;
   isSelectedForBlock?: boolean;
+  isOpponentCard: boolean;
   cardWidth?: number;
   cardHeight?: number;
   onClick: () => void;
@@ -36,6 +37,7 @@ export function BoardCard({
   isValidAttacker,
   isValidBlocker,
   isSelectedForBlock = false,
+  isOpponentCard,
   cardWidth,
   cardHeight,
   onClick,
@@ -72,8 +74,13 @@ export function BoardCard({
       layout
       animate={{
         rotate: permanent.isTapped ? 15 : 0,
-        x: isAttacking ? 4 : 0,
-        y: isAttacking ? -6 : 0,
+        x: isBlocking ? (isOpponentCard ? -10 : 10) : 0,
+        y: isAttacking
+          ? (isOpponentCard ? 28 : -28)
+          : isBlocking
+            ? (isOpponentCard ? 12 : -12)
+            : 0,
+        scale: isAttacking || isBlocking ? 1.04 : 1,
       }}
       exit={{ opacity: 0, scale: 0.6, transition: { duration: 0.3 } }}
       whileTap={{ scale: 0.95 }}

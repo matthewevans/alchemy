@@ -2,8 +2,7 @@ import { createContext, useContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { GameAction, GameEvent, PlayerId } from '@engine/types';
 import type { OpponentController } from './controllers/types';
-import { useGameStore } from './gameStore';
-import { useAnimationStore, groupEventsIntoSteps } from './animationStore';
+import { dispatchWithAnimations } from './dispatchWithAnimations';
 
 type DispatchFn = (action: GameAction, actingPlayer: PlayerId) => GameEvent[];
 
@@ -16,23 +15,11 @@ interface GameDispatchProviderProps {
 }
 
 export function GameDispatchProvider({ controller, children }: GameDispatchProviderProps) {
-  const rawDispatch = useGameStore((s) => s.dispatch);
-
-  // rawDispatch is a stable Zustand reference — only controller matters for memo invalidation
   const wrappedDispatch: DispatchFn = useMemo(() => {
     return (action, actingPlayer) => {
-      // Read positions before dispatch so dying creatures still have entries
-      const positions = useAnimationStore.getState().positions;
-      const events = rawDispatch(action, actingPlayer);
-      controller?.onLocalAction(action, actingPlayer);
-
-      // Group events into animation steps and enqueue
-      const steps = groupEventsIntoSteps(events, positions);
-      if (steps.length > 0) {
-        useAnimationStore.getState().enqueueSteps(steps);
-      }
-
-      return events;
+      return dispatchWithAnimations(action, actingPlayer, (localAction, localPlayer) => {
+        controller?.onLocalAction(localAction, localPlayer);
+      });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controller]);

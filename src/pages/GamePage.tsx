@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import type { PlayerId } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
 import { GameDispatchProvider } from '@game/GameDispatchContext';
+import { dispatchWithAnimations } from '@game/dispatchWithAnimations';
 import { createAIController } from '@game/controllers/aiController';
 import { createNetworkController } from '@game/controllers/networkController';
 import type { OpponentController } from '@game/controllers/types';
@@ -58,7 +59,7 @@ export function GamePage() {
         // Multiplayer: set up network controller
         const session = locationState.session;
         const netController = createNetworkController(session, {
-          dispatch: (action, player) => useGameStore.getState().dispatch(action, player),
+          dispatch: (action, player) => dispatchWithAnimations(action, player),
         });
         session.onDisconnect((reason) => setDisconnectReason(reason));
         setController(netController);
@@ -67,7 +68,7 @@ export function GamePage() {
         // Single player: set up AI controller
         const ai = createAIController({
           getState: () => useGameStore.getState(),
-          dispatch: (action, player) => useGameStore.getState().dispatch(action, player),
+          dispatch: (action, player) => dispatchWithAnimations(action, player),
         });
         setController(ai);
       }
@@ -81,7 +82,7 @@ export function GamePage() {
         restoreGame(saved.gameState, saved.rngState, saved.persisted);
         const ai = createAIController({
           getState: () => useGameStore.getState(),
-          dispatch: (action, player) => useGameStore.getState().dispatch(action, player),
+          dispatch: (action, player) => dispatchWithAnimations(action, player),
         });
         setController(ai);
         return;
@@ -133,7 +134,7 @@ export function GamePage() {
   }, [resetGame, navigate]);
 
   const handleConcede = useCallback(() => {
-    useGameStore.getState().dispatch({ type: 'CONCEDE' }, humanPlayer);
+    dispatchWithAnimations({ type: 'CONCEDE' }, humanPlayer);
   }, [humanPlayer]);
 
   const handleDisconnectAck = useCallback(() => {
