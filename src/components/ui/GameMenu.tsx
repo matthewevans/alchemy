@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePreferencesStore } from '@game/preferencesStore';
 import { gameButtonClass } from './buttonStyles';
 import { useDialogA11y } from '@hooks/useDialogA11y';
 
@@ -12,6 +13,7 @@ interface GameMenuProps {
 export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
   const [confirmingConcede, setConfirmingConcede] = useState(false);
   const dialogRef = useDialogA11y({ open: true, onClose: onResume });
+  const { uiScale, setUIScale, resetUIScale } = usePreferencesStore();
 
   return (
     <motion.div
@@ -39,6 +41,34 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="game-menu-title" className="text-xl font-bold text-white mb-2">Menu</h2>
+
+        {/* UI Scale */}
+        <div className="w-full mb-1">
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="ui-scale" className="text-sm text-white/70">
+              UI Scale: {Math.round(uiScale * 100)}%
+            </label>
+            {uiScale !== 1 && (
+              <button
+                className="text-xs text-amber-300/80 hover:text-amber-200 cursor-pointer"
+                onClick={resetUIScale}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          <input
+            id="ui-scale"
+            type="range"
+            min={0.6}
+            max={1.4}
+            step={0.05}
+            value={uiScale}
+            onChange={(e) => setUIScale(parseFloat(e.target.value))}
+            className="w-full h-2 rounded-full appearance-none cursor-pointer bg-slate-600/60"
+            style={{ accentColor: '#fbbf24' }}
+          />
+        </div>
 
         {/* Resume */}
         <button

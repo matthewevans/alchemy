@@ -141,17 +141,6 @@ export function GamePage() {
     handleMainMenu();
   }, [handleMainMenu]);
 
-  if (phase === 'game_over') {
-    return (
-      <GameOverScreen
-        winner={gameOverWinner}
-        humanPlayer={humanPlayer}
-        onPlayAgain={handlePlayAgain}
-        onMainMenu={handleMainMenu}
-      />
-    );
-  }
-
   return (
     <GameDispatchProvider controller={controller}>
       <PlayingScreenInner
@@ -161,6 +150,16 @@ export function GamePage() {
         disconnectReason={disconnectReason}
         onDisconnectAck={handleDisconnectAck}
       />
+      <AnimatePresence>
+        {phase === 'game_over' && (
+          <GameOverScreen
+            winner={gameOverWinner}
+            humanPlayer={humanPlayer}
+            onPlayAgain={handlePlayAgain}
+            onMainMenu={handleMainMenu}
+          />
+        )}
+      </AnimatePresence>
     </GameDispatchProvider>
   );
 }

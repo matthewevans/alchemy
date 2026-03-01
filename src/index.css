@@ -50,6 +50,11 @@
   min-height: 48px;
 }
 
+/* ─── UI Scale (user preference via preferencesStore) ─── */
+#root {
+  zoom: var(--ui-scale, 1);
+}
+
 /* ─── Base ─── */
 body {
   margin: 0;
