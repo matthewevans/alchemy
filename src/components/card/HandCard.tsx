@@ -44,7 +44,6 @@ export function HandCard({
   const artPath = getCardArtPath(card.id, card.element);
   const effect = card.effectId ? EFFECT_REGISTRY[card.effectId] : null;
   const isCreature = card.type === 'creature';
-  const hasTextContent = card.keywords.length > 0 || effect !== null;
 
   return (
     <motion.div
@@ -145,7 +144,7 @@ export function HandCard({
           </div>
         </div>
 
-        {/* ── Art area — fills available space ── */}
+        {/* ── Art area — fills remaining space after text box ── */}
         <div
           className="relative mx-1 mt-1 rounded-md overflow-hidden"
           style={{
@@ -160,25 +159,6 @@ export function HandCard({
             style={{ backgroundImage: `url(${artPath})` }}
           />
 
-          {/* Text overlay on art (non-verbose) — translucent strip at bottom */}
-          {!verbose && hasTextContent && (
-            <div
-              className="absolute inset-x-0 bottom-0 px-1.5 py-1 backdrop-blur-sm"
-              style={{
-                background: 'linear-gradient(to top, rgba(2, 6, 23, 0.85) 60%, rgba(2, 6, 23, 0) 100%)',
-              }}
-            >
-              {card.keywords.length > 0 && (
-                <div className="flex flex-wrap gap-x-1 gap-y-0.5 mb-0.5">
-                  {card.keywords.map((kw) => (
-                    <KeywordBadge key={kw} keyword={kw} />
-                  ))}
-                </div>
-              )}
-              {effect && <EffectShorthand effect={effect} />}
-            </div>
-          )}
-
           {/* Art frame border */}
           <div
             className="absolute inset-0 rounded-md pointer-events-none"
@@ -186,76 +166,86 @@ export function HandCard({
           />
         </div>
 
-        {/* ── Verbose text box (preview only) — separate section below art ── */}
-        {verbose && (
-          <>
-            {/* Type label */}
-            <div className="flex justify-center" style={{ marginTop: 'calc(var(--card-font-scale) * -0.35rem)' }}>
-              <span
-                data-testid="hand-card-type-label"
-                className="relative z-[3] inline-flex rounded px-1.5 py-[1px] text-white/85 uppercase tracking-wide backdrop-blur-sm"
-                style={{
-                  fontSize: 'calc(var(--card-font-scale) * 0.44rem)',
-                  background: 'rgba(15, 23, 42, 0.85)',
-                  border: '1px solid rgba(148, 163, 184, 0.3)',
-                }}
+        {/* ── Type label (overlaps art/text boundary) ── */}
+        <div className="flex justify-center" style={{ marginTop: 'calc(var(--card-font-scale) * -0.35rem)' }}>
+          <span
+            data-testid="hand-card-type-label"
+            className="relative z-[3] inline-flex rounded px-1.5 py-[1px] text-white/85 uppercase tracking-wide backdrop-blur-sm"
+            style={{
+              fontSize: 'calc(var(--card-font-scale) * 0.44rem)',
+              background: 'rgba(15, 23, 42, 0.85)',
+              border: '1px solid rgba(148, 163, 184, 0.3)',
+            }}
+          >
+            {isCreature ? 'Creature' : 'Spell'}
+          </span>
+        </div>
+
+        {/* ── Text box (keywords + effects) — content-sized, art gets remaining space ── */}
+        <div
+          className="mx-1 mb-1 px-1.5 rounded-md overflow-hidden"
+          style={{
+            background: 'rgba(15, 23, 42, 0.8)',
+            border: '1px solid rgba(148, 163, 184, 0.15)',
+            marginTop: 'calc(var(--card-font-scale) * -0.3rem)',
+            paddingTop: 'calc(var(--card-font-scale) * 0.4rem)',
+            paddingBottom: 'calc(var(--card-font-scale) * 0.2rem)',
+          }}
+        >
+          {/* Keywords — verbose shows full descriptions, compact shows badges */}
+          {card.keywords.length > 0 && (
+            verbose ? (
+              <div className="flex flex-col gap-0.5 mb-0.5">
+                {card.keywords.map((kw) => {
+                  const kwDef = KEYWORD_REGISTRY[kw];
+                  return (
+                    <div
+                      key={kw}
+                      className="flex items-start gap-1 leading-tight"
+                      style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
+                    >
+                      <span>{kwDef.icon}</span>
+                      <span className="text-white/80">
+                        <span className="font-semibold text-amber-300 capitalize">{kwDef.name}</span>
+                        {' \u2014 '}{kwDef.description}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-x-1 gap-y-0.5 mb-0.5">
+                {card.keywords.map((kw) => (
+                  <KeywordBadge key={kw} keyword={kw} />
+                ))}
+              </div>
+            )
+          )}
+
+          {/* Spell effect */}
+          {effect && (
+            verbose ? (
+              <p
+                className="text-white/80 leading-tight"
+                style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
               >
-                {isCreature ? 'Creature' : 'Spell'}
-              </span>
-            </div>
+                {effect.description}
+              </p>
+            ) : (
+              <EffectShorthand effect={effect} />
+            )
+          )}
 
-            <div
-              className="mx-1 mb-1 px-1.5 rounded-md overflow-hidden"
-              style={{
-                flex: '0 1 auto',
-                background: 'rgba(15, 23, 42, 0.8)',
-                border: '1px solid rgba(148, 163, 184, 0.15)',
-                marginTop: 'calc(var(--card-font-scale) * -0.3rem)',
-                paddingTop: 'calc(var(--card-font-scale) * 0.4rem)',
-                paddingBottom: 'calc(var(--card-font-scale) * 0.2rem)',
-              }}
+          {/* Flavor text */}
+          {card.flavor && (
+            <p
+              className="text-white/30 italic leading-tight mt-0.5"
+              style={{ fontSize: 'calc(var(--card-font-scale) * 0.45rem)' }}
             >
-              {card.keywords.length > 0 && (
-                <div className="flex flex-col gap-0.5 mb-0.5">
-                  {card.keywords.map((kw) => {
-                    const kwDef = KEYWORD_REGISTRY[kw];
-                    return (
-                      <div
-                        key={kw}
-                        className="flex items-start gap-1 leading-tight"
-                        style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
-                      >
-                        <span>{kwDef.icon}</span>
-                        <span className="text-white/80">
-                          <span className="font-semibold text-amber-300 capitalize">{kwDef.name}</span>
-                          {' \u2014 '}{kwDef.description}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {effect && (
-                <p
-                  className="text-white/80 leading-tight"
-                  style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
-                >
-                  {effect.description}
-                </p>
-              )}
-
-              {card.flavor && (
-                <p
-                  className="text-white/30 italic leading-tight mt-0.5"
-                  style={{ fontSize: 'calc(var(--card-font-scale) * 0.45rem)' }}
-                >
-                  {card.flavor}
-                </p>
-              )}
-            </div>
-          </>
-        )}
+              {card.flavor}
+            </p>
+          )}
+        </div>
 
         {/* ── Stat bar (creatures only) ── */}
         {isCreature && (
