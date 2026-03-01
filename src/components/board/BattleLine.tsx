@@ -6,7 +6,7 @@ export function BattleLine() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <div className="relative flex items-center justify-center px-8 py-1">
+    <div className="relative z-0 pointer-events-none flex items-center justify-center px-8 py-1">
       <motion.div
         className="w-full h-px"
         style={{

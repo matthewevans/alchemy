@@ -57,6 +57,8 @@ export function BoardCard({
   const isSummoningSick = permanent.summonedThisTurn && !hasSwift;
   const isInteractable = isValidAttacker || isValidBlocker;
   const posRef = usePositionRegistry(permanent.permanentId);
+  const baseZIndex = isOpponentCard ? 46 : 24;
+  const activeZIndex = isOpponentCard ? 54 : 32;
 
   return (
     <motion.div
@@ -69,7 +71,7 @@ export function BoardCard({
         width: cardWidth ? `${cardWidth}px` : 'var(--board-card-width)',
         height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
         fontSize: 'calc(var(--card-font-scale) * 1rem)',
-        zIndex: isAttacking || isBlocking ? 15 : 10,
+        zIndex: isAttacking || isBlocking ? activeZIndex : baseZIndex,
       }}
       layout
       animate={{

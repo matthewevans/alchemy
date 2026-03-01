@@ -94,25 +94,25 @@ export function GameBoard() {
 
       {/* ═══ Main arena: battlefield + right sidebar ═══ */}
       <div
-        className="flex-1 flex min-h-0 relative z-20"
-        style={{ paddingBottom: 'calc(var(--card-height) * 0.42)' }}
+        className="flex-1 flex min-h-0 relative z-30"
+        style={{ paddingBottom: 'calc(var(--card-height) * 0.28)' }}
       >
         {/* Battlefield — takes all available width */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Opponent board */}
-          <div className="flex-1 flex items-end justify-center pb-1 min-h-0 overflow-hidden">
+          <div className="relative z-20 flex-1 flex items-end justify-center pb-3 sm:pb-4 min-h-0 overflow-hidden">
             <CreatureSlots playerId={opponentPlayer} isOpponent />
           </div>
 
           {/* Battle line + phase strip + combat controls */}
-          <div className="shrink-0">
+          <div className="relative z-10 shrink-0">
             <PhaseStrip />
             <BattleLine />
             <CombatControls />
           </div>
 
           {/* Player board */}
-          <div className="flex-1 flex items-start justify-center pt-1 min-h-0 overflow-hidden -translate-y-6 sm:-translate-y-8" data-player-board={humanPlayer}>
+          <div className="relative z-20 flex-1 flex items-start justify-center pt-1 min-h-0 overflow-hidden -translate-y-2 sm:-translate-y-3" data-player-board={humanPlayer}>
             <CreatureSlots playerId={humanPlayer} isOpponent={false} />
           </div>
         </div>
@@ -159,7 +159,7 @@ export function GameBoard() {
       </div>
 
       {/* ═══ Player hand — bottom edge ═══ */}
-      <div className="shrink-0 relative z-20">
+      <div className="shrink-0 relative z-10">
         <PlayerHand />
       </div>
 
