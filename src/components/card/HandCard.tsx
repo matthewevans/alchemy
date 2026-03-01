@@ -54,6 +54,7 @@ export function HandCard({
         height: 'var(--card-height)',
         fontSize: 'calc(var(--card-font-scale) * 1rem)',
         touchAction: 'none',
+        WebkitTouchCallout: 'none',
       }}
       animate={{
         y: isSelected ? -20 : 0,
@@ -146,7 +147,7 @@ export function HandCard({
         >
           <div
             aria-hidden="true"
-            className="absolute inset-0 bg-cover bg-center"
+            className="absolute inset-0 bg-cover bg-center pointer-events-none"
             style={{ backgroundImage: `url(${artPath})` }}
           />
 
