@@ -7,7 +7,7 @@ import { dispatchWithAnimations } from '@game/dispatchWithAnimations';
 import { createAIController } from '@game/controllers/aiController';
 import { createNetworkController } from '@game/controllers/networkController';
 import type { OpponentController } from '@game/controllers/types';
-import type { PeerSession } from '@network/peer';
+import { takePendingSession } from '@network/sessionTransfer';
 import { useGameLoop } from '@hooks/useGameLoop';
 import { loadGame, clearSavedGame, saveHistoryEntry } from '@storage/persistence';
 import { AnimatePresence } from 'framer-motion';
@@ -20,7 +20,6 @@ import { useDialogA11y } from '@hooks/useDialogA11y';
 type GamePhase = 'playing' | 'game_over';
 
 interface LocationState {
-  session?: PeerSession;
   isMultiplayer?: boolean;
 }
 
@@ -55,9 +54,9 @@ export function GamePage() {
 
     // If the store already has this game (navigated from HomePage), set up controller
     if (storeGameId === gameId) {
-      if (locationState?.session) {
+      const session = takePendingSession();
+      if (session) {
         // Multiplayer: set up network controller
-        const session = locationState.session;
         const netController = createNetworkController(session, {
           dispatch: (action, player) => dispatchWithAnimations(action, player),
         });

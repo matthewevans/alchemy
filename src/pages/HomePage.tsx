@@ -8,6 +8,7 @@ import { getCardsByElement } from '@engine/cards';
 import { useGameStore } from '@game/gameStore';
 import { clearSavedGame } from '@storage/persistence';
 import type { PeerSession } from '@network/peer';
+import { setPendingSession } from '@network/sessionTransfer';
 import { TitleScreen } from '@components/ui';
 
 type SubScreen = 'title' | 'deck_select' | 'deck_builder' | 'multiplayer_lobby';
@@ -110,7 +111,8 @@ export function HomePage() {
       // Multiplayer games aren't persisted across refresh
       clearSavedGame(gameId);
 
-      navigate(`/game/${gameId}`, { state: { session, isMultiplayer: true } });
+      setPendingSession(session);
+      navigate(`/game/${gameId}`, { state: { isMultiplayer: true } });
     },
     [initGame, navigate],
   );
