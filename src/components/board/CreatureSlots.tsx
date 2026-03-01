@@ -1,16 +1,47 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { GameAction, PlayerId } from '@engine/types';
+import type { GameAction, Permanent, Phase, PlayerId } from '@engine/types';
 import { getOpponent } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useUIStore } from '@game/uiStore';
 import { BoardCard } from '@components/card';
 import { calculateBoardCardSize } from './boardSizing';
+import { groupIntoStacks } from './boardStacking';
+import { CardStackGroup } from './CardStackGroup';
 
 interface CreatureSlotsProps {
   playerId: PlayerId;
   isOpponent: boolean;
+}
+
+/** Should this board fan out (show individual cards) rather than stacking? */
+function shouldFanOut(
+  phase: Phase | undefined,
+  isPlayerBoard: boolean,
+  humanPlayer: PlayerId,
+  activePlayer: PlayerId | undefined,
+): boolean {
+  if (!phase) return false;
+
+  // Targeting: both boards fan out so player can pick targets
+  if (phase.type === 'targeting') return true;
+
+  if (phase.type !== 'battle') return false;
+
+  // Declare attackers: player's board fans out for attacker selection
+  if (phase.step === 'declare_attackers' && isPlayerBoard) return true;
+
+  // Declare blockers: both boards fan out (defender picks blockers, clicks attackers)
+  if (phase.step === 'declare_blockers') {
+    const defender = activePlayer ? getOpponent(activePlayer) : null;
+    return humanPlayer === defender;
+  }
+
+  // Resolving: fan out so player can see individual combat
+  if (phase.step === 'resolving') return true;
+
+  return false;
 }
 
 export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
@@ -209,10 +240,21 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     }
   };
 
-  const slots = [...board];
-  if (showPlusOnEmpty && !slots.some((slot) => slot === null)) {
-    slots.push(null);
-  }
+  const slots = useMemo(() => {
+    const s = [...board];
+    if (showPlusOnEmpty && !s.some((slot) => slot === null)) {
+      s.push(null);
+    }
+    return s;
+  }, [board, showPlusOnEmpty]);
+
+  const fanned = shouldFanOut(phase, isPlayerBoard, humanPlayer, activePlayer);
+  const stacks = useMemo(() => fanned ? null : groupIntoStacks(slots), [fanned, slots]);
+
+  // Visual slot count for sizing — stacks take fewer visual slots
+  const visualSlotCount = stacks
+    ? stacks.length
+    : slots.length;
 
   useLayoutEffect(() => {
     if (
@@ -226,7 +268,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
 
   useLayoutEffect(() => {
     const container = containerRef.current;
-    if (!container || slots.length === 0) return;
+    if (!container || visualSlotCount === 0) return;
 
     const rootStyles = getComputedStyle(document.documentElement);
     const baseWidth = Number.parseFloat(rootStyles.getPropertyValue('--board-card-width')) || 82;
@@ -238,7 +280,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
         calculateBoardCardSize({
           containerWidth: rect.width,
           containerHeight: rect.height,
-          slotCount: slots.length,
+          slotCount: visualSlotCount,
           baseWidth,
           baseHeight,
         }),
@@ -250,95 +292,147 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [slots.length]);
+  }, [visualSlotCount]);
 
   const cardWidth = cardSize?.width;
   const cardHeight = cardSize?.height;
 
+  const getCardProps = (permanent: Permanent) => {
+    const isAttacking = allAttackers.includes(permanent.permanentId);
+    const isBlocking = allBlockerIds.has(permanent.permanentId);
+    const isValidTarget = validTargetPermanentIds.has(permanent.permanentId);
+    const isValidAttacker = validAttackerIds.has(permanent.permanentId) || undeclareAttackerIds.has(permanent.permanentId);
+    const isValidBlocker = validBlockerIds.has(permanent.permanentId);
+    const isSelectedForBlock =
+      isBattlePhase
+      && phase.step === 'declare_blockers'
+      && (
+        (isPlayerBoard && selectedBlockerId === permanent.permanentId)
+        || (!isPlayerBoard && selectedAttackerId === permanent.permanentId)
+      );
+
+    return {
+      isAttacking,
+      isBlocking,
+      isValidTarget,
+      isValidAttacker,
+      isValidBlocker,
+      isSelectedForBlock,
+      onClick: () => handleCreatureClick(permanent.permanentId),
+      onLongPress: () => inspectCard(permanent.cardId),
+    };
+  };
+
+  const renderEmptySlot = (slotIndex: number) => {
+    if (showPlusOnEmpty) {
+      return (
+        <motion.div
+          key={`empty-${slotIndex}`}
+          className="flex items-center justify-center rounded-xl border-2 border-dashed border-green-500/40 cursor-pointer"
+          style={{
+            width: cardWidth ? `${cardWidth}px` : 'var(--board-card-width)',
+            height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
+          }}
+          animate={{
+            borderColor: ['rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.6)', 'rgba(34, 197, 94, 0.3)'],
+            boxShadow: [
+              'inset 0 0 12px rgba(34, 197, 94, 0.05)',
+              'inset 0 0 20px rgba(34, 197, 94, 0.15)',
+              'inset 0 0 12px rgba(34, 197, 94, 0.05)',
+            ],
+          }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+          whileHover={{ backgroundColor: 'rgba(34, 197, 94, 0.08)', scale: 1.02 }}
+          data-slot-index={slotIndex}
+          data-board-player={playerId}
+          onClick={() => handleEmptySlotClick(slotIndex)}
+        >
+          <motion.span
+            className="text-green-400/40 text-xl font-bold select-none"
+            animate={{ opacity: [0.3, 0.7, 0.3] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            +
+          </motion.span>
+        </motion.div>
+      );
+    }
+
+    return (
+      <div
+        key={`empty-${slotIndex}`}
+        className={`
+          flex items-center justify-center rounded-xl border border-dashed border-slate-700/30
+          ${isOpponent ? 'cursor-default' : ''}
+        `}
+        style={{
+          width: cardWidth ? `${cardWidth}px` : 'var(--board-card-width)',
+          height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
+        }}
+        data-slot-index={slotIndex}
+        data-board-player={playerId}
+        onClick={() => handleEmptySlotClick(slotIndex)}
+      />
+    );
+  };
+
   return (
     <div ref={containerRef} className="flex items-center justify-center gap-2 px-3 py-1 w-full h-full overflow-hidden">
       <AnimatePresence mode="popLayout">
-      {slots.map((permanent, slotIndex) => {
-        if (permanent) {
-          const isAttacking = allAttackers.includes(permanent.permanentId);
-          const isBlocking = allBlockerIds.has(permanent.permanentId);
-          const isValidTarget = validTargetPermanentIds.has(permanent.permanentId);
-          const isValidAttacker = validAttackerIds.has(permanent.permanentId) || undeclareAttackerIds.has(permanent.permanentId);
-          const isValidBlocker = validBlockerIds.has(permanent.permanentId);
-          const isSelectedForBlock =
-            isBattlePhase
-            && phase.step === 'declare_blockers'
-            && (
-              (isPlayerBoard && selectedBlockerId === permanent.permanentId)
-              || (!isPlayerBoard && selectedAttackerId === permanent.permanentId)
-            );
-
-          return (
-            <BoardCard
-              key={permanent.permanentId}
-              permanent={permanent}
-              isAttacking={isAttacking}
-              isBlocking={isBlocking}
-              isValidTarget={isValidTarget}
-              isValidAttacker={isValidAttacker}
-              isValidBlocker={isValidBlocker}
-              isSelectedForBlock={isSelectedForBlock}
-              isOpponentCard={isOpponent}
-              cardWidth={cardWidth}
-              cardHeight={cardHeight}
-              onClick={() => handleCreatureClick(permanent.permanentId)}
-              onLongPress={() => inspectCard(permanent.cardId)}
-            />
-          );
-        }
-
-        return showPlusOnEmpty ? (
-          <motion.div
-            key={`empty-${slotIndex}`}
-            className="flex items-center justify-center rounded-xl border-2 border-dashed border-green-500/40 cursor-pointer"
-            style={{
-              width: cardWidth ? `${cardWidth}px` : 'var(--board-card-width)',
-              height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
-            }}
-            animate={{
-              borderColor: ['rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.6)', 'rgba(34, 197, 94, 0.3)'],
-              boxShadow: [
-                'inset 0 0 12px rgba(34, 197, 94, 0.05)',
-                'inset 0 0 20px rgba(34, 197, 94, 0.15)',
-                'inset 0 0 12px rgba(34, 197, 94, 0.05)',
-              ],
-            }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-            whileHover={{ backgroundColor: 'rgba(34, 197, 94, 0.08)', scale: 1.02 }}
-            data-slot-index={slotIndex}
-            data-board-player={playerId}
-            onClick={() => handleEmptySlotClick(slotIndex)}
-          >
-            <motion.span
-              className="text-green-400/40 text-xl font-bold select-none"
-              animate={{ opacity: [0.3, 0.7, 0.3] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              +
-            </motion.span>
-          </motion.div>
+        {fanned || !stacks ? (
+          // Fanned: render individual cards (used during combat/targeting)
+          slots.map((permanent, slotIndex) => {
+            if (permanent) {
+              const props = getCardProps(permanent);
+              return (
+                <BoardCard
+                  key={permanent.permanentId}
+                  permanent={permanent}
+                  isOpponentCard={isOpponent}
+                  cardWidth={cardWidth}
+                  cardHeight={cardHeight}
+                  {...props}
+                />
+              );
+            }
+            return renderEmptySlot(slotIndex);
+          })
         ) : (
-          <div
-            key={`empty-${slotIndex}`}
-            className={`
-              flex items-center justify-center rounded-xl border border-dashed border-slate-700/30
-              ${isOpponent ? 'cursor-default' : ''}
-            `}
-            style={{
-              width: cardWidth ? `${cardWidth}px` : 'var(--board-card-width)',
-              height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
-            }}
-            data-slot-index={slotIndex}
-            data-board-player={playerId}
-            onClick={() => handleEmptySlotClick(slotIndex)}
-          />
-        );
-      })}
+          // Stacked: group identical permanents
+          stacks.map((entry, stackIndex) => {
+            if (!entry) {
+              return renderEmptySlot(entry === null && stackIndex < slots.length ? stackIndex : stackIndex);
+            }
+
+            if (entry.permanents.length === 1) {
+              // Single card — render as normal BoardCard
+              const permanent = entry.permanents[0];
+              const props = getCardProps(permanent);
+              return (
+                <BoardCard
+                  key={permanent.permanentId}
+                  permanent={permanent}
+                  isOpponentCard={isOpponent}
+                  cardWidth={cardWidth}
+                  cardHeight={cardHeight}
+                  {...props}
+                />
+              );
+            }
+
+            // Multi-card stack
+            return (
+              <CardStackGroup
+                key={`stack-${entry.stateKey}`}
+                permanents={entry.permanents}
+                cardWidth={cardWidth}
+                cardHeight={cardHeight}
+                isOpponent={isOpponent}
+                getCardProps={getCardProps}
+              />
+            );
+          })
+        )}
       </AnimatePresence>
     </div>
   );

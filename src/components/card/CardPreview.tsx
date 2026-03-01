@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { useDialogA11y } from '@hooks/useDialogA11y';
 import { CARD_REGISTRY } from '@engine/cards';
 import { getElementColor } from './cardUtils';
-import { HandCard } from './HandCard';
+import { CardFace } from './CardFace';
 
 interface CardPreviewProps {
   cardId: string;
@@ -100,11 +100,14 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
         aria-modal="true"
         aria-label={`${card.name} details`}
         tabIndex={-1}
-        className="relative"
+        className="relative flex flex-col"
         style={{
           '--card-width': '210px',
           '--card-height': '370px',
           '--card-font-scale': '1.5',
+          width: '210px',
+          height: '370px',
+          fontSize: 'calc(1.5 * 1rem)',
           filter: `drop-shadow(0 0 30px ${elementColor}55) drop-shadow(0 8px 24px rgba(0,0,0,0.5))`,
         } as React.CSSProperties}
         initial={{ scale: 0.5, opacity: 0, y: 30 }}
@@ -118,14 +121,7 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <HandCard
-          cardInstance={{ instanceId: '__preview__', cardId }}
-          isPlayable
-          isSelected={false}
-          verbose
-          onClick={() => {}}
-          onHover={() => {}}
-        />
+        <CardFace cardId={cardId} viewLevel="verbose" />
       </motion.div>
     </motion.div>
   );

@@ -1,18 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
+import { motion, useAnimationControls } from 'framer-motion';
 import type { Permanent } from '@engine/types';
 import { getCurrentHealth, getEffectiveAttack } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
-import { KEYWORD_REGISTRY } from '@engine/keywords';
 import { usePositionRegistry } from '@hooks/usePositionRegistry';
 import { useLongPress } from '@hooks/useLongPress';
-import {
-  getElementColor,
-  getElementArtGradient,
-  getElementIconPath,
-  getElementFrameGradient,
-  getCardArtPath,
-} from './cardUtils';
+import { getElementColor } from './cardUtils';
+import { CardFace } from './CardFace';
 
 interface BoardCardProps {
   permanent: Permanent;
@@ -66,10 +60,6 @@ export function BoardCard({
   const longPress = useLongPress(() => onLongPressProp?.());
   const card = CARD_REGISTRY[permanent.cardId];
   const elementColor = getElementColor(card.element);
-  const artGradient = getElementArtGradient(card.element);
-  const elementIconPath = getElementIconPath(card.element);
-  const frameGradient = getElementFrameGradient(card.element);
-  const artPath = getCardArtPath(card.id, card.element);
   const currentHealth = getCurrentHealth(permanent);
   const effectiveAttack = getEffectiveAttack(permanent);
   const isDamaged = permanent.damage > 0;
@@ -83,7 +73,7 @@ export function BoardCard({
   const activeZIndex = isOpponentCard ? 54 : 32;
   const statusEffects = getActiveStatusEffects(permanent);
 
-  // Entrance glow flash — visible briefly when card first appears
+  // Entrance glow flash
   const [showEntranceGlow, setShowEntranceGlow] = useState(true);
   useEffect(() => {
     const timer = setTimeout(() => setShowEntranceGlow(false), 600);
@@ -123,6 +113,7 @@ export function BoardCard({
   return (
     <motion.div
       ref={posRef}
+      data-testid={`board-card-${permanent.permanentId}`}
       className={`
         touch-target relative flex flex-col cursor-pointer select-none
         ${isSummoningSick ? 'saturate-50 brightness-75' : ''}
@@ -185,7 +176,7 @@ export function BoardCard({
         />
       )}
 
-      {/* Entrance glow flash — element-colored burst on summon */}
+      {/* Entrance glow flash */}
       {showEntranceGlow && (
         <motion.div
           className="absolute -inset-[4px] rounded-xl z-0 pointer-events-none"
@@ -199,7 +190,7 @@ export function BoardCard({
         />
       )}
 
-      {/* Summoning sickness frost overlay — pulsing icy sheen */}
+      {/* Summoning sickness frost overlay */}
       {isSummoningSick && (
         <motion.div
           className="absolute inset-0 rounded-xl z-[5] pointer-events-none"
@@ -212,7 +203,6 @@ export function BoardCard({
           }}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
         >
-          {/* "Zzz" sleep indicator */}
           <motion.span
             className="absolute top-0.5 right-1 text-blue-300/60 font-bold select-none"
             style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
@@ -227,197 +217,45 @@ export function BoardCard({
         </motion.div>
       )}
 
-      {/* Card frame */}
-      <div
-        className="absolute inset-0 rounded-xl z-[1]"
-        style={{ background: frameGradient, opacity: 0.6 }}
+      {/* Entangle vine overlay (over art area) */}
+      {isEntangled && (
+        <motion.div
+          className="absolute inset-0 rounded-xl z-[4] pointer-events-none"
+          style={{
+            background: 'linear-gradient(180deg, transparent 20%, rgba(22, 101, 52, 0.5) 70%, rgba(22, 101, 52, 0.7) 100%)',
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0.6, 0.85, 0.6] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      )}
+
+      {/* Buff glow overlay */}
+      {isBuffed && !isEntangled && (
+        <div
+          className="absolute inset-0 rounded-xl z-[4] pointer-events-none"
+          style={{
+            background: 'linear-gradient(180deg, rgba(250, 204, 21, 0.1) 0%, rgba(250, 204, 21, 0.2) 100%)',
+            boxShadow: 'inset 0 0 8px rgba(250, 204, 21, 0.3)',
+          }}
+        />
+      )}
+
+      <CardFace
+        cardId={permanent.cardId}
+        viewLevel="compact"
+        stats={{
+          attack: effectiveAttack,
+          health: currentHealth,
+          baseAttack: card.attack ?? 0,
+          isDamaged,
+        }}
+        statFlashControls={{
+          attack: attackFlashControls,
+          health: healthFlashControls,
+        }}
+        statusEffects={statusEffects}
       />
-
-      {/* Card inner body */}
-      <div className="relative z-[2] flex flex-col m-[2px] rounded-[10px] overflow-hidden h-full bg-slate-900">
-        {/* ── Name bar ── */}
-        <div
-          className="flex items-center gap-0.5 px-1 py-[1px]"
-          style={{
-            background: `linear-gradient(90deg, ${elementColor}33, ${elementColor}11)`,
-            borderBottom: `1px solid ${elementColor}33`,
-          }}
-        >
-          <img
-            src={elementIconPath}
-            alt={card.element}
-            className="shrink-0 select-none"
-            draggable={false}
-            style={{
-              width: 'calc(var(--card-font-scale) * 0.6rem)',
-              height: 'calc(var(--card-font-scale) * 0.6rem)',
-              objectFit: 'contain',
-            }}
-          />
-          <span
-            className="text-white font-bold truncate text-center flex-1"
-            style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
-          >
-            {card.name}
-          </span>
-        </div>
-
-        {/* ── Art area ── */}
-        <div
-          className="relative mx-[3px] mt-[3px] rounded flex items-center justify-center"
-          style={{
-            flex: '1 1 0',
-            background: artGradient,
-          }}
-        >
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${artPath})` }}
-          />
-
-          {/* Entangle overlay — vines/root visual treatment */}
-          {isEntangled && (
-            <motion.div
-              className="absolute inset-0 rounded pointer-events-none"
-              style={{
-                background: 'linear-gradient(180deg, transparent 20%, rgba(22, 101, 52, 0.5) 70%, rgba(22, 101, 52, 0.7) 100%)',
-              }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0.6, 0.85, 0.6] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            />
-          )}
-
-          {/* Buff glow overlay */}
-          {isBuffed && !isEntangled && (
-            <div
-              className="absolute inset-0 rounded pointer-events-none"
-              style={{
-                background: 'linear-gradient(180deg, rgba(250, 204, 21, 0.1) 0%, rgba(250, 204, 21, 0.2) 100%)',
-                boxShadow: 'inset 0 0 8px rgba(250, 204, 21, 0.3)',
-              }}
-            />
-          )}
-
-          {/* Keyword icons overlay */}
-          {card.keywords.length > 0 && (
-            <div
-              className="absolute top-0.5 right-0.5 flex gap-0.5"
-              style={{ fontSize: 'calc(var(--card-font-scale) * 0.55rem)' }}
-            >
-              {card.keywords.map((kw) => (
-                <BoardKeywordIcon key={kw} keyword={kw} />
-              ))}
-            </div>
-          )}
-
-          {/* Art frame border */}
-          <div
-            className="absolute inset-0 rounded pointer-events-none"
-            style={{ border: `1px solid ${isEntangled ? '#166534' : elementColor + '44'}` }}
-          />
-        </div>
-
-        {/* ── Status bar (active buffs/debuffs) ── */}
-        {statusEffects.length > 0 && (
-          <div
-            className="flex items-center justify-center gap-1 mx-[3px] px-1"
-            style={{
-              height: 'calc(var(--card-font-scale) * 0.7rem)',
-              fontSize: 'calc(var(--card-font-scale) * 0.4rem)',
-              background: 'rgba(15, 23, 42, 0.8)',
-            }}
-          >
-            {statusEffects.map((effect) => (
-              <span
-                key={effect.label}
-                className="flex items-center gap-[1px] font-semibold"
-                style={{ color: effect.color }}
-              >
-                <span>{effect.icon}</span>
-                <span>{effect.label}</span>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* ── Stat bar ── */}
-        <div className="flex justify-between items-center px-[3px] py-[2px]">
-          {/* Attack */}
-          <div
-            className="flex items-center gap-0.5 rounded-md font-black"
-            style={{
-              fontSize: 'calc(var(--card-font-scale) * 0.55rem)',
-              padding: 'calc(var(--card-font-scale) * 0.05rem) calc(var(--card-font-scale) * 0.2rem)',
-              color: effectiveAttack > (card.attack ?? 0) ? '#bbf7d0' : '#fecaca',
-              background: effectiveAttack > (card.attack ?? 0)
-                ? 'rgba(34, 197, 94, 0.2)'
-                : 'rgba(239, 68, 68, 0.2)',
-              border: effectiveAttack > (card.attack ?? 0)
-                ? '1px solid rgba(134, 239, 172, 0.5)'
-                : '1px solid rgba(252, 165, 165, 0.5)',
-            }}
-          >
-            <span className="leading-none">⚔</span>
-            <motion.span className="leading-none" animate={attackFlashControls}>
-              {effectiveAttack}
-            </motion.span>
-          </div>
-
-          {/* Health */}
-          <div
-            className="flex items-center gap-0.5 rounded-md font-black"
-            style={{
-              fontSize: 'calc(var(--card-font-scale) * 0.55rem)',
-              padding: 'calc(var(--card-font-scale) * 0.05rem) calc(var(--card-font-scale) * 0.2rem)',
-              color: isDamaged ? '#fecaca' : '#bbf7d0',
-              background: isDamaged
-                ? 'rgba(239, 68, 68, 0.2)'
-                : 'rgba(34, 197, 94, 0.2)',
-              border: isDamaged
-                ? '1px solid rgba(252, 165, 165, 0.5)'
-                : '1px solid rgba(134, 239, 172, 0.5)',
-            }}
-          >
-            <span className="leading-none">♥</span>
-            <motion.span className="leading-none" animate={healthFlashControls}>
-              {currentHealth}
-            </motion.span>
-          </div>
-        </div>
-      </div>
     </motion.div>
-  );
-}
-
-function BoardKeywordIcon({ keyword }: { keyword: import('@engine/types').Keyword }) {
-  const [hovered, setHovered] = useState(false);
-  const kwDef = KEYWORD_REGISTRY[keyword];
-
-  return (
-    <span
-      className="relative drop-shadow-md cursor-help"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={(e) => { e.stopPropagation(); setHovered((prev) => !prev); }}
-    >
-      {kwDef.icon}
-      <AnimatePresence>
-        {hovered && (
-          <motion.div
-            className="absolute top-full right-0 mt-1 px-2 py-1 rounded-lg bg-slate-950 border border-slate-300/30 shadow-[0_8px_24px_rgba(0,0,0,0.7)] whitespace-nowrap z-50 pointer-events-none"
-            style={{ fontSize: '11px' }}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.15 }}
-          >
-            <span className="text-amber-300 font-bold capitalize">{kwDef.name}</span>
-            <span className="text-white"> — {kwDef.description}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </span>
   );
 }
