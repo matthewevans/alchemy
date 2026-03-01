@@ -207,7 +207,7 @@ function PlayingScreenInner({
           tone: 'slate',
           size: 'sm',
           className:
-            'fixed right-3 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] lg:top-[calc(env(safe-area-inset-top)+0.75rem)] lg:bottom-auto z-30 w-11 h-11 p-0 rounded-full flex items-center justify-center text-white/70 hover:text-white',
+            'fixed left-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-30 w-11 h-11 p-0 rounded-full flex items-center justify-center text-white/70 hover:text-white',
         })}
         onClick={() => setShowMenu(true)}
         aria-label="Game menu"
