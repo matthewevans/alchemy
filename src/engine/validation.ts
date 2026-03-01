@@ -15,7 +15,7 @@ export function validateAction(
     case 'MULLIGAN_CARDS':
       return validateMulliganCards(state, action.cardIndices, actingPlayer);
     case 'ADVANCE_PHASE':
-      return validateAdvancePhase(state);
+      return validateAdvancePhase(state, actingPlayer);
     case 'PLAY_CARD':
       return validatePlayCard(state, action.cardIndex, action.targetSlot, actingPlayer);
     case 'SELECT_TARGET':
@@ -25,15 +25,15 @@ export function validateAction(
     case 'DECLARE_ATTACKER':
       return validateDeclareAttacker(state, action.permanentId, actingPlayer);
     case 'UNDECLARE_ATTACKER':
-      return validateUndeclareAttacker(state, action.permanentId);
+      return validateUndeclareAttacker(state, action.permanentId, actingPlayer);
     case 'CONFIRM_ATTACKERS':
-      return validateConfirmAttackers(state);
+      return validateConfirmAttackers(state, actingPlayer);
     case 'ASSIGN_BLOCKER':
       return validateAssignBlocker(state, action.blockerPermanentId, action.attackerPermanentId, actingPlayer);
     case 'REMOVE_BLOCKER':
-      return validateRemoveBlocker(state, action.blockerPermanentId);
+      return validateRemoveBlocker(state, action.blockerPermanentId, actingPlayer);
     case 'CONFIRM_BLOCKERS':
-      return validateConfirmBlockers(state);
+      return validateConfirmBlockers(state, actingPlayer);
     case 'DISCARD_CARD':
       return validateDiscardCard(state, action.cardIndex, actingPlayer);
     case 'CONCEDE':
@@ -76,9 +76,12 @@ function validateMulliganCards(
   return { valid: true };
 }
 
-function validateAdvancePhase(state: GameState): ValidationResult {
+function validateAdvancePhase(state: GameState, actingPlayer: PlayerId): ValidationResult {
   const { type } = state.phase;
   if (type === 'play' || type === 'draw' || type === 'energy' || type === 'end') {
+    if (state.activePlayer !== actingPlayer) {
+      return { valid: false, reason: 'It is not your turn' };
+    }
     return { valid: true };
   }
   return { valid: false, reason: `Cannot advance phase during ${type} phase` };
@@ -188,9 +191,12 @@ function validateDeclareAttacker(
   return { valid: true };
 }
 
-function validateUndeclareAttacker(state: GameState, permanentId: string): ValidationResult {
+function validateUndeclareAttacker(state: GameState, permanentId: string, actingPlayer: PlayerId): ValidationResult {
   if (state.phase.type !== 'battle' || state.phase.step !== 'declare_attackers') {
     return { valid: false, reason: 'UNDECLARE_ATTACKER is only valid during declare_attackers step' };
+  }
+  if (state.activePlayer !== actingPlayer) {
+    return { valid: false, reason: 'Only the active player can undeclare attackers' };
   }
   if (!state.phase.tentativeAttackers.includes(permanentId)) {
     return { valid: false, reason: 'Creature is not a tentative attacker' };
@@ -198,9 +204,12 @@ function validateUndeclareAttacker(state: GameState, permanentId: string): Valid
   return { valid: true };
 }
 
-function validateConfirmAttackers(state: GameState): ValidationResult {
+function validateConfirmAttackers(state: GameState, actingPlayer: PlayerId): ValidationResult {
   if (state.phase.type !== 'battle' || state.phase.step !== 'declare_attackers') {
     return { valid: false, reason: 'CONFIRM_ATTACKERS is only valid during declare_attackers step' };
+  }
+  if (state.activePlayer !== actingPlayer) {
+    return { valid: false, reason: 'Only the active player can confirm attackers' };
   }
   return { valid: true };
 }
@@ -236,9 +245,12 @@ function validateAssignBlocker(
   return { valid: true };
 }
 
-function validateRemoveBlocker(state: GameState, blockerPermanentId: string): ValidationResult {
+function validateRemoveBlocker(state: GameState, blockerPermanentId: string, actingPlayer: PlayerId): ValidationResult {
   if (state.phase.type !== 'battle' || state.phase.step !== 'declare_blockers') {
     return { valid: false, reason: 'REMOVE_BLOCKER is only valid during declare_blockers step' };
+  }
+  if (actingPlayer !== getOpponent(state.activePlayer)) {
+    return { valid: false, reason: 'Only the defending player can remove blockers' };
   }
   const isAssigned = Object.keys(state.phase.tentativeBlockers).includes(blockerPermanentId);
   if (!isAssigned) {
@@ -247,9 +259,12 @@ function validateRemoveBlocker(state: GameState, blockerPermanentId: string): Va
   return { valid: true };
 }
 
-function validateConfirmBlockers(state: GameState): ValidationResult {
+function validateConfirmBlockers(state: GameState, actingPlayer: PlayerId): ValidationResult {
   if (state.phase.type !== 'battle' || state.phase.step !== 'declare_blockers') {
     return { valid: false, reason: 'CONFIRM_BLOCKERS is only valid during declare_blockers step' };
+  }
+  if (actingPlayer !== getOpponent(state.activePlayer)) {
+    return { valid: false, reason: 'Only the defending player can confirm blockers' };
   }
   return { valid: true };
 }

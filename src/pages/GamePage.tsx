@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import type { PlayerId } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
-import { GameDispatchProvider } from '@game/GameDispatchContext';
+import { GameDispatchProvider, useGameDispatch } from '@game/GameDispatchContext';
 import { dispatchWithAnimations } from '@game/dispatchWithAnimations';
 import { createAIController } from '@game/controllers/aiController';
 import { createNetworkController } from '@game/controllers/networkController';
@@ -132,10 +132,6 @@ export function GamePage() {
     navigate('/');
   }, [resetGame, navigate]);
 
-  const handleConcede = useCallback(() => {
-    dispatchWithAnimations({ type: 'CONCEDE' }, humanPlayer);
-  }, [humanPlayer]);
-
   const handleDisconnectAck = useCallback(() => {
     handleMainMenu();
   }, [handleMainMenu]);
@@ -155,7 +151,6 @@ export function GamePage() {
     <GameDispatchProvider controller={controller}>
       <PlayingScreenInner
         onGameOver={handleGameOver}
-        onConcede={handleConcede}
         onMainMenu={handleMainMenu}
         disconnectReason={disconnectReason}
         onDisconnectAck={handleDisconnectAck}
@@ -166,19 +161,19 @@ export function GamePage() {
 
 function PlayingScreenInner({
   onGameOver,
-  onConcede,
   onMainMenu,
   disconnectReason,
   onDisconnectAck,
 }: {
   onGameOver: (winner: PlayerId) => void;
-  onConcede: () => void;
   onMainMenu: () => void;
   disconnectReason: string | null;
   onDisconnectAck: () => void;
 }) {
   useGameLoop();
 
+  const dispatch = useGameDispatch();
+  const humanPlayer = useGameStore((s) => s.humanPlayer);
   const phase = useGameStore((s) => s.state?.phase);
   const [showMenu, setShowMenu] = useState(false);
   const disconnectPrimaryRef = useRef<HTMLButtonElement | null>(null);
@@ -223,7 +218,7 @@ function PlayingScreenInner({
             onResume={() => setShowMenu(false)}
             onConcede={() => {
               setShowMenu(false);
-              onConcede();
+              dispatch({ type: 'CONCEDE' }, humanPlayer);
             }}
             onMainMenu={() => {
               setShowMenu(false);
