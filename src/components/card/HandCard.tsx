@@ -116,29 +116,31 @@ export function HandCard({
             {card.name}
           </span>
 
-          {/* Energy cost gem with element icon */}
+          {/* Energy cost — element icon ×N */}
           <div
             data-testid="hand-card-cost"
-            className="shrink-0 flex items-center gap-[2px] rounded-md px-[3px] text-white font-black"
-            style={{
-              height: 'calc(var(--card-font-scale) * 1.25rem)',
-              fontSize: 'calc(var(--card-font-scale) * 0.7rem)',
-              background: `linear-gradient(135deg, ${elementColor}, ${elementColor}cc)`,
-              boxShadow: `0 1px 3px ${elementColor}66`,
-            }}
+            className="shrink-0 flex items-center"
+            style={{ gap: 'calc(var(--card-font-scale) * 0.05rem)' }}
           >
-            <span>{card.cost}</span>
             <img
               src={elementIconPath}
-              alt={card.element}
-              className="select-none"
+              alt={`${card.cost} ${card.element}`}
+              className="select-none drop-shadow-sm"
               draggable={false}
               style={{
-                width: 'calc(var(--card-font-scale) * 0.75rem)',
-                height: 'calc(var(--card-font-scale) * 0.75rem)',
+                width: 'calc(var(--card-font-scale) * 0.55rem)',
+                height: 'calc(var(--card-font-scale) * 0.55rem)',
                 objectFit: 'contain',
               }}
             />
+            {card.cost > 1 && (
+              <span
+                className="text-white/50 leading-none"
+                style={{ fontSize: 'calc(var(--card-font-scale) * 0.4rem)' }}
+              >
+                ×<span className="font-bold text-white/80" style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}>{card.cost}</span>
+              </span>
+            )}
           </div>
         </div>
 
@@ -146,7 +148,7 @@ export function HandCard({
         <div
           className="relative mx-1 mt-1 rounded-md overflow-hidden flex items-center justify-center"
           style={{
-            height: 'calc(var(--card-height) * 0.36)',
+            height: 'calc(var(--card-height) * 0.32)',
             background: artGradient,
           }}
         >
@@ -163,27 +165,32 @@ export function HandCard({
           />
         </div>
 
+        {/* ── Type label (overlaps art/text boundary) ── */}
+        <div className="flex justify-center" style={{ marginTop: 'calc(var(--card-font-scale) * -0.35rem)' }}>
+          <span
+            data-testid="hand-card-type-label"
+            className="relative z-[3] inline-flex rounded px-1.5 py-[1px] text-white/85 uppercase tracking-wide backdrop-blur-sm"
+            style={{
+              fontSize: 'calc(var(--card-font-scale) * 0.44rem)',
+              background: 'rgba(15, 23, 42, 0.85)',
+              border: '1px solid rgba(148, 163, 184, 0.3)',
+            }}
+          >
+            {isCreature ? 'Creature' : 'Spell'}
+          </span>
+        </div>
+
         {/* ── Text box (keywords + effects) ── */}
         <div
-          className="flex-1 mx-1 mt-1 mb-1 px-1.5 py-1 rounded-md overflow-visible"
+          className="flex-1 mx-1 mb-1 px-1.5 rounded-md overflow-visible"
           style={{
             background: 'rgba(15, 23, 42, 0.8)',
             border: '1px solid rgba(148, 163, 184, 0.15)',
+            marginTop: 'calc(var(--card-font-scale) * -0.3rem)',
+            paddingTop: 'calc(var(--card-font-scale) * 0.4rem)',
+            paddingBottom: 'calc(var(--card-font-scale) * 0.2rem)',
           }}
         >
-          <div className="mb-1">
-            <span
-              data-testid="hand-card-type-label"
-              className="inline-flex rounded px-1.5 py-[1px] text-white/85 uppercase tracking-wide"
-              style={{
-                fontSize: 'calc(var(--card-font-scale) * 0.44rem)',
-                background: 'rgba(148, 163, 184, 0.2)',
-                border: '1px solid rgba(148, 163, 184, 0.25)',
-              }}
-            >
-              {isCreature ? 'Creature' : 'Spell'}
-            </span>
-          </div>
 
           {/* Keywords */}
           {card.keywords.length > 0 && (
@@ -242,35 +249,33 @@ export function HandCard({
 
         {/* ── Stat bar (creatures only) ── */}
         {isCreature && (
-          <div className="flex justify-between items-center px-1 pb-1">
+          <div className="flex justify-between items-center px-1 pb-1 pt-0.5">
             {/* Attack - bottom left */}
             <div
-              className="flex items-center justify-center rounded-md text-white font-black"
+              className="flex items-center gap-0.5 rounded-md backdrop-blur-sm font-black text-red-100"
               style={{
-                minWidth: 'calc(var(--card-font-scale) * 1.4rem)',
-                height: 'calc(var(--card-font-scale) * 1.2rem)',
-                fontSize: 'calc(var(--card-font-scale) * 0.7rem)',
-                background: 'linear-gradient(135deg, #dc2626, #991b1b)',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                padding: '0 3px',
+                fontSize: 'calc(var(--card-font-scale) * 0.55rem)',
+                padding: 'calc(var(--card-font-scale) * 0.1rem) calc(var(--card-font-scale) * 0.25rem)',
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid rgba(252, 165, 165, 0.5)',
               }}
             >
-              {card.attack}
+              <span className="leading-none">⚔</span>
+              <span className="leading-none">{card.attack}</span>
             </div>
 
             {/* Health - bottom right */}
             <div
-              className="flex items-center justify-center rounded-md text-white font-black"
+              className="flex items-center gap-0.5 rounded-md backdrop-blur-sm font-black text-emerald-100"
               style={{
-                minWidth: 'calc(var(--card-font-scale) * 1.4rem)',
-                height: 'calc(var(--card-font-scale) * 1.2rem)',
-                fontSize: 'calc(var(--card-font-scale) * 0.7rem)',
-                background: 'linear-gradient(135deg, #16a34a, #14532d)',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                padding: '0 3px',
+                fontSize: 'calc(var(--card-font-scale) * 0.55rem)',
+                padding: 'calc(var(--card-font-scale) * 0.1rem) calc(var(--card-font-scale) * 0.25rem)',
+                background: 'rgba(34, 197, 94, 0.2)',
+                border: '1px solid rgba(134, 239, 172, 0.5)',
               }}
             >
-              {card.health}
+              <span className="leading-none">♥</span>
+              <span className="leading-none">{card.health}</span>
             </div>
           </div>
         )}
