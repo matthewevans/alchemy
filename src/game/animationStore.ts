@@ -26,15 +26,16 @@ export type AnimationEffect =
       from: ElementPosition;
       to: ElementPosition;
       element?: Element;
+      soundId?: string;
     }
   | { type: 'damage'; targetId: string; amount: number; position: ElementPosition }
   | { type: 'heal'; targetId: string; amount: number; position: ElementPosition }
   | { type: 'player_damage'; player: PlayerId; amount: number; position: ElementPosition }
   | { type: 'player_heal'; player: PlayerId; amount: number; position: ElementPosition }
-  | { type: 'death'; permanentId: string; position: ElementPosition; element?: Element }
-  | { type: 'spell_impact'; position: ElementPosition; element?: Element }
+  | { type: 'death'; permanentId: string; position: ElementPosition; element?: Element; soundId?: string }
+  | { type: 'spell_impact'; position: ElementPosition; element?: Element; soundId?: string }
   | { type: 'keyword'; permanentId: string; keyword: Keyword; position: ElementPosition; element?: Element }
-  | { type: 'summon'; permanentId: string; position: ElementPosition; element?: Element };
+  | { type: 'summon'; permanentId: string; position: ElementPosition; element?: Element; soundId?: string };
 
 export interface AnimationStep {
   effects: AnimationEffect[];
@@ -112,6 +113,10 @@ export const useAnimationStore = create<AnimationStore>()(
 
 function getCardElement(cardId: string): Element | undefined {
   return CARD_REGISTRY[cardId]?.element;
+}
+
+function getCardSoundId(cardId: string): string | undefined {
+  return CARD_REGISTRY[cardId]?.soundId;
 }
 
 const SHAKE_THRESHOLDS = { heavy: 5, medium: 3 } as const;
@@ -260,6 +265,7 @@ function groupCombatEvents(
               from: sourcePos,
               to: pos,
               element: sourceCardId ? getCardElement(sourceCardId) : undefined,
+              soundId: sourceCardId ? getCardSoundId(sourceCardId) : undefined,
             });
           }
           effects.push({ type: 'damage', targetId: e.targetId, amount: e.amount, position: pos });
@@ -276,6 +282,7 @@ function groupCombatEvents(
               from: sourcePos,
               to: pos,
               element: sourceCardId ? getCardElement(sourceCardId) : undefined,
+              soundId: sourceCardId ? getCardSoundId(sourceCardId) : undefined,
             });
           }
           effects.push({ type: 'player_damage', player: e.player, amount: e.amount, position: pos });
@@ -297,7 +304,7 @@ function groupCombatEvents(
     .filter((e): e is Extract<GameEvent, { type: 'CREATURE_DIED' }> => e.type === 'CREATURE_DIED')
     .map((e) => {
       const pos = positions.get(e.permanentId);
-      return pos ? { type: 'death' as const, permanentId: e.permanentId, position: pos, element: getCardElement(e.cardId) } : null;
+      return pos ? { type: 'death' as const, permanentId: e.permanentId, position: pos, element: getCardElement(e.cardId), soundId: getCardSoundId(e.cardId) } : null;
     })
     .filter((e): e is NonNullable<typeof e> => e !== null);
 
@@ -320,7 +327,7 @@ function groupSpellEvents(
       for (const target of e.targets) {
         const key = target.type === 'creature' ? target.permanentId : `player:${target.playerId}`;
         const pos = positions.get(key);
-        if (pos) effects.push({ type: 'spell_impact', position: pos, element: spellElement });
+        if (pos) effects.push({ type: 'spell_impact', position: pos, element: spellElement, soundId: getCardSoundId(e.cardId) });
       }
     } else {
       const effect = mapEventToEffect(e, positions);
@@ -339,9 +346,11 @@ function groupETBEvents(
   const effects: AnimationEffect[] = [];
 
   let etbElement: Element | undefined;
+  let etbSoundId: string | undefined;
   for (const e of events) {
     if (e.type === 'CARD_PLAYED' && e.cardId) {
       etbElement = getCardElement(e.cardId);
+      etbSoundId = getCardSoundId(e.cardId);
       break;
     }
   }
@@ -349,7 +358,7 @@ function groupETBEvents(
   for (const e of events) {
     if (e.type === 'CREATURE_ENTERED') {
       const pos = positions.get(e.permanentId);
-      if (pos) effects.push({ type: 'summon', permanentId: e.permanentId, position: pos, element: etbElement });
+      if (pos) effects.push({ type: 'summon', permanentId: e.permanentId, position: pos, element: etbElement, soundId: etbSoundId });
     } else if (e.type === 'KEYWORD_TRIGGERED') {
       const pos = positions.get(e.permanentId);
       if (pos) effects.push({ type: 'keyword', permanentId: e.permanentId, keyword: e.keyword, position: pos, element: etbElement });
@@ -377,9 +386,11 @@ function groupSummonEvents(
   positions: Map<string, ElementPosition>,
 ): AnimationStep[] {
   let summonElement: Element | undefined;
+  let summonSoundId: string | undefined;
   for (const e of events) {
     if (e.type === 'CARD_PLAYED' && e.cardId) {
       summonElement = getCardElement(e.cardId);
+      summonSoundId = getCardSoundId(e.cardId);
       break;
     }
   }
@@ -388,7 +399,7 @@ function groupSummonEvents(
   for (const e of events) {
     if (e.type === 'CREATURE_ENTERED') {
       const pos = positions.get(e.permanentId);
-      if (pos) effects.push({ type: 'summon', permanentId: e.permanentId, position: pos, element: summonElement });
+      if (pos) effects.push({ type: 'summon', permanentId: e.permanentId, position: pos, element: summonElement, soundId: summonSoundId });
     }
   }
 

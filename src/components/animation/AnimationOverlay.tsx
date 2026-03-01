@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useAnimationStore } from '@game/animationStore';
 import type { AnimationEffect, ElementPosition } from '@game/animationStore';
 import { KEYWORD_REGISTRY } from '@engine/keywords';
+import { triggerSoundEffect } from '@audio/triggerSoundEffect';
 import { FloatingNumber } from './FloatingNumber';
 import { BlockLink } from './BlockLink';
 import { DamageVignette } from './DamageVignette';
@@ -34,6 +35,7 @@ export function AnimationOverlay() {
 
     for (const effect of activeStep.effects) {
       triggerParticleEffect(particles, effect);
+      triggerSoundEffect(effect);
     }
   }, [activeStep]);
 

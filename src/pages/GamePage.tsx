@@ -9,6 +9,7 @@ import { createNetworkController } from '@game/controllers/networkController';
 import type { OpponentController } from '@game/controllers/types';
 import { takePendingSession } from '@network/sessionTransfer';
 import { useGameLoop } from '@hooks/useGameLoop';
+import { useAmbientMusic } from '@hooks/useAmbientMusic';
 import { loadGame, clearSavedGame, saveHistoryEntry } from '@storage/persistence';
 import { AnimatePresence } from 'framer-motion';
 import { GameBoard } from '@components/board';
@@ -178,6 +179,7 @@ function PlayingScreenInner({
   onDisconnectAck: () => void;
 }) {
   useGameLoop();
+  useAmbientMusic();
 
   const dispatch = useGameDispatch();
   const humanPlayer = useGameStore((s) => s.humanPlayer);

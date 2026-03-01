@@ -69,6 +69,7 @@ export default defineConfig({
       '@hooks': path.resolve(__dirname, 'src/hooks'),
       '@storage': path.resolve(__dirname, 'src/storage'),
       '@network': path.resolve(__dirname, 'src/network'),
+      '@audio': path.resolve(__dirname, 'src/audio'),
     },
   },
   test: {

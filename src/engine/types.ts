@@ -42,6 +42,7 @@ export interface CardDefinition {
   effectId?: string;
   targetingType?: TargetingType;
   flavor?: string;
+  soundId?: string;
 }
 
 export interface CardInstance {

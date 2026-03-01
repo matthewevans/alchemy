@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePreferencesStore } from '@game/preferencesStore';
+import { useAudioStore } from '@audio/audioStore';
 import { gameButtonClass } from './buttonStyles';
 import { useDialogA11y } from '@hooks/useDialogA11y';
 
@@ -14,6 +15,7 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
   const [confirmingConcede, setConfirmingConcede] = useState(false);
   const dialogRef = useDialogA11y({ open: true, onClose: onResume });
   const { uiScale, setUIScale, resetUIScale } = usePreferencesStore();
+  const { sfxVolume, setSfxVolume, musicVolume, setMusicVolume } = useAudioStore();
 
   return (
     <motion.div
@@ -67,6 +69,46 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
             onChange={(e) => setUIScale(parseFloat(e.target.value))}
             className="w-full h-2 rounded-full appearance-none cursor-pointer bg-slate-600/60"
             style={{ accentColor: '#fbbf24' }}
+          />
+        </div>
+
+        {/* SFX Volume */}
+        <div className="w-full mb-1">
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="sfx-volume" className="text-sm text-white/70">
+              SFX: {Math.round(sfxVolume * 100)}%
+            </label>
+          </div>
+          <input
+            id="sfx-volume"
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={sfxVolume}
+            onChange={(e) => setSfxVolume(parseFloat(e.target.value))}
+            className="w-full h-2 rounded-full appearance-none cursor-pointer bg-slate-600/60"
+            style={{ accentColor: '#f97316' }}
+          />
+        </div>
+
+        {/* Music Volume */}
+        <div className="w-full mb-1">
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="music-volume" className="text-sm text-white/70">
+              Music: {Math.round(musicVolume * 100)}%
+            </label>
+          </div>
+          <input
+            id="music-volume"
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={musicVolume}
+            onChange={(e) => setMusicVolume(parseFloat(e.target.value))}
+            className="w-full h-2 rounded-full appearance-none cursor-pointer bg-slate-600/60"
+            style={{ accentColor: '#818cf8' }}
           />
         </div>
 
