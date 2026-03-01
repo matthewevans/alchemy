@@ -74,12 +74,12 @@ export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
     <div className="h-screen w-screen bg-slate-950 overflow-y-auto pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="relative flex items-center justify-center mb-8">
           <motion.button
             className={gameButtonClass({
               tone: 'neutral',
               size: 'sm',
-              className: 'px-4 py-2 font-medium',
+              className: 'absolute left-0 px-4 py-2 font-medium',
             })}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -88,7 +88,6 @@ export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
             Back
           </motion.button>
           <h1 className="text-2xl font-bold text-white">Choose Your Deck</h1>
-          <div className="w-16" /> {/* Spacer for centering */}
         </div>
 
         {/* Deck grid */}
@@ -108,7 +107,7 @@ export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
                   tone: 'neutral',
                   size: 'md',
                   className:
-                    'relative w-full min-h-[11.5rem] p-4 rounded-xl bg-slate-800/65 text-left hover:bg-slate-800/80 overflow-hidden flex flex-col items-start justify-start',
+                    'relative w-full sm:min-h-[11.5rem] p-4 rounded-xl bg-slate-800/65 text-left hover:bg-slate-800/80 overflow-hidden flex flex-col items-start justify-start',
                 })}
                 style={{
                   borderColor: `${primaryColor}33`,

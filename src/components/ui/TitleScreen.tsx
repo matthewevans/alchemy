@@ -97,7 +97,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScree
 
       {/* Buttons */}
       <motion.div
-        className="flex flex-col items-center gap-3"
+        className="flex flex-col items-center gap-4"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
@@ -131,8 +131,8 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder }: TitleScree
         <motion.button
           className={gameButtonClass({
             tone: 'neutral',
-            size: 'sm',
-            className: 'px-8 py-2.5 rounded-xl text-sm font-medium',
+            size: 'md',
+            className: 'w-64 text-sm font-medium',
           })}
           whileHover={shouldReduceMotion ? undefined : { scale: 1.04 }}
           whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}

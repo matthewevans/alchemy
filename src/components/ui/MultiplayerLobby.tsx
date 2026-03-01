@@ -1,9 +1,10 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import type { PeerSession } from '@network/peer';
 import { createPeerSession } from '@network/peer';
 import type { HostResult } from '@network/connection';
 import { hostRoom, joinRoom, parseRoomCode } from '@network/connection';
+import { ELEMENTS } from '@engine/elements';
 import { DeckSelector } from './DeckSelector';
 import { gameButtonClass } from './buttonStyles';
 
@@ -21,6 +22,32 @@ interface MultiplayerLobbyProps {
   onBack: () => void;
 }
 
+interface FloatingIcon {
+  id: number;
+  element: string;
+  x: number;
+  y: number;
+  size: number;
+  duration: number;
+  delay: number;
+}
+
+function useFloatingIcons(count: number): FloatingIcon[] {
+  return useMemo(
+    () =>
+      Array.from({ length: count }, (_, i) => ({
+        id: i,
+        element: ELEMENTS[i % ELEMENTS.length],
+        x: Math.random() * 90 + 5,
+        y: Math.random() * 80 + 10,
+        size: Math.random() * 24 + 20,
+        duration: Math.random() * 6 + 8,
+        delay: Math.random() * 4,
+      })),
+    [count],
+  );
+}
+
 export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps) {
   const [step, setStep] = useState<LobbyStep>({ type: 'choose_role' });
   const [codeInput, setCodeInput] = useState('');
@@ -28,6 +55,8 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
   const mountedRef = useRef(true);
   const hostRef = useRef<HostResult | null>(null);
   const sessionRef = useRef<PeerSession | null>(null);
+  const shouldReduceMotion = useReducedMotion();
+  const floatingIcons = useFloatingIcons(shouldReduceMotion ? 0 : 8);
 
   useEffect(() => {
     return () => {
@@ -193,125 +222,156 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
   // ─── Main Lobby UI ───
 
+  const backHandler = step.type === 'choose_role' ? onBack
+    : step.type === 'connecting' ? null
+    : handleBack;
+
   return (
-    <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 text-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-      <AnimatePresence mode="wait">
-        {step.type === 'choose_role' && (
-          <motion.div
-            key="choose"
-            className="flex flex-col items-center gap-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+    <div className="h-screen w-screen flex flex-col bg-slate-950 text-white overflow-hidden relative pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      {/* Floating element icons */}
+      {floatingIcons.map((icon) => (
+        <motion.img
+          key={icon.id}
+          src={`${import.meta.env.BASE_URL}elements/${icon.element}.webp`}
+          alt=""
+          className="absolute opacity-[0.07] pointer-events-none"
+          style={{
+            left: `${icon.x}%`,
+            top: `${icon.y}%`,
+            width: icon.size,
+            height: icon.size,
+          }}
+          animate={{
+            y: [0, -15, 0],
+            x: [0, 8, 0],
+            rotate: [0, 10, -10, 0],
+          }}
+          transition={{
+            duration: icon.duration,
+            delay: icon.delay,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+
+      {/* Top-left Back button */}
+      {backHandler && (
+        <div className="absolute top-4 left-4 z-10 pt-[env(safe-area-inset-top)]">
+          <motion.button
+            className={gameButtonClass({
+              tone: 'neutral',
+              size: 'sm',
+              className: 'px-4 py-2 font-medium',
+            })}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={backHandler}
           >
-            <h2 className="text-3xl font-bold mb-2">Multiplayer</h2>
-            <p className="text-white/50 text-sm mb-4">Challenge a friend via peer-to-peer</p>
-            <motion.button
-              className={gameButtonClass({ tone: 'amber', size: 'lg', className: 'px-10 text-xl font-bold' })}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setStep({ type: 'host_select_deck' })}
+            Back
+          </motion.button>
+        </div>
+      )}
+
+      {/* Centered content */}
+      <div className="flex-1 flex items-center justify-center">
+        <AnimatePresence mode="wait">
+          {step.type === 'choose_role' && (
+            <motion.div
+              key="choose"
+              className="flex flex-col items-center gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
             >
-              Host Game
-            </motion.button>
-            <motion.button
-              className={gameButtonClass({ tone: 'blue', size: 'lg', className: 'px-10 text-xl font-bold' })}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => { setCodeInput(''); setCodeError(''); setStep({ type: 'join_enter_code' }); }}
-            >
-              Join Game
-            </motion.button>
-            <motion.button
-              className={gameButtonClass({ tone: 'neutral', size: 'sm', className: 'mt-4 px-6 py-2 rounded-xl text-sm' })}
-              whileTap={{ scale: 0.95 }}
-              onClick={onBack}
-            >
-              Back
-            </motion.button>
-          </motion.div>
-        )}
-
-        {step.type === 'host_waiting' && (
-          <motion.div
-            key="host-waiting"
-            className="flex flex-col items-center gap-6 px-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <h3 className="text-xl font-bold">Your Room Code</h3>
-            <p className="text-white/50 text-sm text-center">Tell your friend this code</p>
-
-            <div className="flex gap-2">
-              {step.roomCode.split('').map((char, i) => (
-                <div
-                  key={i}
-                  className="w-14 h-16 rounded-xl bg-amber-500/20 border-2 border-amber-400/60 flex items-center justify-center text-3xl font-bold text-amber-200 tracking-wider"
-                >
-                  {char}
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-3 text-white/50">
-              <motion.div
-                className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              />
-              <span className="text-sm">Waiting for opponent...</span>
-            </div>
-
-            <motion.button
-              className={gameButtonClass({ tone: 'neutral', size: 'sm', className: 'mt-2 px-6 py-2 text-sm' })}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleBack}
-            >
-              Cancel
-            </motion.button>
-          </motion.div>
-        )}
-
-        {step.type === 'join_enter_code' && (
-          <motion.div
-            key="join-code"
-            className="flex flex-col items-center gap-4 max-w-sm px-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <h3 className="text-xl font-bold">Join Game</h3>
-            <p className="text-white/50 text-sm text-center">Enter the room code from the host</p>
-
-            <input
-              className="w-48 bg-slate-800 rounded-xl px-4 py-3 text-center text-2xl font-bold tracking-[0.3em] text-blue-200 uppercase outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-white/20 placeholder:tracking-normal placeholder:text-base"
-              maxLength={5}
-              placeholder="CODE"
-              value={codeInput}
-              onChange={(e) => {
-                setCodeInput(e.target.value.toUpperCase().slice(0, 5));
-                setCodeError('');
-              }}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleJoinSubmitCode(); }}
-              autoFocus
-            />
-            {codeError && <p className="text-red-400 text-xs">{codeError}</p>}
-
-            <div className="flex gap-3 mt-2">
+              <h2 className="text-3xl font-bold mb-1">Multiplayer</h2>
+              <p className="text-white/50 text-sm mb-4">Challenge a friend via peer-to-peer</p>
               <motion.button
-                className={gameButtonClass({ tone: 'neutral', size: 'sm', className: 'px-6 py-2 text-sm' })}
+                className={gameButtonClass({ tone: 'amber', size: 'lg', className: 'w-64 text-xl font-bold' })}
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={handleBack}
+                onClick={() => setStep({ type: 'host_select_deck' })}
               >
-                Back
+                Host Game
               </motion.button>
+              <motion.button
+                className={gameButtonClass({ tone: 'blue', size: 'lg', className: 'w-64 text-xl font-bold' })}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => { setCodeInput(''); setCodeError(''); setStep({ type: 'join_enter_code' }); }}
+              >
+                Join Game
+              </motion.button>
+            </motion.div>
+          )}
+
+          {step.type === 'host_waiting' && (
+            <motion.div
+              key="host-waiting"
+              className="flex flex-col items-center gap-6 px-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <h3 className="text-xl font-bold">Your Room Code</h3>
+              <p className="text-white/50 text-sm text-center">Tell your friend this code</p>
+
+              <div className="flex gap-2">
+                {step.roomCode.split('').map((char, i) => (
+                  <motion.div
+                    key={i}
+                    className="w-14 h-16 rounded-xl bg-amber-500/20 border-2 border-amber-400/60 flex items-center justify-center text-3xl font-bold text-amber-200 tracking-wider"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.08 }}
+                  >
+                    {char}
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-3 text-white/50">
+                <motion.div
+                  className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                />
+                <span className="text-sm">Waiting for opponent...</span>
+              </div>
+            </motion.div>
+          )}
+
+          {step.type === 'join_enter_code' && (
+            <motion.div
+              key="join-code"
+              className="flex flex-col items-center gap-4 max-w-sm px-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <h3 className="text-xl font-bold">Join Game</h3>
+              <p className="text-white/50 text-sm text-center">Enter the room code from the host</p>
+
+              <input
+                className="w-48 bg-slate-800 rounded-xl px-4 py-3 text-center text-2xl font-bold tracking-[0.3em] text-blue-200 uppercase outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-white/20 placeholder:tracking-normal placeholder:text-base"
+                maxLength={5}
+                placeholder="CODE"
+                value={codeInput}
+                onChange={(e) => {
+                  setCodeInput(e.target.value.toUpperCase().slice(0, 5));
+                  setCodeError('');
+                }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleJoinSubmitCode(); }}
+                autoFocus
+              />
+              {codeError && <p className="text-red-400 text-xs">{codeError}</p>}
+
               <motion.button
                 className={gameButtonClass({
                   tone: 'blue',
                   size: 'md',
                   disabled: codeInput.length < 5,
-                  className: 'px-8 font-bold text-sm',
+                  className: 'w-64 font-bold text-sm mt-2',
                 })}
                 whileHover={codeInput.length >= 5 ? { scale: 1.05 } : undefined}
                 whileTap={codeInput.length >= 5 ? { scale: 0.95 } : undefined}
@@ -320,47 +380,47 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
               >
                 Next: Select Deck
               </motion.button>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          )}
 
-        {step.type === 'connecting' && (
-          <motion.div
-            key="connecting"
-            className="flex flex-col items-center gap-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
+          {step.type === 'connecting' && (
             <motion.div
-              className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            />
-            <p className="text-white/70">Connecting...</p>
-          </motion.div>
-        )}
-
-        {step.type === 'error' && (
-          <motion.div
-            key="error"
-            className="flex flex-col items-center gap-4 max-w-md px-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <h3 className="text-xl font-bold text-red-400">Connection Error</h3>
-            <p className="text-white/60 text-sm text-center">{step.message}</p>
-            <motion.button
-              className={gameButtonClass({ tone: 'neutral', size: 'md', className: 'px-6 font-medium' })}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleBack}
+              key="connecting"
+              className="flex flex-col items-center gap-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
-              Try Again
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <motion.div
+                className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              />
+              <p className="text-white/70">Connecting...</p>
+            </motion.div>
+          )}
+
+          {step.type === 'error' && (
+            <motion.div
+              key="error"
+              className="flex flex-col items-center gap-4 max-w-md px-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <h3 className="text-xl font-bold text-red-400">Connection Error</h3>
+              <p className="text-white/60 text-sm text-center">{step.message}</p>
+              <motion.button
+                className={gameButtonClass({ tone: 'neutral', size: 'md', className: 'px-6 font-medium' })}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleBack}
+              >
+                Try Again
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
