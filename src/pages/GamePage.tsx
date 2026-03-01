@@ -123,8 +123,8 @@ export function GamePage() {
     controllerRef.current?.dispose();
     setController(null);
     resetGame();
-    navigate('/');
-  }, [resetGame, navigate]);
+    navigate('/', { state: { initialScreen: isMultiplayer ? 'multiplayer_lobby' : 'deck_select' } });
+  }, [resetGame, navigate, isMultiplayer]);
 
   const handleMainMenu = useCallback(() => {
     controllerRef.current?.dispose();

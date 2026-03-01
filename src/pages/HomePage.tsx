@@ -1,5 +1,5 @@
 import { useState, useCallback, lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import type { PlayerId } from '@engine/types';
 import { createRNG } from '@engine/prng';
 import { TIER_CONFIGS } from '@engine/ruleset';
@@ -35,8 +35,14 @@ function HomeLoading({ label }: { label: string }) {
   );
 }
 
+interface HomeLocationState {
+  initialScreen?: SubScreen;
+}
+
 export function HomePage() {
-  const [subScreen, setSubScreen] = useState<SubScreen>('title');
+  const location = useLocation();
+  const locationState = location.state as HomeLocationState | null;
+  const [subScreen, setSubScreen] = useState<SubScreen>(locationState?.initialScreen ?? 'title');
   const navigate = useNavigate();
   const initGame = useGameStore((s) => s.initGame);
 
