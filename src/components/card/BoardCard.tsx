@@ -21,6 +21,7 @@ interface BoardCardProps {
   isValidTarget: boolean;
   isValidAttacker: boolean;
   isValidBlocker: boolean;
+  isSelectedForBlock?: boolean;
   cardWidth?: number;
   cardHeight?: number;
   onClick: () => void;
@@ -34,6 +35,7 @@ export function BoardCard({
   isValidTarget,
   isValidAttacker,
   isValidBlocker,
+  isSelectedForBlock = false,
   cardWidth,
   cardHeight,
   onClick,
@@ -83,11 +85,13 @@ export function BoardCard({
       onPointerCancel={longPress.onPointerCancel}
     >
       {/* Combat / interaction glow ring */}
-      {(isAttacking || isBlocking || isValidTarget || isInteractable) && (
+      {(isAttacking || isBlocking || isValidTarget || isInteractable || isSelectedForBlock) && (
         <motion.div
           className="absolute -inset-[2px] rounded-xl z-0 pointer-events-none"
           style={{
-            background: isAttacking
+            background: isSelectedForBlock
+              ? 'linear-gradient(135deg, #0ea5e9, #22d3ee, #0ea5e9)'
+              : isAttacking
               ? 'linear-gradient(135deg, #ef4444, #f97316, #ef4444)'
               : isBlocking
                 ? 'linear-gradient(135deg, #3b82f6, #60a5fa, #3b82f6)'
@@ -98,7 +102,7 @@ export function BoardCard({
           }}
           animate={{
             backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-            opacity: isAttacking || isBlocking ? [0.7, 1, 0.7] : [0.4, 0.7, 0.4],
+            opacity: isSelectedForBlock || isAttacking || isBlocking ? [0.7, 1, 0.7] : [0.4, 0.7, 0.4],
           }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
         />

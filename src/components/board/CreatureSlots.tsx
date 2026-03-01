@@ -24,6 +24,8 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   const selectHandCard = useUIStore((s) => s.selectHandCard);
   const selectedBlockerId = useUIStore((s) => s.selectedBlockerId);
   const selectBlocker = useUIStore((s) => s.selectBlocker);
+  const selectedAttackerId = useUIStore((s) => s.selectedAttackerId);
+  const selectAttacker = useUIStore((s) => s.selectAttacker);
   const inspectCard = useUIStore((s) => s.inspectCard);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [cardSize, setCardSize] = useState<{ width: number; height: number } | null>(null);
@@ -110,14 +112,53 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
             dispatch(removeAction, humanPlayer);
           }
           selectBlocker(null);
+          selectAttacker(null);
           return;
         }
 
-        // Clicking own creature: select as potential blocker
+        // If attacker is already selected, assign immediately.
+        if (selectedAttackerId && confirmedAttackers.includes(selectedAttackerId)) {
+          const assignAction = legalActions.find(
+            (a): a is Extract<GameAction, { type: 'ASSIGN_BLOCKER' }> =>
+              a.type === 'ASSIGN_BLOCKER'
+              && a.blockerPermanentId === permanentId
+              && a.attackerPermanentId === selectedAttackerId,
+          );
+          if (assignAction) {
+            dispatch(assignAction, humanPlayer);
+            selectBlocker(null);
+            selectAttacker(null);
+            return;
+          }
+        }
+
+        // With one attacker, blocker click can auto-assign.
+        if (confirmedAttackers.length === 1) {
+          const loneAttackerId = confirmedAttackers[0];
+          const assignAction = legalActions.find(
+            (a): a is Extract<GameAction, { type: 'ASSIGN_BLOCKER' }> =>
+              a.type === 'ASSIGN_BLOCKER'
+              && a.blockerPermanentId === permanentId
+              && a.attackerPermanentId === loneAttackerId,
+          );
+          if (assignAction) {
+            dispatch(assignAction, humanPlayer);
+            selectBlocker(null);
+            selectAttacker(null);
+            return;
+          }
+        }
+
+        // Otherwise select own creature as potential blocker.
         if (validBlockerIds.has(permanentId)) {
           selectBlocker(selectedBlockerId === permanentId ? null : permanentId);
+          if (selectedBlockerId !== permanentId) {
+            selectAttacker(null);
+          }
         }
       } else {
+        if (!confirmedAttackers.includes(permanentId)) return;
+
         // Clicking opponent (attacker) creature: assign block if we have a blocker selected
         if (selectedBlockerId && confirmedAttackers.includes(permanentId)) {
           const assignAction = legalActions.find(
@@ -129,7 +170,12 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
           if (assignAction) {
             dispatch(assignAction, humanPlayer);
             selectBlocker(null);
+            selectAttacker(null);
           }
+        } else {
+          // Allow attacker-first selection flow.
+          selectAttacker(selectedAttackerId === permanentId ? null : permanentId);
+          selectBlocker(null);
         }
       }
       return;
@@ -154,6 +200,16 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   if (showPlusOnEmpty && !slots.some((slot) => slot === null)) {
     slots.push(null);
   }
+
+  useLayoutEffect(() => {
+    if (
+      (phase?.type !== 'battle' || phase.step !== 'declare_blockers')
+      && (selectedBlockerId !== null || selectedAttackerId !== null)
+    ) {
+      selectBlocker(null);
+      selectAttacker(null);
+    }
+  }, [phase, selectedBlockerId, selectedAttackerId, selectBlocker, selectAttacker]);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -196,6 +252,13 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
           const isValidTarget = validTargetPermanentIds.has(permanent.permanentId);
           const isValidAttacker = validAttackerIds.has(permanent.permanentId) || undeclareAttackerIds.has(permanent.permanentId);
           const isValidBlocker = validBlockerIds.has(permanent.permanentId);
+          const isSelectedForBlock =
+            isBattlePhase
+            && phase.step === 'declare_blockers'
+            && (
+              (isPlayerBoard && selectedBlockerId === permanent.permanentId)
+              || (!isPlayerBoard && selectedAttackerId === permanent.permanentId)
+            );
 
           return (
             <BoardCard
@@ -206,6 +269,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
               isValidTarget={isValidTarget}
               isValidAttacker={isValidAttacker}
               isValidBlocker={isValidBlocker}
+              isSelectedForBlock={isSelectedForBlock}
               cardWidth={cardWidth}
               cardHeight={cardHeight}
               onClick={() => handleCreatureClick(permanent.permanentId)}
