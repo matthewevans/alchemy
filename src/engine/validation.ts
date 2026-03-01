@@ -300,7 +300,10 @@ export function enumerateLegalActions(
       break;
     case 'draw':
     case 'energy':
-      actions.push({ type: 'ADVANCE_PHASE' });
+    case 'end':
+      if (state.activePlayer === actingPlayer) {
+        actions.push({ type: 'ADVANCE_PHASE' });
+      }
       break;
     case 'play':
       enumeratePlayActions(state, actingPlayer, actions);
@@ -313,9 +316,6 @@ export function enumerateLegalActions(
       break;
     case 'discard':
       enumerateDiscardActions(state, actingPlayer, actions);
-      break;
-    case 'end':
-      actions.push({ type: 'ADVANCE_PHASE' });
       break;
   }
 
