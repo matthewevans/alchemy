@@ -1,5 +1,5 @@
 import { useState, useCallback, lazy, Suspense } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import type { PlayerId } from '@engine/types';
 import { createRNG } from '@engine/prng';
 import { TIER_CONFIGS } from '@engine/ruleset';
@@ -45,6 +45,7 @@ export function HomePage() {
   const locationState = location.state as HomeLocationState | null;
   const [subScreen, setSubScreen] = useState<SubScreen>(locationState?.initialScreen ?? 'title');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const initGame = useGameStore((s) => s.initGame);
 
   const savedGameId = loadActiveGameId();
@@ -82,7 +83,10 @@ export function HomePage() {
       for (const id of deckCardIds) {
         humanElements.add(id.split('_')[0]);
       }
-      const rng = createRNG(Date.now());
+      const seedParam = searchParams.get('seed');
+      const seed = seedParam ? parseInt(seedParam, 10) : Date.now();
+      console.log(`[Alchemy] Game seed: ${seed}`);
+      const rng = createRNG(seed);
       const availableElements = ELEMENTS.filter((el) => !humanElements.has(el));
       const aiElement = availableElements[Math.floor(rng() * availableElements.length)];
       const aiCards = getCardsByElement(aiElement);
@@ -100,7 +104,7 @@ export function HomePage() {
 
       navigate(`/game/${gameId}`);
     },
-    [initGame, navigate],
+    [initGame, navigate, searchParams],
   );
 
   const handleMultiplayerStart = useCallback(

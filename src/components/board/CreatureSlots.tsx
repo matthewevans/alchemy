@@ -186,7 +186,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   };
 
   const handleEmptySlotClick = (slotIndex: number) => {
-    // Play phase: place creature in empty slot
+    // Play phase: place creature in empty slot or cast spell
     if (isPlayPhase && isPlayerBoard && selectedHandIndex !== null) {
       const playAction = legalActions.find(
         (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
@@ -194,6 +194,16 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
       );
       if (playAction) {
         dispatch(playAction, humanPlayer);
+        selectHandCard(null);
+        return;
+      }
+      // Spell cast — spells have no targetSlot, so any slot click triggers them
+      const spellAction = legalActions.find(
+        (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
+          a.type === 'PLAY_CARD' && a.cardIndex === selectedHandIndex && a.targetSlot === undefined,
+      );
+      if (spellAction) {
+        dispatch(spellAction, humanPlayer);
         selectHandCard(null);
       }
     }
