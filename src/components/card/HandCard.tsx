@@ -94,14 +94,24 @@ export function HandCard({
       <div className="relative z-[2] flex flex-col m-[2px] rounded-[10px] overflow-hidden h-full bg-slate-900">
         {/* ── Name bar ── */}
         <div
+          data-testid="hand-card-header"
           className="flex items-center gap-1 px-1.5 py-[2px]"
           style={{
             background: `linear-gradient(90deg, ${elementColor}33, ${elementColor}11)`,
             borderBottom: `1px solid ${elementColor}44`,
           }}
         >
+          {/* Card name */}
+          <span
+            className="flex-1 text-white font-bold truncate"
+            style={{ fontSize: 'calc(var(--card-font-scale) * 0.6rem)' }}
+          >
+            {card.name}
+          </span>
+
           {/* Energy cost gem with element icon */}
           <div
+            data-testid="hand-card-cost"
             className="shrink-0 flex items-center gap-[2px] rounded-md px-[3px] text-white font-black"
             style={{
               height: 'calc(var(--card-font-scale) * 1.25rem)',
@@ -122,23 +132,6 @@ export function HandCard({
               }}
             />
           </div>
-
-          {/* Card name */}
-          <span
-            className="flex-1 text-white font-bold truncate"
-            style={{ fontSize: 'calc(var(--card-font-scale) * 0.6rem)' }}
-          >
-            {card.name}
-          </span>
-
-          {/* Type icon */}
-          <span
-            className="shrink-0 opacity-70"
-            style={{ fontSize: 'calc(var(--card-font-scale) * 0.65rem)' }}
-            title={card.type}
-          >
-            {isCreature ? '⚔️' : '✨'}
-          </span>
         </div>
 
         {/* ── Art area ── */}
@@ -171,6 +164,20 @@ export function HandCard({
             border: '1px solid rgba(148, 163, 184, 0.15)',
           }}
         >
+          <div className="mb-1">
+            <span
+              data-testid="hand-card-type-label"
+              className="inline-flex rounded px-1.5 py-[1px] text-white/85 uppercase tracking-wide"
+              style={{
+                fontSize: 'calc(var(--card-font-scale) * 0.44rem)',
+                background: 'rgba(148, 163, 184, 0.2)',
+                border: '1px solid rgba(148, 163, 184, 0.25)',
+              }}
+            >
+              {isCreature ? 'Creature' : 'Spell'}
+            </span>
+          </div>
+
           {/* Keywords */}
           {card.keywords.length > 0 && (
             <div className="flex flex-wrap gap-x-1 gap-y-0.5 mb-0.5">

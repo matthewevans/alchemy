@@ -217,6 +217,6 @@ describe('createInitialGameState', () => {
     expect(state.players.player1.hand).toHaveLength(5);
     expect(state.players.player1.deck).toHaveLength(25);
     expect(state.players.player1.health).toBe(25);
-    expect(state.players.player1.board).toHaveLength(6);
+    expect(state.players.player1.board).toHaveLength(7);
   });
 });

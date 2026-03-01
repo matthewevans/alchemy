@@ -59,8 +59,14 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header: cost + name */}
+        {/* Header: name + cost */}
         <div className="flex items-center gap-2 px-2 pt-2">
+          <span
+            className="text-white font-bold truncate flex-1"
+            style={{ fontSize: 'calc(var(--card-font-scale) * 0.85rem)' }}
+          >
+            {card.name}
+          </span>
           <div
             className="flex items-center justify-center rounded-full text-white font-bold shrink-0"
             style={{
@@ -72,12 +78,6 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
           >
             {card.cost}
           </div>
-          <span
-            className="text-white font-bold truncate"
-            style={{ fontSize: 'calc(var(--card-font-scale) * 0.85rem)' }}
-          >
-            {card.name}
-          </span>
         </div>
 
         {/* Element + type badge */}

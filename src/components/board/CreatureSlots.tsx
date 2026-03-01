@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import type { GameAction, PlayerId } from '@engine/types';
 import { getOpponent } from '@engine/types';
@@ -5,6 +6,7 @@ import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useUIStore } from '@game/uiStore';
 import { BoardCard } from '@components/card';
+import { calculateBoardCardSize } from './boardSizing';
 
 interface CreatureSlotsProps {
   playerId: PlayerId;
@@ -13,7 +15,6 @@ interface CreatureSlotsProps {
 
 export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   const board = useGameStore((s) => s.state?.players[playerId].board ?? []);
-  const maxBoardSize = useGameStore((s) => s.state?.ruleset.maxBoardSize ?? 5);
   const phase = useGameStore((s) => s.state?.phase);
   const activePlayer = useGameStore((s) => s.state?.activePlayer);
   const humanPlayer = useGameStore((s) => s.humanPlayer);
@@ -24,6 +25,8 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   const selectedBlockerId = useUIStore((s) => s.selectedBlockerId);
   const selectBlocker = useUIStore((s) => s.selectBlocker);
   const inspectCard = useUIStore((s) => s.inspectCard);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [cardSize, setCardSize] = useState<{ width: number; height: number } | null>(null);
 
   const isPlayerBoard = playerId === humanPlayer;
   const isPlayPhase = phase?.type === 'play';
@@ -97,6 +100,19 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
       if (humanPlayer !== defender) return;
 
       if (isPlayerBoard) {
+        const isAssignedBlocker = permanentId in tentativeBlockers;
+        if (isAssignedBlocker) {
+          const removeAction = legalActions.find(
+            (a): a is Extract<GameAction, { type: 'REMOVE_BLOCKER' }> =>
+              a.type === 'REMOVE_BLOCKER' && a.blockerPermanentId === permanentId,
+          );
+          if (removeAction) {
+            dispatch(removeAction, humanPlayer);
+          }
+          selectBlocker(null);
+          return;
+        }
+
         // Clicking own creature: select as potential blocker
         if (validBlockerIds.has(permanentId)) {
           selectBlocker(selectedBlockerId === permanentId ? null : permanentId);
@@ -134,10 +150,44 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     }
   };
 
-  const slots = Array.from({ length: maxBoardSize }, (_, i) => board[i] ?? null);
+  const slots = [...board];
+  if (showPlusOnEmpty && !slots.some((slot) => slot === null)) {
+    slots.push(null);
+  }
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container || slots.length === 0) return;
+
+    const rootStyles = getComputedStyle(document.documentElement);
+    const baseWidth = Number.parseFloat(rootStyles.getPropertyValue('--board-card-width')) || 82;
+    const baseHeight = Number.parseFloat(rootStyles.getPropertyValue('--board-card-height')) || 115;
+
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      setCardSize(
+        calculateBoardCardSize({
+          containerWidth: rect.width,
+          containerHeight: rect.height,
+          slotCount: slots.length,
+          baseWidth,
+          baseHeight,
+        }),
+      );
+    };
+
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, [slots.length]);
+
+  const cardWidth = cardSize?.width;
+  const cardHeight = cardSize?.height;
 
   return (
-    <div className="flex items-center justify-center gap-3 px-6 py-1">
+    <div ref={containerRef} className="flex items-center justify-center gap-2 px-3 py-1 w-full h-full overflow-hidden">
       <AnimatePresence mode="popLayout">
       {slots.map((permanent, slotIndex) => {
         if (permanent) {
@@ -156,6 +206,8 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
               isValidTarget={isValidTarget}
               isValidAttacker={isValidAttacker}
               isValidBlocker={isValidBlocker}
+              cardWidth={cardWidth}
+              cardHeight={cardHeight}
               onClick={() => handleCreatureClick(permanent.permanentId)}
               onLongPress={() => inspectCard(permanent.cardId)}
             />
@@ -174,8 +226,8 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
               ${isOpponent ? 'cursor-default' : ''}
             `}
             style={{
-              width: 'var(--board-card-width)',
-              height: 'var(--board-card-height)',
+              width: cardWidth ? `${cardWidth}px` : 'var(--board-card-width)',
+              height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
             }}
             data-slot-index={slotIndex}
             data-board-player={playerId}

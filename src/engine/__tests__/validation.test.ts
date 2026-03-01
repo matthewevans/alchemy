@@ -198,7 +198,7 @@ describe('validateAction', () => {
       expect((result as { valid: false; reason: string }).reason).toContain('energy');
     });
 
-    it('is invalid when board is full', () => {
+    it('is valid when board has no empty slots (append is allowed)', () => {
       const board = Array(5)
         .fill(null)
         .map(() => makePermanent('fire_ember_sprite', 'player1'));
@@ -217,8 +217,7 @@ describe('validateAction', () => {
         { type: 'PLAY_CARD', cardIndex: 0 },
         'player1',
       );
-      expect(result.valid).toBe(false);
-      expect((result as { valid: false; reason: string }).reason).toContain('full');
+      expect(result).toEqual({ valid: true });
     });
 
     it('is invalid outside play phase', () => {
@@ -340,6 +339,29 @@ describe('validateAction', () => {
       );
       expect(result.valid).toBe(false);
       expect((result as { valid: false; reason: string }).reason).toContain('occupied');
+    });
+
+    it('is valid when target slot equals current board length', () => {
+      const board: (ReturnType<typeof makePermanent> | null)[] = [
+        makePermanent('fire_ember_sprite', 'player1'),
+        makePermanent('fire_flame_fox', 'player1'),
+      ];
+      const state = createTestGameState({
+        phase: { type: 'play' },
+        activePlayer: 'player1',
+        player1: {
+          currentEnergy: 3,
+          maxEnergy: 3,
+          hand: [makeCardInstance('fire_magma_golem')],
+          board,
+        },
+      });
+      const result = validateAction(
+        state,
+        { type: 'PLAY_CARD', cardIndex: 0, targetSlot: board.length },
+        'player1',
+      );
+      expect(result).toEqual({ valid: true });
     });
   });
 
@@ -933,10 +955,10 @@ describe('enumerateLegalActions', () => {
     expect(actions).toContainEqual({ type: 'ADVANCE_PHASE' });
     expect(actions).toContainEqual({ type: 'CONCEDE' });
 
-    // Should have PLAY_CARD for the two affordable cards × 5 empty slots
+    // Should have PLAY_CARD for the two affordable cards × 6 empty slots
     const playActions = actions.filter((a) => a.type === 'PLAY_CARD');
-    // Ember Sprite (cost 1): 5 slots, Lava Hound (cost 2): 5 slots = 10
-    expect(playActions).toHaveLength(10);
+    // Ember Sprite (cost 1): 6 slots, Lava Hound (cost 2): 6 slots = 12
+    expect(playActions).toHaveLength(12);
 
     // Should NOT contain the expensive card
     const expensivePlays = playActions.filter(
@@ -1188,5 +1210,29 @@ describe('enumerateLegalActions', () => {
     // Spell should have exactly 1 action (no slot variants)
     expect(playActions).toHaveLength(1);
     expect(playActions[0]).toEqual({ type: 'PLAY_CARD', cardIndex: 0 });
+  });
+
+  it('play phase includes append slot for creatures when no empty slot exists', () => {
+    const board = [
+      makePermanent('fire_ember_sprite', 'player1'),
+      makePermanent('fire_flame_fox', 'player1'),
+    ];
+    const state = createTestGameState({
+      phase: { type: 'play' },
+      activePlayer: 'player1',
+      player1: {
+        currentEnergy: 5,
+        maxEnergy: 5,
+        hand: [makeCardInstance('fire_magma_golem')],
+        board,
+      },
+    });
+
+    const actions = enumerateLegalActions(state, 'player1');
+    expect(actions).toContainEqual({
+      type: 'PLAY_CARD',
+      cardIndex: 0,
+      targetSlot: board.length,
+    });
   });
 });

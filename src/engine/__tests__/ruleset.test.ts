@@ -47,4 +47,10 @@ describe('TIER_CONFIGS', () => {
     expect(TIER_CONFIGS.alchemist.damagePersists).toBe(false);
     expect(TIER_CONFIGS.archmage.damagePersists).toBe(false);
   });
+
+  it('supports more than five creatures on board in all tiers', () => {
+    expect(TIER_CONFIGS.apprentice.maxBoardSize).toBeGreaterThan(5);
+    expect(TIER_CONFIGS.alchemist.maxBoardSize).toBeGreaterThan(5);
+    expect(TIER_CONFIGS.archmage.maxBoardSize).toBeGreaterThan(5);
+  });
 });

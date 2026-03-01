@@ -13,10 +13,10 @@ export function OpponentHand() {
   const fanStep = opponentHandSize > 1 ? (maxFanAngle * 2) / (opponentHandSize - 1) : 0;
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center overflow-hidden -mt-3">
       <div
         className="relative flex items-start justify-center"
-        style={{ height: 'calc(var(--card-height) * 0.45)' }}
+        style={{ height: 'calc(var(--card-height) * 0.24)' }}
       >
         {Array.from({ length: opponentHandSize }, (_, index) => {
           const angle = opponentHandSize > 1 ? -maxFanAngle + fanStep * index : 0;
@@ -24,20 +24,20 @@ export function OpponentHand() {
             <div
               key={index}
               style={{
-                transform: `rotate(${angle}deg)`,
-                marginLeft: index === 0 ? 0 : 'calc(var(--card-width) * -0.55)',
+                transform: `translateY(calc(var(--card-height) * -0.35)) rotate(${angle}deg)`,
+                marginLeft: index === 0 ? 0 : 'calc(var(--card-width) * -0.68)',
                 transformOrigin: 'bottom center',
                 zIndex: index,
               }}
             >
-              <div style={{ transform: 'scale(0.55)', transformOrigin: 'top center' }}>
+              <div style={{ transform: 'scale(0.5)', transformOrigin: 'top center' }}>
                 <CardBack />
               </div>
             </div>
           );
         })}
       </div>
-      <span className="text-white/55 text-sm mt-0.5">
+      <span className="text-white/45 text-xs mt-0.5">
         {opponentHandSize} {opponentHandSize === 1 ? 'card' : 'cards'}
       </span>
     </div>

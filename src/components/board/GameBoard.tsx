@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useUIStore } from '@game/uiStore';
@@ -9,6 +9,7 @@ import { useGameDispatch } from '@game/GameDispatchContext';
 import { PlayerInfo } from './PlayerInfo';
 import { CreatureSlots } from './CreatureSlots';
 import { BattleLine } from './BattleLine';
+import { BlockAssignmentLines } from './BlockAssignmentLines';
 import { PlayerHand, OpponentHand } from '@components/hand';
 import { CombatControls } from '@components/combat';
 import { PhaseStrip, TurnBanner } from '@components/phase';
@@ -53,6 +54,11 @@ export function GameBoard() {
       ? EFFECT_REGISTRY[phase.effectId].description
       : null;
 
+  useEffect(() => {
+    document.body.classList.add('game-active');
+    return () => document.body.classList.remove('game-active');
+  }, []);
+
   const handleDismissHints = () => {
     setShowHints(false);
     try {
@@ -71,18 +77,18 @@ export function GameBoard() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div className="h-screen flex flex-col select-none bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {/* ═══ Opponent hand — top edge ═══ */}
-      <div className="shrink-0 pt-1">
+      <div className="shrink-0 pt-1 z-10">
         <OpponentHand />
       </div>
 
       {/* ═══ Main arena: battlefield + right sidebar ═══ */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 relative z-20">
         {/* Battlefield — takes all available width */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Opponent board */}
-          <div className="flex-1 flex items-end justify-center pb-1 min-h-0">
+          <div className="flex-1 flex items-end justify-center pb-1 min-h-0 overflow-hidden">
             <CreatureSlots playerId={opponentPlayer} isOpponent />
           </div>
 
@@ -94,7 +100,7 @@ export function GameBoard() {
           </div>
 
           {/* Player board */}
-          <div className="flex-1 flex items-start justify-center pt-1 min-h-0" data-player-board={humanPlayer}>
+          <div className="flex-1 flex items-start justify-center pt-1 min-h-0 overflow-hidden" data-player-board={humanPlayer}>
             <CreatureSlots playerId={humanPlayer} isOpponent={false} />
           </div>
         </div>
@@ -139,12 +145,15 @@ export function GameBoard() {
       </div>
 
       {/* ═══ Player hand — bottom edge ═══ */}
-      <div className="shrink-0">
+      <div className="shrink-0 relative z-30">
         <PlayerHand />
       </div>
 
       {/* Turn banner overlay */}
       <TurnBanner />
+
+      {/* Block assignment links */}
+      <BlockAssignmentLines />
 
       {/* Targeting prompt overlay */}
       {isTargetingPhase && (

@@ -21,6 +21,8 @@ interface BoardCardProps {
   isValidTarget: boolean;
   isValidAttacker: boolean;
   isValidBlocker: boolean;
+  cardWidth?: number;
+  cardHeight?: number;
   onClick: () => void;
   onLongPress?: () => void;
 }
@@ -32,6 +34,8 @@ export function BoardCard({
   isValidTarget,
   isValidAttacker,
   isValidBlocker,
+  cardWidth,
+  cardHeight,
   onClick,
   onLongPress: onLongPressProp,
 }: BoardCardProps) {
@@ -58,9 +62,10 @@ export function BoardCard({
         ${isSummoningSick ? 'saturate-50 brightness-75' : ''}
       `}
       style={{
-        width: 'var(--board-card-width)',
-        height: 'var(--board-card-height)',
+        width: cardWidth ? `${cardWidth}px` : 'var(--board-card-width)',
+        height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
         fontSize: 'calc(var(--card-font-scale) * 1rem)',
+        zIndex: isAttacking || isBlocking ? 15 : 10,
       }}
       layout
       animate={{

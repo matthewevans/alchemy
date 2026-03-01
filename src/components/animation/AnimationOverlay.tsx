@@ -3,6 +3,8 @@ import { AnimatePresence } from 'framer-motion';
 import { useAnimationStore } from '@game/animationStore';
 import { FloatingNumber } from './FloatingNumber';
 import { SpellImpact } from './SpellImpact';
+import { CombatStrike } from './CombatStrike';
+import { BlockLink } from './BlockLink';
 import { KEYWORD_REGISTRY } from '@engine/keywords';
 
 export function AnimationOverlay() {
@@ -25,6 +27,22 @@ export function AnimationOverlay() {
       <AnimatePresence>
         {activeStep?.effects.map((effect, i) => {
           switch (effect.type) {
+            case 'block_link':
+              return (
+                <BlockLink
+                  key={`block-${effect.blockerId}-${effect.attackerId}-${i}`}
+                  from={effect.from}
+                  to={effect.to}
+                />
+              );
+            case 'combat_strike':
+              return (
+                <CombatStrike
+                  key={`strike-${effect.sourceId}-${i}`}
+                  from={effect.from}
+                  to={effect.to}
+                />
+              );
             case 'damage':
               return (
                 <FloatingNumber

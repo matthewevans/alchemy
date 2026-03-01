@@ -261,6 +261,33 @@ describe('PLAY_CARD (creature)', () => {
     expect(newState.players.player1.board[3]).toBeTruthy();
     expect(newState.players.player1.board[3]!.cardId).toBe('fire_ember_sprite');
   });
+
+  it('can append a creature when board has no empty slots', () => {
+    const card = makeCardInstance('fire_ember_sprite');
+    const filledBoard = [
+      makePermanent('fire_flame_fox', 'player1', { attack: 2, health: 1 }),
+      makePermanent('fire_lava_hound', 'player1', { attack: 2, health: 3 }),
+    ];
+    const state = createTestGameState({
+      phase: { type: 'play' },
+      player1: {
+        hand: [card],
+        currentEnergy: 2,
+        maxEnergy: 2,
+        board: filledBoard,
+      },
+    });
+
+    const { newState } = reduce(
+      state,
+      { type: 'PLAY_CARD', cardIndex: 0, targetSlot: filledBoard.length },
+      'player1',
+      rng,
+    );
+
+    expect(newState.players.player1.board).toHaveLength(3);
+    expect(newState.players.player1.board[2]?.cardId).toBe('fire_ember_sprite');
+  });
 });
 
 // ─── ETB Keywords ───
@@ -361,6 +388,82 @@ describe('PLAY_CARD with heal keyword', () => {
       type: 'PLAYER_HEALED',
       amount: 2,
     }));
+  });
+
+  it('can heal above starting health', () => {
+    const card = makeCardInstance('earth_mushroom_guard');
+    const state = createTestGameState({
+      phase: { type: 'play' },
+      player1: {
+        hand: [card],
+        currentEnergy: 3,
+        maxEnergy: 3,
+        health: 20,
+      },
+    });
+
+    const { newState, events } = reduce(
+      state,
+      { type: 'PLAY_CARD', cardIndex: 0 },
+      'player1',
+      rng,
+    );
+
+    expect(newState.players.player1.health).toBe(22);
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'PLAYER_HEALED',
+      amount: 2,
+    }));
+  });
+});
+
+describe('Heal effects can exceed starting health', () => {
+  it('spell healing is not capped at 20', () => {
+    const card = makeCardInstance('water_healing_rain');
+    const state = createTestGameState({
+      phase: { type: 'play' },
+      player1: {
+        hand: [card],
+        currentEnergy: 3,
+        maxEnergy: 3,
+        health: 20,
+      },
+    });
+
+    const { newState } = reduce(
+      state,
+      { type: 'PLAY_CARD', cardIndex: 0 },
+      'player1',
+      rng,
+    );
+
+    expect(newState.players.player1.health).toBe(24);
+  });
+
+  it('lifesteal can heal above starting health', () => {
+    const lifestealAttacker = makePermanent('shadow_vampire_lord', 'player1', {
+      attack: 4,
+      health: 3,
+    });
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_blockers',
+        confirmedAttackers: [lifestealAttacker.permanentId],
+        tentativeBlockers: {},
+      },
+      player1: {
+        board: [{ ...lifestealAttacker, isTapped: true }, null, null, null, null],
+        health: 20,
+      },
+      player2: {
+        health: 20,
+      },
+    });
+
+    const { newState } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+    expect(newState.players.player1.health).toBe(24);
   });
 });
 
@@ -752,6 +855,98 @@ describe('Combat - blocked attacker', () => {
     expect(attackerAfter!.damage).toBe(2);
 
     expect(events.filter((e) => e.type === 'DAMAGE_DEALT')).toHaveLength(2);
+  });
+
+  it('full flow: assigned blocker prevents face damage', () => {
+    const attacker = makePermanent('fire_magma_golem', 'player1', {
+      attack: 3,
+      health: 4,
+    });
+    const blocker = makePermanent('earth_treant_sapling', 'player2', {
+      attack: 2,
+      health: 5,
+    });
+
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_attackers',
+        tentativeAttackers: [attacker.permanentId],
+      },
+      player1: {
+        board: [attacker, null, null, null, null],
+      },
+      player2: {
+        board: [blocker, null, null, null, null],
+        health: 20,
+      },
+    });
+
+    const { newState: s1 } = reduce(state, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
+    const { newState: s2 } = reduce(
+      s1,
+      {
+        type: 'ASSIGN_BLOCKER',
+        blockerPermanentId: blocker.permanentId,
+        attackerPermanentId: attacker.permanentId,
+      },
+      'player2',
+      rng,
+    );
+    const { newState: s3 } = reduce(s2, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+
+    expect(s3.players.player2.health).toBe(20);
+    expect(s3.players.player2.board[0]?.damage).toBe(3);
+    expect(s3.players.player1.board[0]?.damage).toBe(2);
+  });
+
+  it('full flow: blocker can be removed before combat', () => {
+    const attacker = makePermanent('fire_lava_hound', 'player1', {
+      attack: 2,
+      health: 3,
+    });
+    const blocker = makePermanent('earth_treant_sapling', 'player2', {
+      attack: 2,
+      health: 5,
+    });
+
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_attackers',
+        tentativeAttackers: [attacker.permanentId],
+      },
+      player1: {
+        board: [attacker, null, null, null, null],
+      },
+      player2: {
+        board: [blocker, null, null, null, null],
+        health: 20,
+      },
+    });
+
+    const { newState: s1 } = reduce(state, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
+    const { newState: s2 } = reduce(
+      s1,
+      {
+        type: 'ASSIGN_BLOCKER',
+        blockerPermanentId: blocker.permanentId,
+        attackerPermanentId: attacker.permanentId,
+      },
+      'player2',
+      rng,
+    );
+    const { newState: s3 } = reduce(
+      s2,
+      { type: 'REMOVE_BLOCKER', blockerPermanentId: blocker.permanentId },
+      'player2',
+      rng,
+    );
+    const { newState: s4 } = reduce(s3, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+
+    expect(s4.players.player2.health).toBe(18);
   });
 });
 

@@ -12,6 +12,19 @@ export interface ElementPosition {
 }
 
 export type AnimationEffect =
+  | {
+      type: 'block_link';
+      blockerId: string;
+      attackerId: string;
+      from: ElementPosition;
+      to: ElementPosition;
+    }
+  | {
+      type: 'combat_strike';
+      sourceId: string;
+      from: ElementPosition;
+      to: ElementPosition;
+    }
   | { type: 'damage'; targetId: string; amount: number; position: ElementPosition }
   | { type: 'heal'; targetId: string; amount: number; position: ElementPosition }
   | { type: 'player_damage'; player: PlayerId; amount: number; position: ElementPosition }
@@ -123,12 +136,27 @@ function groupCombatEvents(
   events: GameEvent[],
   positions: Map<string, ElementPosition>,
 ): AnimationStep[] {
+  const blockEffects: AnimationEffect[] = [];
   // Group damage events by their source (attacker)
   const damageBySource = new Map<string, GameEvent[]>();
   const deaths: GameEvent[] = [];
 
   for (const e of events) {
-    if (e.type === 'DAMAGE_DEALT' || e.type === 'PLAYER_DAMAGED') {
+    if (e.type === 'BLOCKERS_DECLARED') {
+      for (const [blockerId, attackerId] of Object.entries(e.assignments)) {
+        const blockerPos = positions.get(blockerId);
+        const attackerPos = positions.get(attackerId);
+        if (blockerPos && attackerPos) {
+          blockEffects.push({
+            type: 'block_link',
+            blockerId,
+            attackerId,
+            from: blockerPos,
+            to: attackerPos,
+          });
+        }
+      }
+    } else if (e.type === 'DAMAGE_DEALT' || e.type === 'PLAYER_DAMAGED') {
       const source = e.source;
       if (!damageBySource.has(source)) {
         damageBySource.set(source, []);
@@ -141,19 +169,40 @@ function groupCombatEvents(
 
   const steps: AnimationStep[] = [];
 
+  if (blockEffects.length > 0) {
+    steps.push({ effects: blockEffects, durationMs: 500 });
+  }
+
   // One step per attacker's exchange
   for (const [, damageEvents] of damageBySource) {
     const effects: AnimationEffect[] = [];
 
     for (const e of damageEvents) {
+      const sourcePos = positions.get(e.source);
       if (e.type === 'DAMAGE_DEALT') {
         const pos = positions.get(e.targetId);
         if (pos) {
+          if (sourcePos) {
+            effects.push({
+              type: 'combat_strike',
+              sourceId: e.source,
+              from: sourcePos,
+              to: pos,
+            });
+          }
           effects.push({ type: 'damage', targetId: e.targetId, amount: e.amount, position: pos });
         }
       } else if (e.type === 'PLAYER_DAMAGED') {
         const pos = positions.get(`player:${e.player}`);
         if (pos) {
+          if (sourcePos) {
+            effects.push({
+              type: 'combat_strike',
+              sourceId: e.source,
+              from: sourcePos,
+              to: pos,
+            });
+          }
           effects.push({ type: 'player_damage', player: e.player, amount: e.amount, position: pos });
         }
       }

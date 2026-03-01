@@ -63,6 +63,10 @@ pnpm test
 - GitHub Pages deploys automatically from `main` via `.github/workflows/deploy-pages.yml`.
 - Build command used for Pages: `pnpm exec vite build --base=/alchemy/`
 
+## TODO
+
+- Prevent browser/system long-press save-sheet behavior on cards so card inspection feels native in-game.
+
 ## License
 
 MIT. See [LICENSE](./LICENSE).

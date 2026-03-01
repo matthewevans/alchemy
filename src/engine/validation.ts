@@ -107,16 +107,11 @@ function validatePlayCard(
   }
   if (cardDef.type === 'creature') {
     if (targetSlot !== undefined) {
-      if (targetSlot < 0 || targetSlot >= playerState.board.length) {
+      if (targetSlot < 0 || targetSlot > playerState.board.length) {
         return { valid: false, reason: `Invalid target slot: ${targetSlot}` };
       }
-      if (playerState.board[targetSlot] !== null) {
+      if (targetSlot < playerState.board.length && playerState.board[targetSlot] !== null) {
         return { valid: false, reason: 'Target slot is occupied' };
-      }
-    } else {
-      const hasEmptySlot = playerState.board.some((slot) => slot === null);
-      if (!hasEmptySlot) {
-        return { valid: false, reason: 'Board is full' };
       }
     }
   }
@@ -245,7 +240,8 @@ function validateRemoveBlocker(state: GameState, blockerPermanentId: string): Va
   if (state.phase.type !== 'battle' || state.phase.step !== 'declare_blockers') {
     return { valid: false, reason: 'REMOVE_BLOCKER is only valid during declare_blockers step' };
   }
-  if (!(blockerPermanentId in state.phase.tentativeBlockers)) {
+  const isAssigned = Object.keys(state.phase.tentativeBlockers).includes(blockerPermanentId);
+  if (!isAssigned) {
     return { valid: false, reason: 'Creature is not currently assigned as a blocker' };
   }
   return { valid: true };
@@ -381,6 +377,9 @@ function enumeratePlayActions(
   const emptySlots = playerState.board
     .map((slot, i) => (slot === null ? i : -1))
     .filter((i) => i >= 0);
+  if (emptySlots.length === 0) {
+    emptySlots.push(playerState.board.length);
+  }
 
   for (let cardIndex = 0; cardIndex < playerState.hand.length; cardIndex++) {
     const cardInstance = playerState.hand[cardIndex];

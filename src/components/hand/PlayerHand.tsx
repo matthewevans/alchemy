@@ -155,22 +155,25 @@ export function PlayerHand() {
   const cardCount = hand.length;
   const maxFanAngle = 12;
   const fanStep = cardCount > 1 ? (maxFanAngle * 2) / (cardCount - 1) : 0;
+  const centerIndex = (cardCount - 1) / 2;
 
   // Phantom card for drag
   const draggedCard = draggedIndex !== null ? hand[draggedIndex] : null;
 
   return (
-    <div className="relative flex flex-col items-center">
+    <div className="relative flex flex-col items-center bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pb-1">
       {/* Fan layout — cards peek from bottom, hover/select lifts them */}
       <div
         className="relative flex items-end justify-center"
-        style={{ height: 'calc(var(--card-height) * 0.55)' }}
+        style={{ height: 'calc(var(--card-height) * 0.52)' }}
       >
         {hand.map((cardInstance, index) => {
           const angle = cardCount > 1 ? -maxFanAngle + fanStep * index : 0;
           const isPlayable = playableIndices.has(index);
           const isSelected = selectedHandIndex === index;
           const isDragged = draggedIndex === index;
+          const depth = cardCount - Math.abs(index - centerIndex);
+          const zIndex = isSelected ? 90 : Math.round(depth * 10);
 
           return (
             <div
@@ -179,7 +182,7 @@ export function PlayerHand() {
               style={{
                 transform: `rotate(${angle}deg)`,
                 marginLeft: index === 0 ? 0 : 'calc(var(--card-width) * -0.45)',
-                zIndex: isSelected ? 50 : index,
+                zIndex,
                 transformOrigin: 'bottom center',
                 opacity: isDragged ? 0.3 : 1,
               }}

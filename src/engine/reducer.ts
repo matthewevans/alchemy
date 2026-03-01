@@ -370,9 +370,14 @@ function handlePlayCard(
   const events: GameEvent[] = [];
 
   if (cardDef.type === 'creature') {
-    const slot = targetSlot ?? findFirstEmptySlot(ps.board);
+    const firstEmpty = findFirstEmptySlot(ps.board);
+    const slot = targetSlot ?? (firstEmpty === -1 ? ps.board.length : firstEmpty);
     const permanent = createPermanent(cardInstance, actingPlayer);
-    ps.board[slot] = permanent;
+    if (slot === ps.board.length) {
+      ps.board = [...ps.board, permanent];
+    } else {
+      ps.board[slot] = permanent;
+    }
 
     events.push({
       type: 'CARD_PLAYED',
@@ -672,13 +677,9 @@ function resolveEffectHeal(
     return { newState: state, events };
   }
 
-  const maxHealth = state.ruleset.startingHealth;
-  const currentHP = players[targetPlayer].health;
-  const actualHeal = Math.min(step.amount, maxHealth - currentHP);
-  players[targetPlayer].health = currentHP + actualHeal;
-
-  if (actualHeal > 0) {
-    events.push({ type: 'PLAYER_HEALED', player: targetPlayer, amount: actualHeal });
+  if (step.amount > 0) {
+    players[targetPlayer].health += step.amount;
+    events.push({ type: 'PLAYER_HEALED', player: targetPlayer, amount: step.amount });
   }
 
   return { newState: { ...state, players }, events };
@@ -1032,13 +1033,8 @@ function processETBKeywords(
           permanentId: permanent.permanentId,
         });
         const players = clonePlayers(currentState.players);
-        const maxHealth = currentState.ruleset.startingHealth;
-        const currentHP = players[ownerId].health;
-        const actualHeal = Math.min(2, maxHealth - currentHP);
-        players[ownerId].health = currentHP + actualHeal;
-        if (actualHeal > 0) {
-          allEvents.push({ type: 'PLAYER_HEALED', player: ownerId, amount: actualHeal });
-        }
+        players[ownerId].health += 2;
+        allEvents.push({ type: 'PLAYER_HEALED', player: ownerId, amount: 2 });
         currentState = { ...currentState, players };
         break;
       }
@@ -1370,24 +1366,14 @@ function resolveBlockedCombat(
   // Lifesteal checks (before death removal so we can check damage dealt)
   if (hasKeyword(attacker, 'lifesteal') && attackDamage > 0) {
     const lifestealPlayers = clonePlayers(currentState.players);
-    const maxHP = currentState.ruleset.startingHealth;
-    const currentHP = lifestealPlayers[attacker.ownerId].health;
-    const healAmt = Math.min(attackDamage, maxHP - currentHP);
-    lifestealPlayers[attacker.ownerId].health = currentHP + healAmt;
-    if (healAmt > 0) {
-      events.push({ type: 'PLAYER_HEALED', player: attacker.ownerId, amount: healAmt });
-    }
+    lifestealPlayers[attacker.ownerId].health += attackDamage;
+    events.push({ type: 'PLAYER_HEALED', player: attacker.ownerId, amount: attackDamage });
     currentState = { ...currentState, players: lifestealPlayers };
   }
   if (hasKeyword(blocker, 'lifesteal') && blockDamage > 0) {
     const lifestealPlayers = clonePlayers(currentState.players);
-    const maxHP = currentState.ruleset.startingHealth;
-    const currentHP = lifestealPlayers[blocker.ownerId].health;
-    const healAmt = Math.min(blockDamage, maxHP - currentHP);
-    lifestealPlayers[blocker.ownerId].health = currentHP + healAmt;
-    if (healAmt > 0) {
-      events.push({ type: 'PLAYER_HEALED', player: blocker.ownerId, amount: healAmt });
-    }
+    lifestealPlayers[blocker.ownerId].health += blockDamage;
+    events.push({ type: 'PLAYER_HEALED', player: blocker.ownerId, amount: blockDamage });
     currentState = { ...currentState, players: lifestealPlayers };
   }
 
@@ -1419,13 +1405,8 @@ function resolveUnblockedAttack(
   // Lifesteal
   if (hasKeyword(attacker, 'lifesteal') && damage > 0) {
     const players = clonePlayers(currentState.players);
-    const maxHP = currentState.ruleset.startingHealth;
-    const currentHP = players[attacker.ownerId].health;
-    const healAmt = Math.min(damage, maxHP - currentHP);
-    players[attacker.ownerId].health = currentHP + healAmt;
-    if (healAmt > 0) {
-      events.push({ type: 'PLAYER_HEALED', player: attacker.ownerId, amount: healAmt });
-    }
+    players[attacker.ownerId].health += damage;
+    events.push({ type: 'PLAYER_HEALED', player: attacker.ownerId, amount: damage });
     currentState = { ...currentState, players };
   }
 
