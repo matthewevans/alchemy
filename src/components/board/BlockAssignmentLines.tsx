@@ -28,7 +28,12 @@ export function BlockAssignmentLines() {
   if (links.length === 0) return null;
 
   return (
-    <svg className="fixed inset-0 pointer-events-none" style={{ zIndex: 26 }}>
+    <svg
+      className="fixed inset-0 pointer-events-none"
+      style={{ zIndex: 26, width: '100vw', height: '100vh' }}
+      viewBox={`0 0 ${window.innerWidth} ${window.innerHeight}`}
+      preserveAspectRatio="none"
+    >
       <defs>
         <filter id="block-line-glow">
           <feGaussianBlur stdDeviation="2.1" result="coloredBlur" />
@@ -58,4 +63,3 @@ export function BlockAssignmentLines() {
     </svg>
   );
 }
-

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { gameButtonClass } from './buttonStyles';
+import { decodeQrFromFrame } from './qrScannerDecode';
 
 type BarcodeDetectorResult = {
   rawValue?: string;
@@ -28,6 +29,7 @@ export function QrScannerModal({ open, onClose, onScan, title }: QrScannerModalP
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scannedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -47,6 +49,7 @@ export function QrScannerModal({ open, onClose, onScan, title }: QrScannerModalP
       videoRef.current.srcObject = null;
     }
     detectorRef.current = null;
+    canvasRef.current = null;
     scannedRef.current = false;
   }, []);
 
@@ -67,15 +70,15 @@ export function QrScannerModal({ open, onClose, onScan, title }: QrScannerModalP
         return;
       }
 
-      const Detector = (window as WindowWithBarcodeDetector).BarcodeDetector;
-      if (!Detector) {
-        setError('QR scanning is not supported in this browser. Paste the code instead.');
-        return;
-      }
-
       try {
-        const detector = new Detector({ formats: ['qr_code'] });
-        detectorRef.current = detector;
+        const Detector = (window as WindowWithBarcodeDetector).BarcodeDetector;
+        if (Detector) {
+          try {
+            detectorRef.current = new Detector({ formats: ['qr_code'] });
+          } catch {
+            detectorRef.current = null;
+          }
+        }
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: 'environment' } },
@@ -89,6 +92,7 @@ export function QrScannerModal({ open, onClose, onScan, title }: QrScannerModalP
         }
 
         streamRef.current = stream;
+        canvasRef.current = document.createElement('canvas');
 
         const video = videoRef.current;
         if (!video) {
@@ -110,8 +114,27 @@ export function QrScannerModal({ open, onClose, onScan, title }: QrScannerModalP
 
           if (activeVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
             try {
-              const results = await activeDetector.detect(activeVideo);
-              const raw = results.find((item) => item.rawValue?.trim())?.rawValue?.trim();
+              let raw: string | null = null;
+
+              if (activeDetector) {
+                const results = await activeDetector.detect(activeVideo);
+                raw = results.find((item) => item.rawValue?.trim())?.rawValue?.trim() ?? null;
+              } else {
+                const canvas = canvasRef.current;
+                const width = activeVideo.videoWidth;
+                const height = activeVideo.videoHeight;
+                if (canvas && width > 0 && height > 0) {
+                  canvas.width = width;
+                  canvas.height = height;
+                  const context = canvas.getContext('2d', { willReadFrequently: true });
+                  if (context) {
+                    context.drawImage(activeVideo, 0, 0, width, height);
+                    const frame = context.getImageData(0, 0, width, height);
+                    raw = decodeQrFromFrame(frame.data, frame.width, frame.height);
+                  }
+                }
+              }
+
               if (raw) {
                 scannedRef.current = true;
                 stopScanning();
