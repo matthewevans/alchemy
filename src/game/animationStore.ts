@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { GameEvent, Keyword, PlayerId } from '@engine/types';
+import { CARD_REGISTRY } from '@engine/cards';
+import type { Element, GameEvent, Keyword, PlayerId } from '@engine/types';
 
 // ─── Types ───
 
@@ -24,63 +25,68 @@ export type AnimationEffect =
       sourceId: string;
       from: ElementPosition;
       to: ElementPosition;
+      element?: Element;
     }
   | { type: 'damage'; targetId: string; amount: number; position: ElementPosition }
   | { type: 'heal'; targetId: string; amount: number; position: ElementPosition }
   | { type: 'player_damage'; player: PlayerId; amount: number; position: ElementPosition }
   | { type: 'player_heal'; player: PlayerId; amount: number; position: ElementPosition }
-  | { type: 'death'; permanentId: string; position: ElementPosition }
-  | { type: 'spell_impact'; position: ElementPosition }
-  | { type: 'keyword'; permanentId: string; keyword: Keyword; position: ElementPosition };
+  | { type: 'death'; permanentId: string; position: ElementPosition; element?: Element }
+  | { type: 'spell_impact'; position: ElementPosition; element?: Element }
+  | { type: 'keyword'; permanentId: string; keyword: Keyword; position: ElementPosition; element?: Element }
+  | { type: 'summon'; permanentId: string; position: ElementPosition; element?: Element };
 
 export interface AnimationStep {
   effects: AnimationEffect[];
   durationMs: number;
+  /** Screen shake intensity: 1=light, 2=medium, 3=heavy */
+  shakeIntensity?: number;
 }
 
+// ─── Position Registry ───
+// Mutable module-level Map — not in Zustand because positions are only read
+// imperatively in dispatchWithAnimations (never subscribed to reactively).
+// This avoids cloning the entire Map on every ResizeObserver callback.
+
+const positionRegistry = new Map<string, ElementPosition>();
+
+export function registerPosition(id: string, pos: ElementPosition) {
+  positionRegistry.set(id, pos);
+}
+
+export function unregisterPosition(id: string) {
+  positionRegistry.delete(id);
+}
+
+export function getPositions(): Map<string, ElementPosition> {
+  return positionRegistry;
+}
+
+// ─── Store ───
+
 interface AnimationStore {
-  positions: Map<string, ElementPosition>;
   queue: AnimationStep[];
   activeStep: AnimationStep | null;
   isAnimating: boolean;
 
-  registerPosition: (id: string, pos: ElementPosition) => void;
-  unregisterPosition: (id: string) => void;
   enqueueSteps: (steps: AnimationStep[]) => void;
   advanceStep: () => void;
   clear: () => void;
 }
 
-// ─── Store ───
-
 export const useAnimationStore = create<AnimationStore>()(
   subscribeWithSelector((set, get) => ({
-    positions: new Map(),
     queue: [],
     activeStep: null,
     isAnimating: false,
-
-    registerPosition: (id, pos) => {
-      const positions = new Map(get().positions);
-      positions.set(id, pos);
-      set({ positions });
-    },
-
-    unregisterPosition: (id) => {
-      const positions = new Map(get().positions);
-      positions.delete(id);
-      set({ positions });
-    },
 
     enqueueSteps: (steps) => {
       if (steps.length === 0) return;
 
       const { activeStep, queue } = get();
       if (activeStep) {
-        // Already animating — append to queue
         set({ queue: [...queue, ...steps] });
       } else {
-        // Start playing immediately
         const [first, ...rest] = steps;
         set({ activeStep: first, queue: rest, isAnimating: true });
       }
@@ -102,42 +108,108 @@ export const useAnimationStore = create<AnimationStore>()(
   })),
 );
 
+// ─── Helpers ───
+
+function getCardElement(cardId: string): Element | undefined {
+  return CARD_REGISTRY[cardId]?.element;
+}
+
+const SHAKE_THRESHOLDS = { heavy: 5, medium: 3 } as const;
+
+function computeShakeIntensity(events: GameEvent[]): number | undefined {
+  let totalPlayerDamage = 0;
+  for (const e of events) {
+    if (e.type === 'PLAYER_DAMAGED') totalPlayerDamage += e.amount;
+  }
+  if (totalPlayerDamage === 0) return undefined;
+  if (totalPlayerDamage >= SHAKE_THRESHOLDS.heavy) return 3;
+  if (totalPlayerDamage >= SHAKE_THRESHOLDS.medium) return 2;
+  return 1;
+}
+
+const STEP_DURATIONS = {
+  blockLink: 600,
+  combatExchange: 1200,
+  death: 900,
+  spell: 1200,
+  etb: 900,
+  standaloneDamage: 800,
+  summon: 500,
+} as const;
+
+/**
+ * Maps common game events (damage, heal, death) to animation effects.
+ * Shared by all grouping functions to eliminate duplication.
+ */
+function mapEventToEffect(
+  event: GameEvent,
+  positions: Map<string, ElementPosition>,
+): AnimationEffect | null {
+  switch (event.type) {
+    case 'DAMAGE_DEALT': {
+      const pos = positions.get(event.targetId);
+      return pos ? { type: 'damage', targetId: event.targetId, amount: event.amount, position: pos } : null;
+    }
+    case 'PLAYER_DAMAGED': {
+      const pos = positions.get(`player:${event.player}`);
+      return pos ? { type: 'player_damage', player: event.player, amount: event.amount, position: pos } : null;
+    }
+    case 'CREATURE_HEALED': {
+      const pos = positions.get(event.permanentId);
+      return pos ? { type: 'heal', targetId: event.permanentId, amount: event.amount, position: pos } : null;
+    }
+    case 'PLAYER_HEALED': {
+      const pos = positions.get(`player:${event.player}`);
+      return pos ? { type: 'player_heal', player: event.player, amount: event.amount, position: pos } : null;
+    }
+    case 'CREATURE_DIED': {
+      const pos = positions.get(event.permanentId);
+      return pos ? { type: 'death', permanentId: event.permanentId, position: pos, element: getCardElement(event.cardId) } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+/** Collect all common effects (damage, heal, death) from an event list. */
+function collectCommonEffects(events: GameEvent[], positions: Map<string, ElementPosition>): AnimationEffect[] {
+  const effects: AnimationEffect[] = [];
+  for (const e of events) {
+    const effect = mapEventToEffect(e, positions);
+    if (effect) effects.push(effect);
+  }
+  return effects;
+}
+
 // ─── Event Grouping ───
 
 export function groupEventsIntoSteps(
   events: GameEvent[],
   positions: Map<string, ElementPosition>,
+  /** Maps permanentId → cardId so combat effects can look up the attacker's element. */
+  cardIdMap?: Map<string, string>,
 ): AnimationStep[] {
-  const steps: AnimationStep[] = [];
-
-  // Identify the kind of action that produced these events
   const hasBlockersConfirmed = events.some((e) => e.type === 'BLOCKERS_DECLARED');
   const hasSpellResolved = events.some((e) => e.type === 'SPELL_RESOLVED');
   const hasKeywordTriggered = events.some((e) => e.type === 'KEYWORD_TRIGGERED');
   const hasCreatureEntered = events.some((e) => e.type === 'CREATURE_ENTERED');
+  const hasPlayerDamaged = events.some((e) => e.type === 'PLAYER_DAMAGED');
+  const hasDamageDealt = events.some((e) => e.type === 'DAMAGE_DEALT');
 
-  if (hasBlockersConfirmed) {
-    // Combat resolution: group damage by attacker source
-    return groupCombatEvents(events, positions);
-  }
-
-  if (hasSpellResolved) {
-    return groupSpellEvents(events, positions);
-  }
-
-  if (hasCreatureEntered && hasKeywordTriggered) {
-    return groupETBEvents(events, positions);
-  }
-
-  return steps;
+  if (hasBlockersConfirmed) return groupCombatEvents(events, positions, cardIdMap);
+  if (hasSpellResolved) return groupSpellEvents(events, positions);
+  if (hasCreatureEntered && hasKeywordTriggered) return groupETBEvents(events, positions);
+  if (hasCreatureEntered) return groupSummonEvents(events, positions);
+  if (hasPlayerDamaged || hasDamageDealt) return groupStandaloneDamageEvents(events, positions);
+  return [];
 }
 
 function groupCombatEvents(
   events: GameEvent[],
   positions: Map<string, ElementPosition>,
+  cardIdMap?: Map<string, string>,
 ): AnimationStep[] {
   const blockEffects: AnimationEffect[] = [];
-  // Group damage events by their source (attacker)
   const damageBySource = new Map<string, GameEvent[]>();
   const deaths: GameEvent[] = [];
 
@@ -158,9 +230,7 @@ function groupCombatEvents(
       }
     } else if (e.type === 'DAMAGE_DEALT' || e.type === 'PLAYER_DAMAGED') {
       const source = e.source;
-      if (!damageBySource.has(source)) {
-        damageBySource.set(source, []);
-      }
+      if (!damageBySource.has(source)) damageBySource.set(source, []);
       damageBySource.get(source)!.push(e);
     } else if (e.type === 'CREATURE_DIED') {
       deaths.push(e);
@@ -170,10 +240,10 @@ function groupCombatEvents(
   const steps: AnimationStep[] = [];
 
   if (blockEffects.length > 0) {
-    steps.push({ effects: blockEffects, durationMs: 500 });
+    steps.push({ effects: blockEffects, durationMs: STEP_DURATIONS.blockLink });
   }
 
-  // One step per attacker's exchange
+  // One step per attacker's exchange — includes combat strike projectiles
   for (const [, damageEvents] of damageBySource) {
     const effects: AnimationEffect[] = [];
 
@@ -183,11 +253,13 @@ function groupCombatEvents(
         if (pos) {
           const sourcePos = positions.get(e.source);
           if (sourcePos) {
+            const sourceCardId = cardIdMap?.get(e.source);
             effects.push({
               type: 'combat_strike',
               sourceId: e.source,
               from: sourcePos,
               to: pos,
+              element: sourceCardId ? getCardElement(sourceCardId) : undefined,
             });
           }
           effects.push({ type: 'damage', targetId: e.targetId, amount: e.amount, position: pos });
@@ -197,11 +269,13 @@ function groupCombatEvents(
         if (pos) {
           const sourcePos = positions.get(e.source);
           if (sourcePos) {
+            const sourceCardId = cardIdMap?.get(e.source);
             effects.push({
               type: 'combat_strike',
               sourceId: e.source,
               from: sourcePos,
               to: pos,
+              element: sourceCardId ? getCardElement(sourceCardId) : undefined,
             });
           }
           effects.push({ type: 'player_damage', player: e.player, amount: e.amount, position: pos });
@@ -210,24 +284,25 @@ function groupCombatEvents(
     }
 
     if (effects.length > 0) {
-      steps.push({ effects, durationMs: 1200 });
+      steps.push({
+        effects,
+        durationMs: STEP_DURATIONS.combatExchange,
+        shakeIntensity: computeShakeIntensity(damageEvents),
+      });
     }
   }
 
-  // Death step (if any creatures died)
-  if (deaths.length > 0) {
-    const deathEffects: AnimationEffect[] = [];
-    for (const e of deaths) {
-      if (e.type === 'CREATURE_DIED') {
-        const pos = positions.get(e.permanentId);
-        if (pos) {
-          deathEffects.push({ type: 'death', permanentId: e.permanentId, position: pos });
-        }
-      }
-    }
-    if (deathEffects.length > 0) {
-      steps.push({ effects: deathEffects, durationMs: 800 });
-    }
+  // Death step
+  const deathEffects = deaths
+    .filter((e): e is Extract<GameEvent, { type: 'CREATURE_DIED' }> => e.type === 'CREATURE_DIED')
+    .map((e) => {
+      const pos = positions.get(e.permanentId);
+      return pos ? { type: 'death' as const, permanentId: e.permanentId, position: pos, element: getCardElement(e.cardId) } : null;
+    })
+    .filter((e): e is NonNullable<typeof e> => e !== null);
+
+  if (deathEffects.length > 0) {
+    steps.push({ effects: deathEffects, durationMs: STEP_DURATIONS.death });
   }
 
   return steps;
@@ -240,46 +315,21 @@ function groupSpellEvents(
   const effects: AnimationEffect[] = [];
 
   for (const e of events) {
-    if (e.type === 'DAMAGE_DEALT') {
-      const pos = positions.get(e.targetId);
-      if (pos) {
-        effects.push({ type: 'damage', targetId: e.targetId, amount: e.amount, position: pos });
-      }
-    } else if (e.type === 'PLAYER_DAMAGED') {
-      const pos = positions.get(`player:${e.player}`);
-      if (pos) {
-        effects.push({ type: 'player_damage', player: e.player, amount: e.amount, position: pos });
-      }
-    } else if (e.type === 'CREATURE_HEALED') {
-      const pos = positions.get(e.permanentId);
-      if (pos) {
-        effects.push({ type: 'heal', targetId: e.permanentId, amount: e.amount, position: pos });
-      }
-    } else if (e.type === 'PLAYER_HEALED') {
-      const pos = positions.get(`player:${e.player}`);
-      if (pos) {
-        effects.push({ type: 'player_heal', player: e.player, amount: e.amount, position: pos });
-      }
-    } else if (e.type === 'CREATURE_DIED') {
-      const pos = positions.get(e.permanentId);
-      if (pos) {
-        effects.push({ type: 'death', permanentId: e.permanentId, position: pos });
-      }
-    } else if (e.type === 'SPELL_RESOLVED') {
-      // Show spell impact at the first target's position
+    if (e.type === 'SPELL_RESOLVED') {
+      const spellElement = getCardElement(e.cardId);
       for (const target of e.targets) {
         const key = target.type === 'creature' ? target.permanentId : `player:${target.playerId}`;
         const pos = positions.get(key);
-        if (pos) {
-          effects.push({ type: 'spell_impact', position: pos });
-          break;
-        }
+        if (pos) effects.push({ type: 'spell_impact', position: pos, element: spellElement });
       }
+    } else {
+      const effect = mapEventToEffect(e, positions);
+      if (effect) effects.push(effect);
     }
   }
 
   if (effects.length === 0) return [];
-  return [{ effects, durationMs: 1000 }];
+  return [{ effects, durationMs: STEP_DURATIONS.spell, shakeIntensity: computeShakeIntensity(events) }];
 }
 
 function groupETBEvents(
@@ -288,40 +338,60 @@ function groupETBEvents(
 ): AnimationStep[] {
   const effects: AnimationEffect[] = [];
 
+  let etbElement: Element | undefined;
   for (const e of events) {
-    if (e.type === 'KEYWORD_TRIGGERED') {
+    if (e.type === 'CARD_PLAYED' && e.cardId) {
+      etbElement = getCardElement(e.cardId);
+      break;
+    }
+  }
+
+  for (const e of events) {
+    if (e.type === 'CREATURE_ENTERED') {
       const pos = positions.get(e.permanentId);
-      if (pos) {
-        effects.push({ type: 'keyword', permanentId: e.permanentId, keyword: e.keyword, position: pos });
-      }
-    } else if (e.type === 'DAMAGE_DEALT') {
-      const pos = positions.get(e.targetId);
-      if (pos) {
-        effects.push({ type: 'damage', targetId: e.targetId, amount: e.amount, position: pos });
-      }
-    } else if (e.type === 'PLAYER_DAMAGED') {
-      const pos = positions.get(`player:${e.player}`);
-      if (pos) {
-        effects.push({ type: 'player_damage', player: e.player, amount: e.amount, position: pos });
-      }
-    } else if (e.type === 'CREATURE_HEALED') {
+      if (pos) effects.push({ type: 'summon', permanentId: e.permanentId, position: pos, element: etbElement });
+    } else if (e.type === 'KEYWORD_TRIGGERED') {
       const pos = positions.get(e.permanentId);
-      if (pos) {
-        effects.push({ type: 'heal', targetId: e.permanentId, amount: e.amount, position: pos });
-      }
-    } else if (e.type === 'PLAYER_HEALED') {
-      const pos = positions.get(`player:${e.player}`);
-      if (pos) {
-        effects.push({ type: 'player_heal', player: e.player, amount: e.amount, position: pos });
-      }
-    } else if (e.type === 'CREATURE_DIED') {
-      const pos = positions.get(e.permanentId);
-      if (pos) {
-        effects.push({ type: 'death', permanentId: e.permanentId, position: pos });
-      }
+      if (pos) effects.push({ type: 'keyword', permanentId: e.permanentId, keyword: e.keyword, position: pos, element: etbElement });
+    } else {
+      const effect = mapEventToEffect(e, positions);
+      if (effect) effects.push(effect);
     }
   }
 
   if (effects.length === 0) return [];
-  return [{ effects, durationMs: 800 }];
+  return [{ effects, durationMs: STEP_DURATIONS.etb, shakeIntensity: computeShakeIntensity(events) }];
+}
+
+function groupStandaloneDamageEvents(
+  events: GameEvent[],
+  positions: Map<string, ElementPosition>,
+): AnimationStep[] {
+  const effects = collectCommonEffects(events, positions);
+  if (effects.length === 0) return [];
+  return [{ effects, durationMs: STEP_DURATIONS.standaloneDamage, shakeIntensity: computeShakeIntensity(events) }];
+}
+
+function groupSummonEvents(
+  events: GameEvent[],
+  positions: Map<string, ElementPosition>,
+): AnimationStep[] {
+  let summonElement: Element | undefined;
+  for (const e of events) {
+    if (e.type === 'CARD_PLAYED' && e.cardId) {
+      summonElement = getCardElement(e.cardId);
+      break;
+    }
+  }
+
+  const effects: AnimationEffect[] = [];
+  for (const e of events) {
+    if (e.type === 'CREATURE_ENTERED') {
+      const pos = positions.get(e.permanentId);
+      if (pos) effects.push({ type: 'summon', permanentId: e.permanentId, position: pos, element: summonElement });
+    }
+  }
+
+  if (effects.length === 0) return [];
+  return [{ effects, durationMs: STEP_DURATIONS.summon }];
 }

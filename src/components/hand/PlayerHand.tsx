@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useUIStore } from '@game/uiStore';
@@ -24,6 +25,22 @@ export function PlayerHand() {
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const dragStartRef = useRef<{ x: number; y: number; index: number } | null>(null);
   const dragActiveRef = useRef(false);
+
+  // Play burst animation
+  const [playBurstKey, setPlayBurstKey] = useState(0);
+  const [showPlayBurst, setShowPlayBurst] = useState(false);
+  const prevHandLengthRef = useRef(hand.length);
+
+  useEffect(() => {
+    if (hand.length < prevHandLengthRef.current) {
+      setPlayBurstKey((k) => k + 1);
+      setShowPlayBurst(true);
+      const timer = setTimeout(() => setShowPlayBurst(false), 500);
+      prevHandLengthRef.current = hand.length;
+      return () => clearTimeout(timer);
+    }
+    prevHandLengthRef.current = hand.length;
+  }, [hand.length]);
 
   const playableIndices = new Set(
     legalActions
@@ -198,6 +215,28 @@ export function PlayerHand() {
           );
         })}
       </div>
+
+      {/* Play burst — brief cyan flash when a card leaves the hand */}
+      <AnimatePresence>
+        {showPlayBurst && (
+          <motion.div
+            key={playBurstKey}
+            className="absolute left-1/2 top-0 -translate-x-1/2 pointer-events-none"
+            style={{
+              width: 120,
+              height: 60,
+              borderRadius: '50%',
+              background: 'radial-gradient(ellipse, rgba(34, 211, 238, 0.4), rgba(34, 211, 238, 0.1) 60%, transparent 100%)',
+              filter: 'blur(6px)',
+              zIndex: 100,
+            }}
+            initial={{ opacity: 0, scale: 0.5, y: 0 }}
+            animate={{ opacity: [0, 1, 0], scale: [0.5, 1.5, 2], y: -30 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.45, ease: 'easeOut' }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Drag phantom — portal-mounted at fixed position */}
       {draggedCard && dragPosition && createPortal(

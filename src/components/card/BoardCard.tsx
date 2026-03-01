@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import type { Permanent } from '@engine/types';
 import { getCurrentHealth, getEffectiveAttack } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
@@ -83,6 +83,43 @@ export function BoardCard({
   const activeZIndex = isOpponentCard ? 54 : 32;
   const statusEffects = getActiveStatusEffects(permanent);
 
+  // Entrance glow flash — visible briefly when card first appears
+  const [showEntranceGlow, setShowEntranceGlow] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowEntranceGlow(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Stat change flash animations
+  const healthFlashControls = useAnimationControls();
+  const attackFlashControls = useAnimationControls();
+  const prevHealthRef = useRef(currentHealth);
+  const prevAttackRef = useRef(effectiveAttack);
+
+  useEffect(() => {
+    if (prevHealthRef.current !== currentHealth) {
+      const lost = currentHealth < prevHealthRef.current;
+      healthFlashControls.start({
+        scale: [1.5, 1],
+        color: lost ? ['#ff4444', isDamaged ? '#fecaca' : '#bbf7d0'] : ['#34d399', '#bbf7d0'],
+        transition: { duration: 0.4, ease: 'easeOut' },
+      });
+      prevHealthRef.current = currentHealth;
+    }
+  }, [currentHealth, isDamaged, healthFlashControls]);
+
+  useEffect(() => {
+    if (prevAttackRef.current !== effectiveAttack) {
+      const buffed = effectiveAttack > prevAttackRef.current;
+      attackFlashControls.start({
+        scale: [1.5, 1],
+        color: buffed ? ['#fbbf24', effectiveAttack > (card.attack ?? 0) ? '#bbf7d0' : '#fecaca'] : ['#ff4444', '#fecaca'],
+        transition: { duration: 0.4, ease: 'easeOut' },
+      });
+      prevAttackRef.current = effectiveAttack;
+    }
+  }, [effectiveAttack, card.attack, attackFlashControls]);
+
   return (
     <motion.div
       ref={posRef}
@@ -97,7 +134,9 @@ export function BoardCard({
         zIndex: isAttacking || isBlocking ? activeZIndex : baseZIndex,
       }}
       layout
+      initial={{ opacity: 0, scale: 0.3, y: isOpponentCard ? -30 : 30 }}
       animate={{
+        opacity: 1,
         rotate: permanent.isTapped ? 15 : 0,
         x: isBlocking ? (isOpponentCard ? -10 : 10) : 0,
         y: isAttacking
@@ -107,7 +146,13 @@ export function BoardCard({
             : 0,
         scale: isAttacking || isBlocking ? 1.04 : 1,
       }}
-      exit={{ opacity: 0, scale: 0.6, transition: { duration: 0.3 } }}
+      exit={{
+        opacity: 0,
+        scale: 0.15,
+        rotate: isOpponentCard ? -12 : 12,
+        filter: 'brightness(2) saturate(0)',
+        transition: { duration: 0.4, ease: 'easeIn' },
+      }}
       whileTap={{ scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       onClick={() => { if (!longPress.firedRef.current) onClick(); }}
@@ -121,7 +166,7 @@ export function BoardCard({
         <motion.div
           className="absolute -inset-[2px] rounded-xl z-0 pointer-events-none"
           style={{
-            background: isSelectedForBlock
+            backgroundImage: isSelectedForBlock
               ? 'linear-gradient(135deg, #0ea5e9, #22d3ee, #0ea5e9)'
               : isAttacking
               ? 'linear-gradient(135deg, #ef4444, #f97316, #ef4444)'
@@ -138,6 +183,48 @@ export function BoardCard({
           }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
         />
+      )}
+
+      {/* Entrance glow flash — element-colored burst on summon */}
+      {showEntranceGlow && (
+        <motion.div
+          className="absolute -inset-[4px] rounded-xl z-0 pointer-events-none"
+          style={{
+            boxShadow: `0 0 20px 8px ${elementColor}66, 0 0 40px 16px ${elementColor}33`,
+            background: `radial-gradient(ellipse at center, ${elementColor}22, transparent 70%)`,
+          }}
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+        />
+      )}
+
+      {/* Summoning sickness frost overlay — pulsing icy sheen */}
+      {isSummoningSick && (
+        <motion.div
+          className="absolute inset-0 rounded-xl z-[5] pointer-events-none"
+          style={{
+            background: 'linear-gradient(180deg, rgba(147, 197, 253, 0.15) 0%, rgba(147, 197, 253, 0.05) 40%, rgba(147, 197, 253, 0.18) 100%)',
+            boxShadow: 'inset 0 0 12px rgba(147, 197, 253, 0.2)',
+          }}
+          animate={{
+            opacity: [0.5, 0.8, 0.5],
+          }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          {/* "Zzz" sleep indicator */}
+          <motion.span
+            className="absolute top-0.5 right-1 text-blue-300/60 font-bold select-none"
+            style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
+            animate={{
+              opacity: [0.3, 0.7, 0.3],
+              y: [0, -2, 0],
+            }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            💤
+          </motion.span>
+        </motion.div>
       )}
 
       {/* Card frame */}
@@ -273,7 +360,9 @@ export function BoardCard({
             }}
           >
             <span className="leading-none">⚔</span>
-            <span className="leading-none">{effectiveAttack}</span>
+            <motion.span className="leading-none" animate={attackFlashControls}>
+              {effectiveAttack}
+            </motion.span>
           </div>
 
           {/* Health */}
@@ -292,7 +381,9 @@ export function BoardCard({
             }}
           >
             <span className="leading-none">♥</span>
-            <span className="leading-none">{currentHealth}</span>
+            <motion.span className="leading-none" animate={healthFlashControls}>
+              {currentHealth}
+            </motion.span>
           </div>
         </div>
       </div>

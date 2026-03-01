@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { CardInstance } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
@@ -44,6 +45,15 @@ export function HandCard({
   const artPath = getCardArtPath(card.id, card.element);
   const effect = card.effectId ? EFFECT_REGISTRY[card.effectId] : null;
   const isCreature = card.type === 'creature';
+  const isPreview = cardInstance.instanceId === '__preview__';
+
+  // Draw shimmer — brief golden flash when card first appears in hand
+  const [showDrawGlow, setShowDrawGlow] = useState(!isPreview);
+  useEffect(() => {
+    if (!showDrawGlow) return;
+    const timer = setTimeout(() => setShowDrawGlow(false), 700);
+    return () => clearTimeout(timer);
+  }, [showDrawGlow]);
 
   return (
     <motion.div
@@ -88,6 +98,20 @@ export function HandCard({
             opacity: isSelected ? 1 : [0.7, 1, 0.7],
           }}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      )}
+
+      {/* Draw shimmer — golden flash on arrival */}
+      {showDrawGlow && (
+        <motion.div
+          className="absolute -inset-[3px] rounded-xl z-[1] pointer-events-none"
+          style={{
+            boxShadow: `0 0 24px 8px ${elementColor}55, 0 0 48px 16px ${elementColor}22`,
+            background: `radial-gradient(ellipse at center, ${elementColor}20, transparent 70%)`,
+          }}
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: 0.7, ease: 'easeOut' }}
         />
       )}
 

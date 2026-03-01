@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useUIStore } from '@game/uiStore';
 import type { CardInstance, PlayerId } from '@engine/types';
@@ -7,6 +7,7 @@ import { getOpponent } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
 import { EFFECT_REGISTRY } from '@engine/effects';
 import { useGameDispatch } from '@game/GameDispatchContext';
+import { useScreenShake } from '@hooks/useScreenShake';
 import { PlayerInfo } from './PlayerInfo';
 import { CreatureSlots } from './CreatureSlots';
 import { BattleLine } from './BattleLine';
@@ -32,6 +33,7 @@ export function GameBoard() {
   const humanPlayer = useGameStore((s) => s.humanPlayer);
   const state = useGameStore((s) => s.state);
   const legalActions = useGameStore((s) => s.legalActions);
+  const shakeClass = useScreenShake();
   const opponentPlayer = getOpponent(humanPlayer);
   const inspectedCardId = useUIStore((s) => s.inspectedCardId);
   const inspectCard = useUIStore((s) => s.inspectCard);
@@ -87,7 +89,7 @@ export function GameBoard() {
 
   return (
     <div
-      className="game-surface h-screen flex flex-col select-none bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      className={`game-surface h-screen flex flex-col select-none bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${shakeClass}`}
       style={{ paddingRight: 'calc(6rem + env(safe-area-inset-right))' }}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -132,7 +134,11 @@ export function GameBoard() {
       {/* Right sidebar — full-height viewport panel */}
       <div
         data-testid="right-sidebar"
-        className="fixed inset-y-0 right-0 z-[35] w-24 flex flex-col justify-between border-l border-white/10 bg-slate-950/72 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+        className="fixed inset-y-0 right-0 z-[35] w-24 flex flex-col justify-between bg-gradient-to-b from-slate-950 via-slate-900/90 to-slate-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+        style={{
+          borderLeft: '1px solid rgba(148, 163, 184, 0.12)',
+          boxShadow: 'inset 4px 0 16px rgba(0, 0, 0, 0.3)',
+        }}
       >
         <PlayerInfo
           playerId={opponentPlayer}
@@ -152,6 +158,8 @@ export function GameBoard() {
           }
           onDiscardClick={() => setDiscardViewerPlayerId(opponentPlayer)}
         />
+        {/* Decorative divider */}
+        <div className="mx-3 shrink-0" style={{ height: 1, background: 'linear-gradient(90deg, transparent 0%, rgba(148, 163, 184, 0.2) 50%, transparent 100%)' }} />
         <PlayerInfo
           playerId={humanPlayer}
           isOpponent={false}
@@ -179,52 +187,86 @@ export function GameBoard() {
       <BlockAssignmentLines />
 
       {/* Targeting prompt overlay */}
-      {isLocalPlayerTargeting && (
-        <div className="fixed top-[calc(env(safe-area-inset-top)+0.5rem)] left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-          <div className="pointer-events-auto rounded-xl border border-amber-300/40 bg-slate-900/90 px-4 py-2 shadow-xl shadow-black/40 backdrop-blur-sm text-center">
-            <p className="text-amber-200 text-sm font-semibold">
-              Choose a target for {targetingCardName}
-            </p>
-            {targetingEffectText && (
-              <p className="text-white/70 text-xs mt-0.5">{targetingEffectText}</p>
-            )}
-            {canCancelTargeting && (
-              <button
-                className={gameButtonClass({
-                  tone: 'neutral',
-                  size: 'sm',
-                  className: 'mt-2 px-4 py-2 text-sm',
-                })}
-                onClick={() => dispatch({ type: 'CANCEL_TARGETING' }, humanPlayer)}
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {isLocalPlayerTargeting && (
+          <motion.div
+            className="fixed top-[calc(env(safe-area-inset-top)+0.5rem)] left-1/2 -translate-x-1/2 z-30 pointer-events-none"
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <motion.div
+              className="pointer-events-auto rounded-xl bg-slate-900/90 px-4 py-2 shadow-xl shadow-black/40 backdrop-blur-sm text-center"
+              style={{
+                border: '1px solid rgba(251, 191, 36, 0.4)',
+              }}
+              animate={{
+                borderColor: [
+                  'rgba(251, 191, 36, 0.3)',
+                  'rgba(251, 191, 36, 0.7)',
+                  'rgba(251, 191, 36, 0.3)',
+                ],
+                boxShadow: [
+                  '0 0 12px rgba(251, 191, 36, 0.1), 0 4px 20px rgba(0, 0, 0, 0.4)',
+                  '0 0 24px rgba(251, 191, 36, 0.3), 0 4px 20px rgba(0, 0, 0, 0.4)',
+                  '0 0 12px rgba(251, 191, 36, 0.1), 0 4px 20px rgba(0, 0, 0, 0.4)',
+                ],
+              }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <p className="text-amber-200 text-sm font-semibold">
+                Choose a target for {targetingCardName}
+              </p>
+              {targetingEffectText && (
+                <p className="text-white/70 text-xs mt-0.5">{targetingEffectText}</p>
+              )}
+              {canCancelTargeting && (
+                <button
+                  className={gameButtonClass({
+                    tone: 'neutral',
+                    size: 'sm',
+                    className: 'mt-2 px-4 py-2 text-sm',
+                  })}
+                  onClick={() => dispatch({ type: 'CANCEL_TARGETING' }, humanPlayer)}
+                >
+                  Cancel
+                </button>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* New-player gameplay coach marks */}
-      {showHints && (
-        <div className="fixed left-2 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-20 max-w-xs rounded-xl border border-white/20 bg-slate-900/88 p-3 shadow-xl shadow-black/30 backdrop-blur-sm">
-          <p className="text-white text-sm font-semibold">Quick tips</p>
-          <ul className="mt-1 space-y-1 text-white/75 text-xs">
-            <li>Tap a card, then tap an empty slot to play.</li>
-            <li>Hold any card to inspect details.</li>
-            <li>Tap highlighted units or heroes to target spells.</li>
-          </ul>
-          <button
-            className={gameButtonClass({
-              tone: 'neutral',
-              size: 'sm',
-              className: 'mt-2 w-full text-sm',
-            })}
-            onClick={handleDismissHints}
+      <AnimatePresence>
+        {showHints && (
+          <motion.div
+            className="fixed left-2 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-20 max-w-xs rounded-xl border border-white/20 bg-slate-900/88 p-3 shadow-xl shadow-black/30 backdrop-blur-sm"
+            initial={{ opacity: 0, x: -20, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -20, scale: 0.95 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1], delay: 0.5 }}
           >
-            Got it
-          </button>
-        </div>
-      )}
+            <p className="text-white text-sm font-semibold">Quick tips</p>
+            <ul className="mt-1 space-y-1 text-white/75 text-xs">
+              <li>Tap a card, then tap an empty slot to play.</li>
+              <li>Hold any card to inspect details.</li>
+              <li>Tap highlighted units or heroes to target spells.</li>
+            </ul>
+            <button
+              className={gameButtonClass({
+                tone: 'neutral',
+                size: 'sm',
+                className: 'mt-2 w-full text-sm',
+              })}
+              onClick={handleDismissHints}
+            >
+              Got it
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Animation overlay */}
       <AnimationOverlay />
@@ -232,10 +274,36 @@ export function GameBoard() {
       {/* Graveyard / discard viewer */}
       <AnimatePresence>
         {discardViewerPlayerId && (
-          <div className="fixed inset-0 z-50 bg-black/65 flex items-center justify-center p-4">
-            <div className="w-full max-w-md rounded-2xl border border-white/15 bg-slate-950 p-4">
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setDiscardViewerPlayerId(null)}
+          >
+            {/* Ghostly backdrop */}
+            <motion.div
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            />
+
+            {/* Modal panel */}
+            <motion.div
+              className="relative w-full max-w-md rounded-2xl border border-slate-600/30 bg-slate-950/95 p-4 shadow-2xl"
+              style={{
+                boxShadow: '0 0 40px rgba(100, 116, 139, 0.15), 0 8px 32px rgba(0,0,0,0.5)',
+              }}
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between">
-                <h3 className="text-white text-lg font-bold">
+                <h3 className="text-slate-300 text-lg font-bold flex items-center gap-2">
+                  <span className="text-slate-500">💀</span>
                   {discardViewerPlayerId === humanPlayer ? 'Your' : 'Opponent'} Graveyard
                 </h3>
                 <button
@@ -255,20 +323,23 @@ export function GameBoard() {
                 <p className="text-white/55 text-sm mt-4">No cards in graveyard.</p>
               ) : (
                 <ul className="mt-3 max-h-80 overflow-auto space-y-1">
-                  {discardViewerCards.map((item) => (
-                    <li
+                  {discardViewerCards.map((item, i) => (
+                    <motion.li
                       key={item.cardId}
                       className="flex items-center justify-between rounded-lg bg-slate-900/85 border border-white/8 px-3 py-2 cursor-pointer hover:bg-slate-800/85 transition-colors"
                       onClick={() => inspectCard(item.cardId)}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2, delay: i * 0.04, ease: 'easeOut' }}
                     >
                       <span className="text-white/90 text-sm">{item.name}</span>
                       <span className="text-white/50 text-xs">x{item.count}</span>
-                    </li>
+                    </motion.li>
                   ))}
                 </ul>
               )}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

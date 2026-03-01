@@ -178,7 +178,7 @@ describe('GameBoard', () => {
       </GameDispatchProvider>,
     );
 
-    const resolvingLabel = screen.getByText('Resolving combat...');
+    const resolvingLabel = screen.getByText('⚔ Resolving combat...');
     expect(resolvingLabel.parentElement).toHaveClass('bg-slate-950/50', 'backdrop-blur-sm');
   });
 });

@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { Element } from '@engine/types';
 import { ELEMENT_META } from '@engine/elements';
 import { getCardsByElement } from '@engine/cards';
@@ -70,6 +70,8 @@ function ElementIcon({ element }: { element: Element }) {
 }
 
 export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <div className="h-screen w-screen bg-slate-950 overflow-y-auto pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-3xl mx-auto px-4 py-8">
@@ -87,7 +89,14 @@ export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
           >
             Back
           </motion.button>
-          <h1 className="text-2xl font-bold text-white">Choose Your Deck</h1>
+          <motion.h1
+            className="text-2xl font-bold text-white"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          >
+            Choose Your Deck
+          </motion.h1>
         </div>
 
         {/* Deck grid */}
@@ -97,7 +106,6 @@ export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
               ? getCardsByElement(deck.elements[0]).length * 2
               : deck.elements.reduce((sum, el) => sum + getCardsByElement(el).length, 0);
 
-            // Primary element color for the card border accent
             const primaryColor = getElementColor(deck.elements[0]);
 
             return (
@@ -112,18 +120,25 @@ export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
                 style={{
                   borderColor: `${primaryColor}33`,
                 }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: i * 0.05 }}
-                whileHover={{ scale: 1.03, borderColor: `${primaryColor}88` }}
+                initial={{ opacity: 0, y: 24, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.4, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={shouldReduceMotion ? undefined : {
+                  scale: 1.03,
+                  borderColor: `${primaryColor}88`,
+                  boxShadow: `0 0 20px ${primaryColor}22, 0 4px 16px rgba(0,0,0,0.3)`,
+                }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => onSelectDeck(buildDeckCardIds(deck))}
               >
                 {/* Element icon watermark */}
-                <img
+                <motion.img
                   src={getElementIconPath(deck.elements[0])}
                   alt=""
                   className="absolute -right-4 -top-4 w-24 h-24 object-contain opacity-10 pointer-events-none"
+                  initial={{ opacity: 0, rotate: -20 }}
+                  animate={{ opacity: 0.1, rotate: 0 }}
+                  transition={{ duration: 0.5, delay: i * 0.06 + 0.2 }}
                 />
 
                 <h2 className="text-lg leading-tight font-bold text-white mb-2 relative whitespace-normal break-words">{deck.name}</h2>

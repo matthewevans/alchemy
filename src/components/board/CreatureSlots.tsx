@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { GameAction, PlayerId } from '@engine/types';
 import { getOpponent } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
@@ -282,15 +282,41 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
           );
         }
 
-        return (
+        return showPlusOnEmpty ? (
+          <motion.div
+            key={`empty-${slotIndex}`}
+            className="flex items-center justify-center rounded-xl border-2 border-dashed border-green-500/40 cursor-pointer"
+            style={{
+              width: cardWidth ? `${cardWidth}px` : 'var(--board-card-width)',
+              height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
+            }}
+            animate={{
+              borderColor: ['rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.6)', 'rgba(34, 197, 94, 0.3)'],
+              boxShadow: [
+                'inset 0 0 12px rgba(34, 197, 94, 0.05)',
+                'inset 0 0 20px rgba(34, 197, 94, 0.15)',
+                'inset 0 0 12px rgba(34, 197, 94, 0.05)',
+              ],
+            }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            whileHover={{ backgroundColor: 'rgba(34, 197, 94, 0.08)', scale: 1.02 }}
+            data-slot-index={slotIndex}
+            data-board-player={playerId}
+            onClick={() => handleEmptySlotClick(slotIndex)}
+          >
+            <motion.span
+              className="text-green-400/40 text-xl font-bold select-none"
+              animate={{ opacity: [0.3, 0.7, 0.3] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              +
+            </motion.span>
+          </motion.div>
+        ) : (
           <div
             key={`empty-${slotIndex}`}
             className={`
-              flex items-center justify-center rounded-xl transition-colors
-              ${showPlusOnEmpty
-                ? 'border-2 border-dashed border-green-500/30 cursor-pointer hover:border-green-400/50 hover:bg-green-900/10'
-                : 'border border-dashed border-slate-700/30'
-              }
+              flex items-center justify-center rounded-xl border border-dashed border-slate-700/30
               ${isOpponent ? 'cursor-default' : ''}
             `}
             style={{
@@ -300,11 +326,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
             data-slot-index={slotIndex}
             data-board-player={playerId}
             onClick={() => handleEmptySlotClick(slotIndex)}
-          >
-            {showPlusOnEmpty && (
-              <span className="text-green-500/30 text-lg select-none">+</span>
-            )}
-          </div>
+          />
         );
       })}
       </AnimatePresence>

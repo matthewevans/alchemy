@@ -2,17 +2,19 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createTestGameState } from '@engine/__tests__/__fixtures__/testHelpers';
 import { useGameStore } from '@game/gameStore';
-import { useAnimationStore } from '@game/animationStore';
+import { useAnimationStore, registerPosition, unregisterPosition } from '@game/animationStore';
 import { BlockAssignmentLines } from './BlockAssignmentLines';
 
 describe('BlockAssignmentLines', () => {
   beforeEach(() => {
     useAnimationStore.setState({
-      positions: new Map(),
       queue: [],
       activeStep: null,
       isAnimating: false,
     });
+    // Clear position registry
+    unregisterPosition('blk-1');
+    unregisterPosition('atk-1');
   });
 
   it('renders link lines for blocker assignments', () => {
@@ -26,12 +28,8 @@ describe('BlockAssignmentLines', () => {
         },
       }),
     });
-    useAnimationStore.setState({
-      positions: new Map([
-        ['blk-1', { x: 100, y: 250, width: 70, height: 100 }],
-        ['atk-1', { x: 260, y: 130, width: 70, height: 100 }],
-      ]),
-    });
+    registerPosition('blk-1', { x: 100, y: 250, width: 70, height: 100 });
+    registerPosition('atk-1', { x: 260, y: 130, width: 70, height: 100 });
 
     render(<BlockAssignmentLines />);
     expect(screen.getAllByTestId('block-assignment-line')).toHaveLength(1);

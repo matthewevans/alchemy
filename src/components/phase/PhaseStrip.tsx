@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
@@ -39,6 +40,21 @@ export function PhaseStrip() {
   const dispatch = useGameDispatch();
   const shouldReduceMotion = useReducedMotion();
 
+  // Phase transition flash (derived state pattern — detect transition during render)
+  const [prevPhaseType, setPrevPhaseType] = useState(phase?.type);
+  const [transitionFlash, setTransitionFlash] = useState(false);
+
+  if (phase && prevPhaseType !== phase.type) {
+    setPrevPhaseType(phase.type);
+    setTransitionFlash(true);
+  }
+
+  useEffect(() => {
+    if (!transitionFlash) return;
+    const timer = setTimeout(() => setTransitionFlash(false), 400);
+    return () => clearTimeout(timer);
+  }, [transitionFlash]);
+
   if (!phase) return null;
 
   const currentPhaseType = phase.type;
@@ -56,7 +72,7 @@ export function PhaseStrip() {
     >
       <div className="flex items-center justify-center gap-1.5">
       {/* Phase icons */}
-      <div className="flex items-center gap-0.5 pointer-events-none">
+      <div className="flex items-center gap-0.5 pointer-events-none relative">
         {PHASES.map((p) => {
           const order = PHASE_ORDER[p.key];
           const isActive = p.key === currentPhaseType || (currentPhaseType === 'targeting' && p.key === 'play');
@@ -66,13 +82,22 @@ export function PhaseStrip() {
             <motion.div
               key={p.key}
               className={`
-                flex flex-col items-center px-1 py-0.5 rounded select-none pointer-events-none
+                flex flex-col items-center px-1 py-0.5 rounded select-none pointer-events-none relative
                 ${isActive ? 'text-amber-300' : isCompleted ? 'text-slate-500' : 'text-white/50'}
               `}
+              style={{
+                filter: isActive ? 'none' : 'grayscale(1) brightness(0.5)',
+              }}
               animate={
                 !shouldReduceMotion && isActive
-                  ? { scale: [1, 1.08, 1], filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.6)) grayscale(0) brightness(1)' }
-                  : { scale: 1, filter: 'drop-shadow(0 0 0px transparent) grayscale(1) brightness(0.5)' }
+                  ? {
+                      scale: [1, 1.08, 1],
+                      opacity: 1,
+                    }
+                  : {
+                      scale: 1,
+                      opacity: 1,
+                    }
               }
               transition={
                 !shouldReduceMotion && isActive
@@ -80,11 +105,38 @@ export function PhaseStrip() {
                   : { duration: 0.2 }
               }
             >
+              {/* Active phase underline glow */}
+              {isActive && !shouldReduceMotion && (
+                <motion.div
+                  className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 rounded-full"
+                  style={{
+                    width: 16,
+                    height: 2,
+                    background: 'rgba(251, 191, 36, 0.8)',
+                    boxShadow: '0 0 6px rgba(251, 191, 36, 0.6)',
+                  }}
+                  layoutId="phase-indicator"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
               <span className="text-sm leading-none">{p.icon}</span>
               <span className="text-[9px] mt-0.5 font-medium">{p.label}</span>
             </motion.div>
           );
         })}
+
+        {/* Phase transition flash — brief golden burst */}
+        {transitionFlash && !shouldReduceMotion && (
+          <motion.div
+            className="absolute inset-0 rounded pointer-events-none"
+            style={{
+              background: 'radial-gradient(ellipse at center, rgba(251, 191, 36, 0.3), transparent 70%)',
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+          />
+        )}
       </div>
 
       {/* Advance button */}
@@ -102,6 +154,9 @@ export function PhaseStrip() {
           })}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
           onClick={() => dispatch(advanceInfo.action, humanPlayer)}
         >
           {advanceInfo.label}

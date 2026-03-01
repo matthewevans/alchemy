@@ -15,11 +15,11 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
+      transition={{ duration: 0.2 }}
       onClick={onResume}
     >
       <motion.div
@@ -28,10 +28,13 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
         aria-modal="true"
         aria-labelledby="game-menu-title"
         tabIndex={-1}
-        className="bg-slate-800 rounded-2xl p-8 flex flex-col items-center gap-4 min-w-[240px] shadow-2xl border border-slate-700/50"
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-slate-800/95 rounded-2xl p-8 flex flex-col items-center gap-4 min-w-[240px] shadow-2xl border border-slate-600/40"
+        style={{
+          boxShadow: '0 0 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(0, 0, 0, 0.3)',
+        }}
+        initial={{ scale: 0.85, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.85, opacity: 0, y: 20 }}
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         onClick={(e) => e.stopPropagation()}
       >

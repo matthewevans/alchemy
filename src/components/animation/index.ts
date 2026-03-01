@@ -1,5 +1,5 @@
 export { AnimationOverlay } from './AnimationOverlay';
 export { BlockLink } from './BlockLink';
-export { CombatStrike } from './CombatStrike';
+export { DamageVignette } from './DamageVignette';
 export { FloatingNumber } from './FloatingNumber';
-export { SpellImpact } from './SpellImpact';
+export { ParticleCanvas } from './ParticleCanvas';

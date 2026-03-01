@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import type { PeerSession } from '@network/peer';
 import { createPeerSession } from '@network/peer';
@@ -33,19 +33,19 @@ interface FloatingIcon {
 }
 
 function useFloatingIcons(count: number): FloatingIcon[] {
-  return useMemo(
-    () =>
-      Array.from({ length: count }, (_, i) => ({
-        id: i,
-        element: ELEMENTS[i % ELEMENTS.length],
-        x: Math.random() * 90 + 5,
-        y: Math.random() * 80 + 10,
-        size: Math.random() * 24 + 20,
-        duration: Math.random() * 6 + 8,
-        delay: Math.random() * 4,
-      })),
-    [count],
+  // useState lazy initializer is explicitly allowed to be impure (runs once)
+  const [icons] = useState(() =>
+    Array.from({ length: count }, (_, i) => ({
+      id: i,
+      element: ELEMENTS[i % ELEMENTS.length],
+      x: Math.random() * 90 + 5,
+      y: Math.random() * 80 + 10,
+      size: Math.random() * 24 + 20,
+      duration: Math.random() * 6 + 8,
+      delay: Math.random() * 4,
+    })),
   );
+  return icons;
 }
 
 export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps) {
@@ -283,11 +283,29 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             >
-              <h2 className="text-3xl font-bold mb-1">Multiplayer</h2>
-              <p className="text-white/50 text-sm mb-4">Challenge a friend via peer-to-peer</p>
+              <motion.h2
+                className="text-3xl font-bold mb-1"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                Multiplayer
+              </motion.h2>
+              <motion.p
+                className="text-white/50 text-sm mb-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+              >
+                Challenge a friend via peer-to-peer
+              </motion.p>
               <motion.button
                 className={gameButtonClass({ tone: 'amber', size: 'lg', className: 'w-64 text-xl font-bold' })}
+                initial={{ opacity: 0, y: 15, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 0.15, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setStep({ type: 'host_select_deck' })}
@@ -296,6 +314,9 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
               </motion.button>
               <motion.button
                 className={gameButtonClass({ tone: 'blue', size: 'lg', className: 'w-64 text-xl font-bold' })}
+                initial={{ opacity: 0, y: 15, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 0.25, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => { setCodeInput(''); setCodeError(''); setStep({ type: 'join_enter_code' }); }}
@@ -321,14 +342,33 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
                   <motion.div
                     key={i}
                     className="w-14 h-16 rounded-xl bg-amber-500/20 border-2 border-amber-400/60 flex items-center justify-center text-3xl font-bold text-amber-200 tracking-wider"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.08 }}
+                    initial={{ opacity: 0, y: 20, scale: 0.5, rotate: -10 }}
+                    animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+                    transition={{ delay: i * 0.1, type: 'spring', stiffness: 400, damping: 15 }}
+                    style={{
+                      textShadow: '0 0 10px rgba(251, 191, 36, 0.5)',
+                    }}
                   >
                     {char}
                   </motion.div>
                 ))}
               </div>
+
+              {/* Pulsing glow under room code */}
+              {!shouldReduceMotion && (
+                <motion.div
+                  className="absolute pointer-events-none"
+                  style={{
+                    width: 280,
+                    height: 60,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(ellipse, rgba(251, 191, 36, 0.12), transparent 70%)',
+                    filter: 'blur(15px)',
+                  }}
+                  animate={{ opacity: [0.3, 0.7, 0.3] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              )}
 
               <div className="flex items-center gap-3 text-white/50">
                 <motion.div

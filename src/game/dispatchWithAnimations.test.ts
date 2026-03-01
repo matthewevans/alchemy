@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRNG } from '@engine/prng';
 import { createTestGameState, makePermanent, resetTestCounters } from '@engine/__tests__/__fixtures__/testHelpers';
-import { useAnimationStore } from './animationStore';
+import { useAnimationStore, registerPosition, unregisterPosition } from './animationStore';
 import { useGameStore } from './gameStore';
 import { dispatchWithAnimations } from './dispatchWithAnimations';
 
@@ -9,11 +9,13 @@ describe('dispatchWithAnimations', () => {
   beforeEach(() => {
     resetTestCounters();
     useAnimationStore.setState({
-      positions: new Map(),
       queue: [],
       activeStep: null,
       isAnimating: false,
     });
+    // Clear any registered positions
+    unregisterPosition('player:player1');
+    unregisterPosition('player:player2');
   });
 
   it('enqueues animation steps for combat resolution actions', () => {
@@ -44,12 +46,8 @@ describe('dispatchWithAnimations', () => {
       legalActions: [],
       events: [],
     });
-    useAnimationStore.setState({
-      positions: new Map([
-        [attacker.permanentId, { x: 120, y: 210, width: 80, height: 120 }],
-        ['player:player2', { x: 330, y: 60, width: 56, height: 56 }],
-      ]),
-    });
+    registerPosition(attacker.permanentId, { x: 120, y: 210, width: 80, height: 120 });
+    registerPosition('player:player2', { x: 330, y: 60, width: 56, height: 56 });
 
     dispatchWithAnimations({ type: 'CONFIRM_BLOCKERS' }, 'player2');
 
@@ -57,6 +55,10 @@ describe('dispatchWithAnimations', () => {
     expect(activeStep).not.toBeNull();
     expect(activeStep?.effects.some((effect) => effect.type === 'combat_strike')).toBe(true);
     expect(activeStep?.effects.some((effect) => effect.type === 'player_damage')).toBe(true);
+
+    // Clean up registered positions
+    unregisterPosition(attacker.permanentId);
+    unregisterPosition('player:player2');
   });
 
   it('notifies optional local-action callback once', () => {
@@ -77,4 +79,3 @@ describe('dispatchWithAnimations', () => {
     expect(onLocalAction).toHaveBeenCalledTimes(1);
   });
 });
-
