@@ -2,35 +2,60 @@ import { describe, it, expect, vi } from 'vitest';
 import { createPeerSession } from './peer';
 import { encodeMessage } from './protocol';
 
-class FakeDataChannel extends EventTarget {
-  readyState: RTCDataChannelState = 'open';
+type DataHandler = (data: unknown) => void;
+type VoidHandler = () => void;
+type ErrorHandler = (err: Error) => void;
+
+/** Minimal fake matching PeerJS DataConnection API surface used by createPeerSession */
+class FakeDataConnection {
+  open = true;
   sent: string[] = [];
 
-  send(data: string) {
-    if (this.readyState !== 'open') {
-      throw new Error('Data channel is closed');
-    }
-    this.sent.push(data);
+  private dataHandlers = new Set<DataHandler>();
+  private closeHandlers = new Set<VoidHandler>();
+  private errorHandlers = new Set<ErrorHandler>();
+
+  send(data: unknown) {
+    if (!this.open) throw new Error('Connection is closed');
+    this.sent.push(data as string);
+  }
+
+  on(event: string, handler: (...args: unknown[]) => void): this {
+    if (event === 'data') this.dataHandlers.add(handler as DataHandler);
+    else if (event === 'close') this.closeHandlers.add(handler as VoidHandler);
+    else if (event === 'error') this.errorHandlers.add(handler as ErrorHandler);
+    return this;
+  }
+
+  off(event: string, handler: (...args: unknown[]) => void): this {
+    if (event === 'data') this.dataHandlers.delete(handler as DataHandler);
+    else if (event === 'close') this.closeHandlers.delete(handler as VoidHandler);
+    else if (event === 'error') this.errorHandlers.delete(handler as ErrorHandler);
+    return this;
+  }
+
+  // Test helpers
+  simulateData(data: string) {
+    for (const h of this.dataHandlers) h(data);
+  }
+
+  simulateClose() {
+    this.open = false;
+    for (const h of this.closeHandlers) h();
   }
 }
 
-class FakePeerConnection extends EventTarget {
-  connectionState: RTCPeerConnectionState = 'connected';
-  close = vi.fn();
-}
-
-function emitMessage(channel: FakeDataChannel, data: string) {
-  channel.dispatchEvent(new MessageEvent('message', { data }));
+function createTestSession() {
+  const conn = new FakeDataConnection();
+  const destroyPeer = vi.fn();
+  // Cast to satisfy DataConnection type — we only use the subset FakeDataConnection implements
+  const session = createPeerSession(conn as never, destroyPeer);
+  return { conn, destroyPeer, session };
 }
 
 describe('createPeerSession', () => {
   it('buffers messages while no listeners are attached, then flushes when a listener is added', () => {
-    const pc = new FakePeerConnection();
-    const channel = new FakeDataChannel();
-    const session = createPeerSession({
-      pc: pc as unknown as RTCPeerConnection,
-      channel: channel as unknown as RTCDataChannel,
-    });
+    const { conn, session } = createTestSession();
 
     const actionMessage = {
       type: 'action' as const,
@@ -39,7 +64,7 @@ describe('createPeerSession', () => {
       seq: 0,
     };
 
-    emitMessage(channel, encodeMessage(actionMessage));
+    conn.simulateData(encodeMessage(actionMessage));
 
     const handler = vi.fn();
     session.onMessage(handler);
@@ -50,12 +75,7 @@ describe('createPeerSession', () => {
   });
 
   it('buffers messages again after temporary listener is removed', () => {
-    const pc = new FakePeerConnection();
-    const channel = new FakeDataChannel();
-    const session = createPeerSession({
-      pc: pc as unknown as RTCPeerConnection,
-      channel: channel as unknown as RTCDataChannel,
-    });
+    const { conn, session } = createTestSession();
 
     const temporaryHandler = vi.fn();
     const unsubscribeTemporary = session.onMessage(temporaryHandler);
@@ -68,7 +88,7 @@ describe('createPeerSession', () => {
       seq: 1,
     };
 
-    emitMessage(channel, encodeMessage(actionMessage));
+    conn.simulateData(encodeMessage(actionMessage));
 
     const gameHandler = vi.fn();
     session.onMessage(gameHandler);
@@ -80,12 +100,7 @@ describe('createPeerSession', () => {
   });
 
   it('invokes disconnect listeners immediately if they subscribe after disconnect', () => {
-    const pc = new FakePeerConnection();
-    const channel = new FakeDataChannel();
-    const session = createPeerSession({
-      pc: pc as unknown as RTCPeerConnection,
-      channel: channel as unknown as RTCDataChannel,
-    });
+    const { destroyPeer, session } = createTestSession();
 
     session.close('Peer closed');
 
@@ -94,6 +109,6 @@ describe('createPeerSession', () => {
 
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler).toHaveBeenCalledWith('Peer closed');
-    expect(pc.close).toHaveBeenCalledTimes(1);
+    expect(destroyPeer).toHaveBeenCalledTimes(1);
   });
 });

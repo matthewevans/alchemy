@@ -14,15 +14,19 @@ export function encodeMessage(msg: NetworkMessage): string {
   return JSON.stringify(msg);
 }
 
-/** Decode and structurally validate a network message. Throws on malformed data. */
+/** Decode and structurally validate a network message from a raw JSON string. Throws on malformed data. */
 export function decodeMessage(data: string): NetworkMessage {
-  const parsed: unknown = JSON.parse(data);
-  if (typeof parsed !== 'object' || parsed === null || !('type' in parsed)) {
+  return validateMessage(JSON.parse(data));
+}
+
+/** Validate an already-parsed object as a NetworkMessage. Throws on malformed data. */
+export function validateMessage(raw: unknown): NetworkMessage {
+  if (typeof raw !== 'object' || raw === null || !('type' in raw)) {
     throw new Error('Invalid message: missing type field');
   }
-  const msg = parsed as { type: string };
+  const msg = raw as { type: string };
   if (!VALID_TYPES.has(msg.type)) {
     throw new Error(`Invalid message type: ${msg.type}`);
   }
-  return parsed as NetworkMessage;
+  return raw as NetworkMessage;
 }

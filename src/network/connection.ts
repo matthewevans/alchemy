@@ -1,127 +1,112 @@
-import { compressSDP, decompressSDP } from './codec';
+import Peer from 'peerjs';
+import type { DataConnection } from 'peerjs';
 
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-];
+/** Unambiguous characters — no 0/O, 1/I/L confusion */
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const CODE_LENGTH = 5;
+const PEER_ID_PREFIX = 'alchemy-';
 
-const ICE_TIMEOUT_MS = 15_000;
-const CHANNEL_TIMEOUT_MS = 30_000;
-
-export interface PeerConnection {
-  pc: RTCPeerConnection;
-  channel: RTCDataChannel;
+export interface HostResult {
+  roomCode: string;
+  waitForGuest: () => Promise<{ conn: DataConnection; destroyPeer: () => void }>;
+  destroy: () => void;
 }
 
-/** Wait for ICE gathering to complete, with timeout. */
-function waitForICEComplete(pc: RTCPeerConnection): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (pc.iceGatheringState === 'complete') {
-      resolve();
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      reject(new Error('ICE gathering timed out. Your network may be blocking peer-to-peer connections.'));
-    }, ICE_TIMEOUT_MS);
-
-    pc.addEventListener('icegatheringstatechange', () => {
-      if (pc.iceGatheringState === 'complete') {
-        clearTimeout(timeout);
-        resolve();
-      }
-    });
-  });
-}
-
-/** Decode a compressed SDP code, with user-friendly error messages. */
-async function decodeSDP(code: string, label: string): Promise<RTCSessionDescriptionInit> {
-  let sdpJson: string;
-  try {
-    sdpJson = await decompressSDP(code);
-  } catch {
-    throw new Error(`Invalid ${label} code. Please check that you copied the full code and try again.`);
+export function generateRoomCode(): string {
+  const chars: string[] = [];
+  for (let i = 0; i < CODE_LENGTH; i++) {
+    chars.push(CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)]);
   }
-
-  try {
-    return JSON.parse(sdpJson) as RTCSessionDescriptionInit;
-  } catch {
-    throw new Error(`Invalid ${label} code. The code appears to be corrupted.`);
-  }
+  return chars.join('');
 }
 
 /**
- * Host creates an offer. Returns compressed invite code and a function
- * to complete the connection with the guest's answer code.
+ * Validate and normalize a room code from user input.
+ * Returns the uppercase code or null if invalid.
  */
-export async function createHostOffer(): Promise<{
-  inviteCode: string;
-  completeConnection: (answerCode: string) => Promise<PeerConnection>;
-}> {
-  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-  const channel = pc.createDataChannel('game', { ordered: true });
+export function parseRoomCode(input: string): string | null {
+  const code = input.trim().toUpperCase();
+  if (code.length !== CODE_LENGTH) return null;
+  for (const ch of code) {
+    if (!CODE_ALPHABET.includes(ch)) return null;
+  }
+  return code;
+}
 
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  await waitForICEComplete(pc);
+/** Host creates a room and waits for a guest to connect. */
+export function hostRoom(): HostResult {
+  const roomCode = generateRoomCode();
+  const peerId = PEER_ID_PREFIX + roomCode;
+  const peer = new Peer(peerId);
 
-  const inviteCode = await compressSDP(JSON.stringify(pc.localDescription));
+  let destroyed = false;
 
-  const completeConnection = async (answerCode: string): Promise<PeerConnection> => {
-    const answerSDP = await decodeSDP(answerCode, 'answer');
-    await pc.setRemoteDescription(answerSDP);
-
-    // Wait for data channel to open
-    await new Promise<void>((resolve, reject) => {
-      if (channel.readyState === 'open') {
-        resolve();
+  const waitForGuest = (): Promise<{ conn: DataConnection; destroyPeer: () => void }> => {
+    return new Promise((resolve, reject) => {
+      if (destroyed) {
+        reject(new Error('Host was destroyed before a guest connected'));
         return;
       }
-      channel.addEventListener('open', () => resolve(), { once: true });
-      channel.addEventListener('error', (e) => reject(e), { once: true });
-      setTimeout(() => reject(new Error('Data channel open timeout')), CHANNEL_TIMEOUT_MS);
-    });
 
-    return { pc, channel };
+      const timeout = setTimeout(() => {
+        reject(new Error('No one joined. The room timed out.'));
+        peer.destroy();
+      }, 120_000);
+
+      peer.on('error', (err) => {
+        clearTimeout(timeout);
+        reject(new Error(`Connection error: ${err.message}`));
+      });
+
+      peer.on('connection', (conn) => {
+        clearTimeout(timeout);
+        conn.on('open', () => {
+          resolve({ conn, destroyPeer: () => peer.destroy() });
+        });
+        conn.on('error', (err) => {
+          clearTimeout(timeout);
+          reject(new Error(`Guest connection error: ${err.message}`));
+        });
+      });
+    });
   };
 
-  return { inviteCode, completeConnection };
+  const destroy = () => {
+    destroyed = true;
+    peer.destroy();
+  };
+
+  return { roomCode, waitForGuest, destroy };
 }
 
-/**
- * Guest joins with the host's invite code. Returns compressed answer code
- * and the PeerConnection (data channel opens after host applies answer).
- */
-export async function joinWithOffer(inviteCode: string): Promise<{
-  answerCode: string;
-  waitForConnection: () => Promise<PeerConnection>;
-}> {
-  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+/** Guest joins a room by code. */
+export function joinRoom(code: string): Promise<{ conn: DataConnection; destroyPeer: () => void }> {
+  return new Promise((resolve, reject) => {
+    const peer = new Peer();
+    const peerId = PEER_ID_PREFIX + code;
 
-  const offerSDP = await decodeSDP(inviteCode, 'invite');
-  await pc.setRemoteDescription(offerSDP);
+    peer.on('open', () => {
+      const conn = peer.connect(peerId, { reliable: true });
 
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  await waitForICEComplete(pc);
+      const timeout = setTimeout(() => {
+        reject(new Error('Connection timed out. Check the room code and try again.'));
+        peer.destroy();
+      }, 30_000);
 
-  const answerCode = await compressSDP(JSON.stringify(pc.localDescription));
+      conn.on('open', () => {
+        clearTimeout(timeout);
+        resolve({ conn, destroyPeer: () => peer.destroy() });
+      });
 
-  const waitForConnection = (): Promise<PeerConnection> => {
-    return new Promise((resolve, reject) => {
-      pc.addEventListener('datachannel', (event) => {
-        const channel = event.channel;
-        if (channel.readyState === 'open') {
-          resolve({ pc, channel });
-          return;
-        }
-        channel.addEventListener('open', () => resolve({ pc, channel }), { once: true });
-        channel.addEventListener('error', (e) => reject(e), { once: true });
-      }, { once: true });
-
-      setTimeout(() => reject(new Error('Data channel timeout')), CHANNEL_TIMEOUT_MS);
+      conn.on('error', (err) => {
+        clearTimeout(timeout);
+        reject(new Error(`Connection error: ${err.message}`));
+        peer.destroy();
+      });
     });
-  };
 
-  return { answerCode, waitForConnection };
+    peer.on('error', (err) => {
+      reject(new Error(`Failed to connect: ${err.message}`));
+    });
+  });
 }

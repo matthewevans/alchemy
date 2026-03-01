@@ -1,22 +1,19 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PeerSession } from '@network/peer';
-import { createHostOffer, joinWithOffer } from '@network/connection';
+import { hostRoom, joinRoom, parseRoomCode } from '@network/connection';
+import type { HostResult } from '@network/connection';
 import { createPeerSession } from '@network/peer';
 import { DeckSelector } from './DeckSelector';
 import { gameButtonClass } from './buttonStyles';
-import { CodeQrDisplay } from './CodeQrDisplay';
-import { QrScannerModal } from './QrScannerModal';
 
 type LobbyStep =
   | { type: 'choose_role' }
   | { type: 'host_select_deck' }
-  | { type: 'host_enter_answer'; inviteCode: string; completeConnection: (answer: string) => Promise<{ pc: RTCPeerConnection; channel: RTCDataChannel }>; hostDeckIds: string[] }
-  | { type: 'host_connecting' }
-  | { type: 'join_enter_invite' }
-  | { type: 'join_select_deck'; inviteCode: string }
-  | { type: 'join_waiting_answer'; answerCode: string; waitForConnection: () => Promise<{ pc: RTCPeerConnection; channel: RTCDataChannel }>; guestDeckIds: string[] }
-  | { type: 'join_connecting' }
+  | { type: 'host_waiting'; roomCode: string; hostDeckIds: string[] }
+  | { type: 'join_enter_code' }
+  | { type: 'join_select_deck'; roomCode: string }
+  | { type: 'connecting' }
   | { type: 'error'; message: string };
 
 interface MultiplayerLobbyProps {
@@ -26,222 +23,155 @@ interface MultiplayerLobbyProps {
 
 export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps) {
   const [step, setStep] = useState<LobbyStep>({ type: 'choose_role' });
-  const [inputCode, setInputCode] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [scannerTarget, setScannerTarget] = useState<'invite' | 'answer' | null>(null);
+  const [codeInput, setCodeInput] = useState('');
+  const [codeError, setCodeError] = useState('');
   const mountedRef = useRef(true);
-  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hostRef = useRef<HostResult | null>(null);
 
-  // Track mounted state for async safety
   useEffect(() => {
     return () => {
       mountedRef.current = false;
-      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
+      hostRef.current?.destroy();
     };
-  }, []);
-
-  const copyToClipboard = useCallback(async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      if (!mountedRef.current) return;
-      setCopied(true);
-      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
-      copyTimerRef.current = setTimeout(() => {
-        if (mountedRef.current) setCopied(false);
-        copyTimerRef.current = null;
-      }, 2000);
-    } catch {
-      // Clipboard API unavailable or permission denied — fall back to selection
-      // The code div has select-all, so users can manually copy
-    }
   }, []);
 
   // ─── Host Flow ───
 
-  const handleHost = useCallback(() => {
-    setStep({ type: 'host_select_deck' });
+  const handleHostDeckSelected = useCallback((deckIds: string[]) => {
+    const host = hostRoom();
+    hostRef.current = host;
+    setStep({ type: 'host_waiting', roomCode: host.roomCode, hostDeckIds: deckIds });
   }, []);
 
-  const handleHostDeckSelected = useCallback(async (deckIds: string[]) => {
-    try {
-      const { inviteCode, completeConnection } = await createHostOffer();
-      if (!mountedRef.current) return;
-      setStep({ type: 'host_enter_answer', inviteCode, completeConnection, hostDeckIds: deckIds });
-    } catch (err) {
-      if (!mountedRef.current) return;
-      setStep({ type: 'error', message: err instanceof Error ? err.message : `Failed to create offer: ${err}` });
-    }
-  }, []);
+  // Effect: wait for guest when host is waiting
+  useEffect(() => {
+    if (step.type !== 'host_waiting') return;
 
-  const handleHostConnect = useCallback(async () => {
-    if (step.type !== 'host_enter_answer') return;
-    const answerCode = inputCode.trim();
-    if (!answerCode) return;
+    const host = hostRef.current;
+    if (!host) return;
 
-    // Capture values from closure before async
-    const { completeConnection, hostDeckIds } = step;
+    const { hostDeckIds } = step;
+    let cancelled = false;
 
-    setStep({ type: 'host_connecting' });
-    try {
-      const conn = await completeConnection(answerCode);
-      if (!mountedRef.current) return;
-      const session = createPeerSession(conn);
+    (async () => {
+      try {
+        const { conn, destroyPeer } = await host.waitForGuest();
+        if (cancelled || !mountedRef.current) { destroyPeer(); return; }
 
-      // Wait for guest to send deck
-      const guestDeckIds = await new Promise<string[]>((resolve, reject) => {
-        let unsubscribeMessage = () => {};
-        let unsubscribeDisconnect = () => {};
-        const fail = (error: Error) => {
-          clearTimeout(timeout);
-          unsubscribeMessage();
-          unsubscribeDisconnect();
-          reject(error);
-        };
-        const timeout = setTimeout(() => fail(new Error('Timeout waiting for guest deck')), 30_000);
-        unsubscribeMessage = session.onMessage((msg) => {
-          if (msg.type === 'guest_deck') {
+        setStep({ type: 'connecting' });
+        const session = createPeerSession(conn, destroyPeer);
+
+        // Wait for guest to send their deck
+        const guestDeckIds = await new Promise<string[]>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Timeout waiting for opponent deck')), 30_000);
+          const unsubMsg = session.onMessage((msg) => {
+            if (msg.type === 'guest_deck') {
+              clearTimeout(timeout);
+              unsubMsg();
+              unsubDc();
+              resolve(msg.deckIds);
+            }
+          });
+          const unsubDc = session.onDisconnect((reason) => {
             clearTimeout(timeout);
-            unsubscribeMessage();
-            unsubscribeDisconnect();
-            resolve(msg.deckIds);
-          }
+            unsubMsg();
+            unsubDc();
+            reject(new Error(`Opponent disconnected: ${reason}`));
+          });
         });
-        unsubscribeDisconnect = session.onDisconnect((reason) => {
-          fail(new Error(`Peer disconnected: ${reason}`));
+
+        if (cancelled || !mountedRef.current) { session.close(); return; }
+
+        const seed = Date.now();
+        const sent = session.send({
+          type: 'game_setup',
+          seed,
+          hostDeckIds,
+          guestDeckIds,
+          tier: 'apprentice',
         });
-      });
+        if (!sent) throw new Error('Failed to send game setup. Connection may have been lost.');
 
-      if (!mountedRef.current) { session.close(); return; }
-
-      // Send game setup with shared seed
-      const seed = Date.now();
-      const setupSent = session.send({
-        type: 'game_setup',
-        seed,
-        hostDeckIds,
-        guestDeckIds,
-        tier: 'apprentice',
-      });
-      if (!setupSent) {
-        throw new Error('Failed to send game setup. Connection may have been lost.');
+        onStartGame(session, true, hostDeckIds, guestDeckIds, seed);
+      } catch (err) {
+        if (cancelled || !mountedRef.current) return;
+        setStep({ type: 'error', message: err instanceof Error ? err.message : `Connection failed: ${err}` });
       }
+    })();
 
-      onStartGame(session, true, hostDeckIds, guestDeckIds, seed);
-    } catch (err) {
-      if (!mountedRef.current) return;
-      setStep({ type: 'error', message: err instanceof Error ? err.message : `Connection failed: ${err}` });
-    }
-  }, [step, inputCode, onStartGame]);
+    return () => { cancelled = true; };
+  }, [step.type, step.type === 'host_waiting' ? step.hostDeckIds : null, onStartGame]);
 
   // ─── Join Flow ───
 
-  const handleJoin = useCallback(() => {
-    setStep({ type: 'join_enter_invite' });
-  }, []);
-
-  const applyJoinInviteCode = useCallback((rawCode: string) => {
-    const code = rawCode.trim();
-    if (!code) return;
-    setInputCode('');
-    setStep({ type: 'join_select_deck', inviteCode: code });
-  }, []);
-
-  const handleJoinEnterInvite = useCallback(() => {
-    applyJoinInviteCode(inputCode);
-  }, [applyJoinInviteCode, inputCode]);
+  const handleJoinSubmitCode = useCallback(() => {
+    const code = parseRoomCode(codeInput);
+    if (!code) {
+      setCodeError('Enter a 5-character room code');
+      return;
+    }
+    setCodeError('');
+    setStep({ type: 'join_select_deck', roomCode: code });
+  }, [codeInput]);
 
   const handleJoinDeckSelected = useCallback(async (deckIds: string[]) => {
     if (step.type !== 'join_select_deck') return;
+    const { roomCode } = step;
+
+    setStep({ type: 'connecting' });
     try {
-      const { answerCode, waitForConnection } = await joinWithOffer(step.inviteCode);
-      if (!mountedRef.current) return;
-      setStep({ type: 'join_waiting_answer', answerCode, waitForConnection, guestDeckIds: deckIds });
-    } catch (err) {
-      if (!mountedRef.current) return;
-      setStep({ type: 'error', message: err instanceof Error ? err.message : `Failed to join: ${err}` });
-    }
-  }, [step]);
+      const { conn, destroyPeer } = await joinRoom(roomCode);
+      if (!mountedRef.current) { destroyPeer(); return; }
 
-  const handleJoinConnect = useCallback(async () => {
-    if (step.type !== 'join_waiting_answer') return;
+      const session = createPeerSession(conn, destroyPeer);
 
-    // Capture values from closure before async
-    const { waitForConnection, guestDeckIds } = step;
-
-    setStep({ type: 'join_connecting' });
-    try {
-      const conn = await waitForConnection();
-      if (!mountedRef.current) return;
-      const session = createPeerSession(conn);
-
-      // Send our deck
-      const guestDeckSent = session.send({ type: 'guest_deck', deckIds: guestDeckIds });
-      if (!guestDeckSent) {
-        throw new Error('Failed to send deck selection. Connection may have been lost.');
-      }
+      const sent = session.send({ type: 'guest_deck', deckIds });
+      if (!sent) throw new Error('Failed to send deck. Connection may have been lost.');
 
       // Wait for game setup from host
       const setup = await new Promise<{ seed: number; hostDeckIds: string[]; guestDeckIds: string[] }>((resolve, reject) => {
-        let unsubscribeMessage = () => {};
-        let unsubscribeDisconnect = () => {};
-        const fail = (error: Error) => {
-          clearTimeout(timeout);
-          unsubscribeMessage();
-          unsubscribeDisconnect();
-          reject(error);
-        };
-        const timeout = setTimeout(() => fail(new Error('Timeout waiting for game setup')), 30_000);
-        unsubscribeMessage = session.onMessage((msg) => {
+        const timeout = setTimeout(() => reject(new Error('Timeout waiting for game setup')), 30_000);
+        const unsubMsg = session.onMessage((msg) => {
           if (msg.type === 'game_setup') {
             clearTimeout(timeout);
-            unsubscribeMessage();
-            unsubscribeDisconnect();
+            unsubMsg();
+            unsubDc();
             resolve({ seed: msg.seed, hostDeckIds: msg.hostDeckIds, guestDeckIds: msg.guestDeckIds });
           }
         });
-        unsubscribeDisconnect = session.onDisconnect((reason) => {
-          fail(new Error(`Peer disconnected: ${reason}`));
+        const unsubDc = session.onDisconnect((reason) => {
+          clearTimeout(timeout);
+          unsubMsg();
+          unsubDc();
+          reject(new Error(`Host disconnected: ${reason}`));
         });
       });
 
       if (!mountedRef.current) { session.close(); return; }
 
-      onStartGame(session, false, guestDeckIds, setup.hostDeckIds, setup.seed);
+      onStartGame(session, false, deckIds, setup.hostDeckIds, setup.seed);
     } catch (err) {
       if (!mountedRef.current) return;
       setStep({ type: 'error', message: err instanceof Error ? err.message : `Connection failed: ${err}` });
     }
   }, [step, onStartGame]);
 
-  const handleScanInvite = useCallback(() => {
-    setScannerTarget('invite');
+  const handleBack = useCallback(() => {
+    hostRef.current?.destroy();
+    hostRef.current = null;
+    setCodeInput('');
+    setCodeError('');
+    setStep({ type: 'choose_role' });
   }, []);
-
-  const handleScanAnswer = useCallback(() => {
-    setScannerTarget('answer');
-  }, []);
-
-  const handleCloseScanner = useCallback(() => {
-    setScannerTarget(null);
-  }, []);
-
-  const handleScannedCode = useCallback((code: string) => {
-    if (scannerTarget === 'invite') {
-      applyJoinInviteCode(code);
-    } else if (scannerTarget === 'answer') {
-      setInputCode(code.trim());
-    }
-    setScannerTarget(null);
-  }, [applyJoinInviteCode, scannerTarget]);
 
   // ─── Deck Selection Screens ───
 
   if (step.type === 'host_select_deck') {
-    return <DeckSelector onSelectDeck={handleHostDeckSelected} onBack={() => setStep({ type: 'choose_role' })} />;
+    return <DeckSelector onSelectDeck={handleHostDeckSelected} onBack={handleBack} />;
   }
 
   if (step.type === 'join_select_deck') {
-    return <DeckSelector onSelectDeck={handleJoinDeckSelected} onBack={() => setStep({ type: 'join_enter_invite' })} />;
+    return <DeckSelector onSelectDeck={handleJoinDeckSelected} onBack={() => { setStep({ type: 'join_enter_code' }); }} />;
   }
 
   // ─── Main Lobby UI ───
@@ -260,35 +190,23 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
             <h2 className="text-3xl font-bold mb-2">Multiplayer</h2>
             <p className="text-white/50 text-sm mb-4">Challenge a friend via peer-to-peer</p>
             <motion.button
-              className={gameButtonClass({
-                tone: 'amber',
-                size: 'lg',
-                className: 'px-10 text-xl font-bold',
-              })}
+              className={gameButtonClass({ tone: 'amber', size: 'lg', className: 'px-10 text-xl font-bold' })}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={handleHost}
+              onClick={() => setStep({ type: 'host_select_deck' })}
             >
               Host Game
             </motion.button>
             <motion.button
-              className={gameButtonClass({
-                tone: 'blue',
-                size: 'lg',
-                className: 'px-10 text-xl font-bold',
-              })}
+              className={gameButtonClass({ tone: 'blue', size: 'lg', className: 'px-10 text-xl font-bold' })}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={handleJoin}
+              onClick={() => { setCodeInput(''); setCodeError(''); setStep({ type: 'join_enter_code' }); }}
             >
               Join Game
             </motion.button>
             <motion.button
-              className={gameButtonClass({
-                tone: 'neutral',
-                size: 'sm',
-                className: 'mt-4 px-6 py-2 rounded-xl text-sm',
-              })}
+              className={gameButtonClass({ tone: 'neutral', size: 'sm', className: 'mt-4 px-6 py-2 rounded-xl text-sm' })}
               whileTap={{ scale: 0.95 }}
               onClick={onBack}
             >
@@ -297,108 +215,77 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
           </motion.div>
         )}
 
-        {step.type === 'host_enter_answer' && (
+        {step.type === 'host_waiting' && (
           <motion.div
-            key="host-answer"
-            className="flex flex-col items-center gap-4 max-w-md px-4"
+            key="host-waiting"
+            className="flex flex-col items-center gap-6 px-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
-            <h3 className="text-xl font-bold">Share Invite Code</h3>
-            <p className="text-white/50 text-sm text-center">Copy this code and send it to your opponent</p>
-            <div className="w-full bg-slate-800 rounded-lg p-3 break-all text-xs font-mono text-amber-300 max-h-24 overflow-y-auto select-all">
-              {step.inviteCode}
+            <h3 className="text-xl font-bold">Your Room Code</h3>
+            <p className="text-white/50 text-sm text-center">Tell your friend this code</p>
+
+            <div className="flex gap-2">
+              {step.roomCode.split('').map((char, i) => (
+                <div
+                  key={i}
+                  className="w-14 h-16 rounded-xl bg-amber-500/20 border-2 border-amber-400/60 flex items-center justify-center text-3xl font-bold text-amber-200 tracking-wider"
+                >
+                  {char}
+                </div>
+              ))}
             </div>
-            <CodeQrDisplay code={step.inviteCode} color="amber" />
+
+            <div className="flex items-center gap-3 text-white/50">
+              <motion.div
+                className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              />
+              <span className="text-sm">Waiting for opponent...</span>
+            </div>
+
             <motion.button
-              className={gameButtonClass({
-                tone: 'amber',
-                size: 'sm',
-                className: 'px-6 py-2 font-bold text-sm',
-              })}
-              whileHover={{ scale: 1.05 }}
+              className={gameButtonClass({ tone: 'neutral', size: 'sm', className: 'mt-2 px-6 py-2 text-sm' })}
               whileTap={{ scale: 0.95 }}
-              onClick={() => copyToClipboard(step.inviteCode)}
+              onClick={handleBack}
             >
-              {copied ? 'Copied!' : 'Copy Code'}
-            </motion.button>
-
-            <div className="w-full border-t border-white/10 my-2" />
-
-            <p className="text-white/50 text-sm text-center">Paste their answer code below</p>
-            <motion.button
-              className={gameButtonClass({
-                tone: 'blue',
-                size: 'sm',
-                className: 'px-6 py-2 text-sm',
-              })}
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={handleScanAnswer}
-            >
-              Scan Answer QR
-            </motion.button>
-            <textarea
-              className="w-full bg-slate-800 rounded-lg p-3 text-xs font-mono text-blue-300 resize-none h-20 outline-none focus:ring-1 focus:ring-blue-500"
-              placeholder="Paste answer code here..."
-              value={inputCode}
-              onChange={(e) => setInputCode(e.target.value)}
-            />
-            <motion.button
-              className={gameButtonClass({
-                tone: 'emerald',
-                size: 'md',
-                disabled: !inputCode.trim(),
-                className: 'px-8 font-bold text-sm',
-              })}
-              whileHover={inputCode.trim() ? { scale: 1.05 } : undefined}
-              whileTap={inputCode.trim() ? { scale: 0.95 } : undefined}
-              onClick={handleHostConnect}
-              disabled={!inputCode.trim()}
-            >
-              Connect
+              Cancel
             </motion.button>
           </motion.div>
         )}
 
-        {step.type === 'join_enter_invite' && (
+        {step.type === 'join_enter_code' && (
           <motion.div
-            key="join-invite"
-            className="flex flex-col items-center gap-4 max-w-md px-4"
+            key="join-code"
+            className="flex flex-col items-center gap-4 max-w-sm px-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
             <h3 className="text-xl font-bold">Join Game</h3>
-            <p className="text-white/50 text-sm text-center">Paste the invite code from the host</p>
-            <textarea
-              className="w-full bg-slate-800 rounded-lg p-3 text-xs font-mono text-amber-300 resize-none h-20 outline-none focus:ring-1 focus:ring-amber-500"
-              placeholder="Paste invite code here..."
-              value={inputCode}
-              onChange={(e) => setInputCode(e.target.value)}
+            <p className="text-white/50 text-sm text-center">Enter the room code from the host</p>
+
+            <input
+              className="w-48 bg-slate-800 rounded-xl px-4 py-3 text-center text-2xl font-bold tracking-[0.3em] text-blue-200 uppercase outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-white/20 placeholder:tracking-normal placeholder:text-base"
+              maxLength={5}
+              placeholder="CODE"
+              value={codeInput}
+              onChange={(e) => {
+                setCodeInput(e.target.value.toUpperCase().slice(0, 5));
+                setCodeError('');
+              }}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleJoinSubmitCode(); }}
+              autoFocus
             />
-            <motion.button
-              className={gameButtonClass({
-                tone: 'amber',
-                size: 'sm',
-                className: 'px-6 py-2 text-sm',
-              })}
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={handleScanInvite}
-            >
-              Scan Invite QR
-            </motion.button>
-            <div className="flex gap-3">
+            {codeError && <p className="text-red-400 text-xs">{codeError}</p>}
+
+            <div className="flex gap-3 mt-2">
               <motion.button
-                className={gameButtonClass({
-                  tone: 'neutral',
-                  size: 'sm',
-                  className: 'px-6 py-2 text-sm',
-                })}
+                className={gameButtonClass({ tone: 'neutral', size: 'sm', className: 'px-6 py-2 text-sm' })}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => { setInputCode(''); setStep({ type: 'choose_role' }); }}
+                onClick={handleBack}
               >
                 Back
               </motion.button>
@@ -406,13 +293,13 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
                 className={gameButtonClass({
                   tone: 'blue',
                   size: 'md',
-                  disabled: !inputCode.trim(),
+                  disabled: codeInput.length < 5,
                   className: 'px-8 font-bold text-sm',
                 })}
-                whileHover={inputCode.trim() ? { scale: 1.05 } : undefined}
-                whileTap={inputCode.trim() ? { scale: 0.95 } : undefined}
-                onClick={handleJoinEnterInvite}
-                disabled={!inputCode.trim()}
+                whileHover={codeInput.length >= 5 ? { scale: 1.05 } : undefined}
+                whileTap={codeInput.length >= 5 ? { scale: 0.95 } : undefined}
+                onClick={handleJoinSubmitCode}
+                disabled={codeInput.length < 5}
               >
                 Next: Select Deck
               </motion.button>
@@ -420,52 +307,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
           </motion.div>
         )}
 
-        {step.type === 'join_waiting_answer' && (
-          <motion.div
-            key="join-answer"
-            className="flex flex-col items-center gap-4 max-w-md px-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <h3 className="text-xl font-bold">Share Answer Code</h3>
-            <p className="text-white/50 text-sm text-center">Copy this code and send it back to the host</p>
-            <div className="w-full bg-slate-800 rounded-lg p-3 break-all text-xs font-mono text-blue-300 max-h-24 overflow-y-auto select-all">
-              {step.answerCode}
-            </div>
-            <CodeQrDisplay code={step.answerCode} color="blue" />
-            <motion.button
-              className={gameButtonClass({
-                tone: 'blue',
-                size: 'sm',
-                className: 'px-6 py-2 font-bold text-sm',
-              })}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => copyToClipboard(step.answerCode)}
-            >
-              {copied ? 'Copied!' : 'Copy Code'}
-            </motion.button>
-
-            <div className="w-full border-t border-white/10 my-2" />
-
-            <p className="text-white/50 text-sm text-center">Once the host has your code, click connect</p>
-            <motion.button
-              className={gameButtonClass({
-                tone: 'emerald',
-                size: 'md',
-                className: 'px-8 font-bold text-sm',
-              })}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleJoinConnect}
-            >
-              Connect
-            </motion.button>
-          </motion.div>
-        )}
-
-        {(step.type === 'host_connecting' || step.type === 'join_connecting') && (
+        {step.type === 'connecting' && (
           <motion.div
             key="connecting"
             className="flex flex-col items-center gap-4"
@@ -493,26 +335,15 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
             <h3 className="text-xl font-bold text-red-400">Connection Error</h3>
             <p className="text-white/60 text-sm text-center">{step.message}</p>
             <motion.button
-              className={gameButtonClass({
-                tone: 'neutral',
-                size: 'md',
-                className: 'px-6 font-medium',
-              })}
+              className={gameButtonClass({ tone: 'neutral', size: 'md', className: 'px-6 font-medium' })}
               whileTap={{ scale: 0.95 }}
-              onClick={() => { setInputCode(''); setStep({ type: 'choose_role' }); }}
+              onClick={handleBack}
             >
               Try Again
             </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
-
-      <QrScannerModal
-        open={scannerTarget !== null}
-        onClose={handleCloseScanner}
-        onScan={handleScannedCode}
-        title={scannerTarget === 'answer' ? 'Scan Answer Code' : 'Scan Invite Code'}
-      />
     </div>
   );
 }

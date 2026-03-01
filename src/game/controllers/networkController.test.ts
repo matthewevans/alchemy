@@ -56,7 +56,7 @@ describe('createNetworkController', () => {
     const store = { dispatch: vi.fn(() => { throw new Error('invalid action'); }) };
     createNetworkController(session, store);
 
-    onMessageHandler?.({
+    onMessageHandler!({
       type: 'action',
       action: { type: 'ADVANCE_PHASE' },
       actingPlayer: 'player2',

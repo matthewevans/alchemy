@@ -1,23 +1,21 @@
-import type { PeerConnection } from './connection';
+import type { DataConnection } from 'peerjs';
 import type { NetworkMessage } from './protocol';
-import { encodeMessage, decodeMessage } from './protocol';
+import { encodeMessage, validateMessage } from './protocol';
 
 export interface PeerSession {
-  /** Send a message. Returns false if the message was dropped (channel closed). */
+  /** Send a message. Returns false if the message was dropped (connection closed). */
   send(msg: NetworkMessage): boolean;
   onMessage(handler: (msg: NetworkMessage) => void): () => void;
   onDisconnect(handler: (reason: string) => void): () => void;
   close(reason?: string): void;
 }
 
-export function createPeerSession(conn: PeerConnection): PeerSession {
-  const { pc, channel } = conn;
+export function createPeerSession(conn: DataConnection, destroyPeer: () => void): PeerSession {
   const messageHandlers = new Set<(msg: NetworkMessage) => void>();
   const disconnectHandlers = new Set<(reason: string) => void>();
   let closed = false;
   let disconnectReason: string | null = null;
 
-  // Queues messages received while no handlers are installed
   const pendingMessages: NetworkMessage[] = [];
 
   // Ping/pong keep-alive
@@ -29,17 +27,23 @@ export function createPeerSession(conn: PeerConnection): PeerSession {
     if (pongTimeout !== null) { clearTimeout(pongTimeout); pongTimeout = null; }
   };
 
+  const trySend = (msg: NetworkMessage): boolean => {
+    if (closed || !conn.open) return false;
+    try {
+      conn.send(encodeMessage(msg));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const startKeepAlive = () => {
     pingInterval = setInterval(() => {
-      if (channel.readyState !== 'open') return;
+      if (!conn.open) return;
 
-      // Fix #1: Clear previous pong timeout before setting a new one
       if (pongTimeout !== null) { clearTimeout(pongTimeout); pongTimeout = null; }
 
-      try {
-        channel.send(encodeMessage({ type: 'ping', timestamp: Date.now() }));
-      } catch {
-        // Channel closed between readyState check and send (TOCTOU)
+      if (!trySend({ type: 'ping', timestamp: Date.now() })) {
         handleDisconnect('Channel send failed');
         return;
       }
@@ -50,11 +54,10 @@ export function createPeerSession(conn: PeerConnection): PeerSession {
     }, 5_000);
   };
 
-  // Fix #5: Remove beforeunload in handleDisconnect (not just close())
   const beforeUnloadHandler = () => {
-    if (!closed && channel.readyState === 'open') {
+    if (!closed && conn.open) {
       try {
-        channel.send(encodeMessage({ type: 'disconnect', reason: 'Page closed' }));
+        conn.send(encodeMessage({ type: 'disconnect', reason: 'Page closed' }));
       } catch { /* best-effort */ }
     }
   };
@@ -69,16 +72,16 @@ export function createPeerSession(conn: PeerConnection): PeerSession {
     for (const handler of disconnectHandlers) {
       handler(reason);
     }
-    try { pc.close(); } catch (e) {
-      console.warn('Error closing RTCPeerConnection:', e);
+    try { destroyPeer(); } catch (e) {
+      console.warn('Error destroying peer:', e);
     }
   };
 
-  // Fix #2: Wrap message handler in try-catch so one bad message can't kill the listener
-  channel.addEventListener('message', (event) => {
+  const onData = (data: unknown) => {
     let msg: NetworkMessage;
     try {
-      msg = decodeMessage(event.data as string);
+      // PeerJS sends strings when we use encodeMessage (JSON string)
+      msg = typeof data === 'string' ? validateMessage(JSON.parse(data)) : validateMessage(data);
     } catch (e) {
       console.warn('Failed to decode message from peer:', e);
       return;
@@ -90,9 +93,7 @@ export function createPeerSession(conn: PeerConnection): PeerSession {
     }
 
     if (msg.type === 'ping') {
-      try {
-        channel.send(encodeMessage({ type: 'pong', timestamp: msg.timestamp }));
-      } catch { /* channel may be closing */ }
+      trySend({ type: 'pong', timestamp: msg.timestamp });
       return;
     }
 
@@ -101,7 +102,6 @@ export function createPeerSession(conn: PeerConnection): PeerSession {
       return;
     }
 
-    // Queue messages until at least one handler is installed
     if (messageHandlers.size === 0) {
       pendingMessages.push(msg);
       return;
@@ -110,32 +110,21 @@ export function createPeerSession(conn: PeerConnection): PeerSession {
     for (const handler of messageHandlers) {
       handler(msg);
     }
-  });
+  };
 
-  channel.addEventListener('close', () => handleDisconnect('Channel closed'));
-  pc.addEventListener('connectionstatechange', () => {
-    if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-      handleDisconnect('Connection ' + pc.connectionState);
-    }
-  });
+  conn.on('data', onData);
+  conn.on('close', () => handleDisconnect('Connection closed'));
+  conn.on('error', (err) => handleDisconnect(`Connection error: ${err.message}`));
 
   startKeepAlive();
 
   return {
-    // Fix #4: Return boolean indicating whether the message was sent
     send(msg) {
-      if (closed || channel.readyState !== 'open') return false;
-      try {
-        channel.send(encodeMessage(msg));
-        return true;
-      } catch {
-        return false;
-      }
+      return trySend(msg);
     },
     onMessage(handler) {
       messageHandlers.add(handler);
 
-      // Flush messages that arrived while no handler was installed
       if (pendingMessages.length > 0) {
         const queued = pendingMessages.splice(0);
         for (const msg of queued) {
@@ -159,9 +148,9 @@ export function createPeerSession(conn: PeerConnection): PeerSession {
       };
     },
     close(reason = 'Left game') {
-      if (!closed && channel.readyState === 'open') {
+      if (!closed && conn.open) {
         try {
-          channel.send(encodeMessage({ type: 'disconnect', reason }));
+          conn.send(encodeMessage({ type: 'disconnect', reason }));
         } catch { /* closing anyway */ }
       }
       handleDisconnect(reason);
