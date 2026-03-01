@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createPeerSession } from './peer';
-import { encodeMessage } from './protocol';
 
 type DataHandler = (data: unknown) => void;
 type VoidHandler = () => void;
@@ -9,7 +8,7 @@ type ErrorHandler = (err: Error) => void;
 /** Minimal fake matching PeerJS DataConnection API surface used by createPeerSession */
 class FakeDataConnection {
   open = true;
-  sent: string[] = [];
+  sent: unknown[] = [];
 
   private dataHandlers = new Set<DataHandler>();
   private closeHandlers = new Set<VoidHandler>();
@@ -17,7 +16,7 @@ class FakeDataConnection {
 
   send(data: unknown) {
     if (!this.open) throw new Error('Connection is closed');
-    this.sent.push(data as string);
+    this.sent.push(data);
   }
 
   on(event: string, handler: (...args: unknown[]) => void): this {
@@ -35,7 +34,7 @@ class FakeDataConnection {
   }
 
   // Test helpers
-  simulateData(data: string) {
+  simulateData(data: unknown) {
     for (const h of this.dataHandlers) h(data);
   }
 
@@ -64,7 +63,7 @@ describe('createPeerSession', () => {
       seq: 0,
     };
 
-    conn.simulateData(encodeMessage(actionMessage));
+    conn.simulateData(actionMessage);
 
     const handler = vi.fn();
     session.onMessage(handler);
@@ -88,7 +87,7 @@ describe('createPeerSession', () => {
       seq: 1,
     };
 
-    conn.simulateData(encodeMessage(actionMessage));
+    conn.simulateData(actionMessage);
 
     const gameHandler = vi.fn();
     session.onMessage(gameHandler);

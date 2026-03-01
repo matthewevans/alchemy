@@ -1,6 +1,6 @@
 import type { DataConnection } from 'peerjs';
 import type { NetworkMessage } from './protocol';
-import { encodeMessage, validateMessage } from './protocol';
+import { validateMessage } from './protocol';
 
 export interface PeerSession {
   /** Send a message. Returns false if the message was dropped (connection closed). */
@@ -30,7 +30,7 @@ export function createPeerSession(conn: DataConnection, destroyPeer: () => void)
   const trySend = (msg: NetworkMessage): boolean => {
     if (closed || !conn.open) return false;
     try {
-      conn.send(encodeMessage(msg));
+      conn.send(msg);
       return true;
     } catch {
       return false;
@@ -57,7 +57,7 @@ export function createPeerSession(conn: DataConnection, destroyPeer: () => void)
   const beforeUnloadHandler = () => {
     if (!closed && conn.open) {
       try {
-        conn.send(encodeMessage({ type: 'disconnect', reason: 'Page closed' }));
+        conn.send({ type: 'disconnect', reason: 'Page closed' });
       } catch { /* best-effort */ }
     }
   };
@@ -80,8 +80,7 @@ export function createPeerSession(conn: DataConnection, destroyPeer: () => void)
   const onData = (data: unknown) => {
     let msg: NetworkMessage;
     try {
-      // PeerJS sends strings when we use encodeMessage (JSON string)
-      msg = typeof data === 'string' ? validateMessage(JSON.parse(data)) : validateMessage(data);
+      msg = validateMessage(data);
     } catch (e) {
       console.warn('Failed to decode message from peer:', e);
       return;
@@ -150,7 +149,7 @@ export function createPeerSession(conn: DataConnection, destroyPeer: () => void)
     close(reason = 'Left game') {
       if (!closed && conn.open) {
         try {
-          conn.send(encodeMessage({ type: 'disconnect', reason }));
+          conn.send({ type: 'disconnect', reason });
         } catch { /* closing anyway */ }
       }
       handleDisconnect(reason);
