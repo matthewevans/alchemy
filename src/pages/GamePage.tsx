@@ -63,7 +63,7 @@ export function GamePage() {
           dispatch: (action, player) => dispatchWithAnimations(action, player),
         });
         session.onDisconnect((reason) => setDisconnectReason(reason));
-        setController(netController);
+        setController(netController); // eslint-disable-line react-hooks/set-state-in-effect -- init-once effect
         setIsMultiplayer(true);
       } else {
         // Single player: set up AI controller

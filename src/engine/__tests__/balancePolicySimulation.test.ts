@@ -318,7 +318,6 @@ let summary: PolicyBalanceSummary;
 beforeAll(() => {
   summary = runPolicyBalanceSuite();
   if (import.meta.env['BALANCE_DEBUG_POLICIES'] === '1') {
-    // eslint-disable-next-line no-console
     console.log(JSON.stringify(summary, null, 2));
   }
 });

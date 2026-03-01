@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { GameAction, GameEvent, PlayerId } from '@engine/types';
@@ -21,7 +22,6 @@ export function GameDispatchProvider({ controller, children }: GameDispatchProvi
         controller?.onLocalAction(localAction, localPlayer);
       });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controller]);
 
   return (

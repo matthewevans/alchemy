@@ -21,7 +21,7 @@ Alchemy is a browser-based 1v1 elemental card battler (MTG-inspired, kid-friendl
 
 ### Path Aliases (defined in vite.config.ts)
 
-`@engine/*`, `@game/*`, `@components/*`, `@hooks/*`, `@storage/*`, `@network/*` map to their respective `src/` subdirectories.
+`@engine/*`, `@game/*`, `@components/*`, `@hooks/*`, `@storage/*`, `@network/*`, `@audio/*` map to their respective `src/` subdirectories.
 
 ### Engine (`src/engine/`) — Pure game logic, no React
 
@@ -50,6 +50,7 @@ Alchemy is a browser-based 1v1 elemental card battler (MTG-inspired, kid-friendl
 User interaction → dispatchWithAnimations(action, player)
   → gameStore.dispatch → engine reduce() → new GameState + GameEvent[]
   → groupEventsIntoSteps → animationStore.enqueueSteps
+  → AnimationOverlay triggers particle VFX + sound effects per step
   → useGameLoop() waits for animations → auto-advances phases → delegates opponent turns to controller
 ```
 
@@ -62,6 +63,14 @@ Organized by domain: `board/`, `card/`, `hand/`, `combat/`, `phase/`, `targeting
 Two routes: `/` (HomePage — menus, deck select) and `/game/:id` (GamePage — active game).
 
 ### Network (`src/network/`) — Peer-to-peer multiplayer via PeerJS (WebRTC signaling) with 5-character room codes.
+
+### Audio (`src/audio/`) — Web Audio API sound effects + procedural ambient music
+
+- **`audioContext.ts`** — Lazy `AudioContext` singleton with `sfxGain`/`musicGain` master buses. Reads persisted volumes from localStorage on first creation.
+- **`audioStore.ts`** — Zustand store for `sfxVolume`/`musicVolume` preferences (follows `preferencesStore` pattern).
+- **`sounds.ts`** — Synthesis functions for each `AnimationEffect` type + `SOUND_REGISTRY` for per-card custom sounds via `CardDefinition.soundId`.
+- **`ambientMusic.ts`** — Procedural ambient pads (cycling pentatonic chords + atmospheric noise).
+- **`triggerSoundEffect.ts`** — Maps `AnimationEffect` → sound playback (parallels `triggerParticleEffect` in `AnimationOverlay`).
 
 ### Storage (`src/storage/`) — IndexedDB persistence for game state and decks. `shareCode.ts` handles deck compression/sharing.
 
@@ -82,3 +91,5 @@ Vitest uses jsdom environment. `src/test-setup.ts` polyfills `matchMedia` and `R
 - Registry pattern (`CARD_REGISTRY`, `EFFECT_REGISTRY`) avoids circular imports and enables data-driven design.
 - Zustand stores use `subscribeWithSelector` middleware for fine-grained reactivity.
 - Animation is a first-class concern — events from the reducer are translated into animation steps that block game progression.
+- Audio syncs with animation steps — `triggerSoundEffect` fires alongside `triggerParticleEffect` in `AnimationOverlay`. Volume controlled via gain node buses, not per-call parameters.
+- Per-card custom sounds: add `soundId` to `CardDefinition`, register a synthesis function via `registerSound(id, fn)` in `sounds.ts`.

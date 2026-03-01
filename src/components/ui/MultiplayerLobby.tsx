@@ -66,6 +66,8 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
     };
   }, []);
 
+  const hostDeckIds = step.type === 'host_waiting' ? step.hostDeckIds : null;
+
   // ─── Host Flow ───
 
   const handleHostDeckSelected = useCallback((deckIds: string[]) => {
@@ -76,12 +78,11 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
   // Effect: wait for guest when host is waiting
   useEffect(() => {
-    if (step.type !== 'host_waiting') return;
+    if (step.type !== 'host_waiting' || !hostDeckIds) return;
 
     const host = hostRef.current;
     if (!host) return;
 
-    const { hostDeckIds } = step;
     let cancelled = false;
 
     (async () => {
@@ -140,7 +141,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
       sessionRef.current?.close();
       sessionRef.current = null;
     };
-  }, [step.type, step.type === 'host_waiting' ? step.hostDeckIds : null, onStartGame]);
+  }, [step.type, hostDeckIds, onStartGame]);
 
   // ─── Join Flow ───
 

@@ -39,11 +39,11 @@ export function reduce(
     case 'MULLIGAN_CARDS':
       return handleMulliganCards(state, actingPlayer, action.cardIndices, rng);
     case 'ADVANCE_PHASE':
-      return handleAdvancePhase(state, rng);
+      return handleAdvancePhase(state);
     case 'PLAY_CARD':
-      return handlePlayCard(state, actingPlayer, action.cardIndex, action.targetSlot, rng);
+      return handlePlayCard(state, actingPlayer, action.cardIndex, action.targetSlot);
     case 'SELECT_TARGET':
-      return handleSelectTarget(state, action.targetRef, rng);
+      return handleSelectTarget(state, action.targetRef);
     case 'CANCEL_TARGETING':
       return handleCancelTargeting(state);
     case 'DECLARE_ATTACKER':
@@ -57,7 +57,7 @@ export function reduce(
     case 'REMOVE_BLOCKER':
       return handleRemoveBlocker(state, action.blockerPermanentId);
     case 'CONFIRM_BLOCKERS':
-      return handleConfirmBlockers(state, rng);
+      return handleConfirmBlockers(state);
     case 'DISCARD_CARD':
       return handleDiscardCard(state, actingPlayer, action.cardIndex);
     case 'CONCEDE':
@@ -188,12 +188,12 @@ function handleMulliganCards(
   return transitionAfterMulligan(newState, actingPlayer, []);
 }
 
-function handleAdvancePhase(state: GameState, rng: RNG): ReducerResult {
+function handleAdvancePhase(state: GameState): ReducerResult {
   const phase = state.phase;
 
   switch (phase.type) {
     case 'draw':
-      return advanceFromDraw(state, rng);
+      return advanceFromDraw(state);
     case 'energy':
       return advanceFromEnergy(state);
     case 'play':
@@ -205,7 +205,7 @@ function handleAdvancePhase(state: GameState, rng: RNG): ReducerResult {
   }
 }
 
-function advanceFromDraw(state: GameState, _rng: RNG): ReducerResult {
+function advanceFromDraw(state: GameState): ReducerResult {
   const events: GameEvent[] = [];
   const players = clonePlayers(state.players);
   const activePs = players[state.activePlayer];
@@ -363,7 +363,6 @@ function handlePlayCard(
   actingPlayer: PlayerId,
   cardIndex: number,
   targetSlot: number | undefined,
-  rng: RNG,
 ): ReducerResult {
   const players = clonePlayers(state.players);
   const ps = players[actingPlayer];
@@ -400,7 +399,7 @@ function handlePlayCard(
 
     // Process ETB keywords
     let newState: GameState = { ...state, players, phase: state.phase };
-    const etbResult = processETBKeywords(newState, permanent, actingPlayer, rng);
+    const etbResult = processETBKeywords(newState, permanent, actingPlayer);
     newState = etbResult.newState;
     events.push(...etbResult.events);
 
@@ -439,7 +438,7 @@ function handlePlayCard(
   // Untargeted spell — resolve immediately
   const effect = EFFECT_REGISTRY[cardDef.effectId!];
   let newState: GameState = { ...state, players };
-  const resolveResult = resolveEffectSteps(newState, effect.steps, actingPlayer, null, rng);
+  const resolveResult = resolveEffectSteps(newState, effect.steps, actingPlayer, null);
   newState = resolveResult.newState;
   events.push(...resolveResult.events);
 
@@ -467,15 +466,14 @@ function handlePlayCard(
 function handleSelectTarget(
   state: GameState,
   targetRef: TargetRef,
-  rng: RNG,
 ): ReducerResult {
   const phase = state.phase as Extract<Phase, { type: 'targeting' }>;
   const effect = EFFECT_REGISTRY[phase.effectId];
   const events: GameEvent[] = [];
 
   // Resolve effect steps
-  const resolveResult = resolveEffectSteps(state, effect.steps, phase.casterId, targetRef, rng);
-  let newState = resolveResult.newState;
+  const resolveResult = resolveEffectSteps(state, effect.steps, phase.casterId, targetRef);
+  const newState = resolveResult.newState;
   events.push(...resolveResult.events);
 
   // Move spell to discard
@@ -576,13 +574,12 @@ function resolveEffectSteps(
   steps: EffectStep[],
   casterId: PlayerId,
   selectedTarget: TargetRef | null,
-  rng: RNG,
 ): EffectResult {
   let currentState = state;
   const allEvents: GameEvent[] = [];
 
   for (const step of steps) {
-    const result = resolveEffectStep(currentState, step, casterId, selectedTarget, rng);
+    const result = resolveEffectStep(currentState, step, casterId, selectedTarget);
     currentState = result.newState;
     allEvents.push(...result.events);
 
@@ -600,7 +597,6 @@ function resolveEffectStep(
   step: EffectStep,
   casterId: PlayerId,
   selectedTarget: TargetRef | null,
-  rng: RNG,
 ): EffectResult {
   switch (step.type) {
     case 'damage':
@@ -608,7 +604,7 @@ function resolveEffectStep(
     case 'heal':
       return resolveEffectHeal(state, step, casterId, selectedTarget);
     case 'draw':
-      return resolveEffectDraw(state, step, casterId, rng);
+      return resolveEffectDraw(state, step, casterId);
     case 'bounce':
       return resolveEffectBounce(state, step, casterId, selectedTarget);
     case 'buff':
@@ -698,7 +694,6 @@ function resolveEffectDraw(
   state: GameState,
   step: Extract<EffectStep, { type: 'draw' }>,
   casterId: PlayerId,
-  _rng: RNG,
 ): EffectResult {
   const events: GameEvent[] = [];
   const players = clonePlayers(state.players);
@@ -1010,7 +1005,6 @@ function processETBKeywords(
   state: GameState,
   permanent: Permanent,
   ownerId: PlayerId,
-  rng: RNG,
 ): EffectResult {
   const cardDef = CARD_REGISTRY[permanent.cardId];
   let currentState = state;
@@ -1057,7 +1051,6 @@ function processETBKeywords(
           currentState,
           { type: 'draw', amount: 1 },
           ownerId,
-          rng,
         );
         currentState = result.newState;
         allEvents.push(...result.events);
@@ -1215,7 +1208,7 @@ function handleRemoveBlocker(
   };
 }
 
-function handleConfirmBlockers(state: GameState, _rng: RNG): ReducerResult {
+function handleConfirmBlockers(state: GameState): ReducerResult {
   const phase = state.phase as Extract<Phase, { type: 'battle'; step: 'declare_blockers' }>;
   const events: GameEvent[] = [];
 

@@ -46,7 +46,7 @@ describe('createNetworkController', () => {
   });
 
   it('closes the session when applying a remote action throws', () => {
-    let onMessageHandler: ((msg: any) => void) | null = null;
+    let onMessageHandler: ((msg: Record<string, unknown>) => void) | null = null;
     const session = createSessionMock({
       onMessage: vi.fn((handler) => {
         onMessageHandler = handler;

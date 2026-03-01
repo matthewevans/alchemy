@@ -61,6 +61,7 @@ export function saveGame(
   player1DeckIds: string[],
   player2DeckIds: string[],
 ): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { availableKeywords: _, ...rulesetWithoutKeywords } = gameState.ruleset;
   const persisted: PersistedGame = {
     version: 1,

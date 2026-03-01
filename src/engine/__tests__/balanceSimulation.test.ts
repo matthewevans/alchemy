@@ -177,7 +177,6 @@ beforeAll(() => {
   summary = runMonoBalanceSuite();
   if (import.meta.env['BALANCE_DEBUG'] === '1') {
     // Useful when tuning cards locally without spamming default test output.
-    // eslint-disable-next-line no-console
     console.log(JSON.stringify(summary, null, 2));
   }
 });
