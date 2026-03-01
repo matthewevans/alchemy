@@ -89,6 +89,7 @@ export function hostRoom(): HostResult {
       peer.on('error', (err) => {
         clearTimeout(timeout);
         reject(new Error(`Connection error: ${err.message}`));
+        peer.destroy();
       });
 
       peer.on('connection', (conn) => {
@@ -99,6 +100,7 @@ export function hostRoom(): HostResult {
         conn.on('error', (err) => {
           clearTimeout(timeout);
           reject(new Error(`Guest connection error: ${err.message}`));
+          peer.destroy();
         });
       });
     });
@@ -141,6 +143,7 @@ export function joinRoom(code: string): Promise<{ conn: DataConnection; destroyP
     // PeerJS emits connection failures on the peer, not the conn (issue #1281)
     peer.on('error', (err) => {
       reject(new Error(`Failed to connect: ${err.message}`));
+      peer.destroy();
     });
   });
 }

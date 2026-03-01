@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PeerSession } from '@network/peer';
-import { hostRoom, joinRoom, parseRoomCode } from '@network/connection';
-import type { HostResult } from '@network/connection';
 import { createPeerSession } from '@network/peer';
+import type { HostResult } from '@network/connection';
+import { hostRoom, joinRoom, parseRoomCode } from '@network/connection';
 import { DeckSelector } from './DeckSelector';
 import { gameButtonClass } from './buttonStyles';
 
@@ -27,10 +27,12 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
   const [codeError, setCodeError] = useState('');
   const mountedRef = useRef(true);
   const hostRef = useRef<HostResult | null>(null);
+  const sessionRef = useRef<PeerSession | null>(null);
 
   useEffect(() => {
     return () => {
       mountedRef.current = false;
+      sessionRef.current?.close();
       hostRef.current?.destroy();
     };
   }, []);
@@ -60,6 +62,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
         setStep({ type: 'connecting' });
         const session = createPeerSession(conn, destroyPeer);
+        sessionRef.current = session;
 
         // Wait for guest to send their deck
         const guestDeckIds = await new Promise<string[]>((resolve, reject) => {
@@ -92,14 +95,21 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
         });
         if (!sent) throw new Error('Failed to send game setup. Connection may have been lost.');
 
+        sessionRef.current = null;
         onStartGame(session, true, hostDeckIds, guestDeckIds, seed);
       } catch (err) {
+        sessionRef.current?.close();
+        sessionRef.current = null;
         if (cancelled || !mountedRef.current) return;
         setStep({ type: 'error', message: err instanceof Error ? err.message : `Connection failed: ${err}` });
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      sessionRef.current?.close();
+      sessionRef.current = null;
+    };
   }, [step.type, step.type === 'host_waiting' ? step.hostDeckIds : null, onStartGame]);
 
   // ─── Join Flow ───
@@ -124,6 +134,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
       if (!mountedRef.current) { destroyPeer(); return; }
 
       const session = createPeerSession(conn, destroyPeer);
+      sessionRef.current = session;
 
       const sent = session.send({ type: 'guest_deck', deckIds });
       if (!sent) throw new Error('Failed to send deck. Connection may have been lost.');
@@ -149,14 +160,19 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
       if (!mountedRef.current) { session.close(); return; }
 
+      sessionRef.current = null;
       onStartGame(session, false, deckIds, setup.hostDeckIds, setup.seed);
     } catch (err) {
+      sessionRef.current?.close();
+      sessionRef.current = null;
       if (!mountedRef.current) return;
       setStep({ type: 'error', message: err instanceof Error ? err.message : `Connection failed: ${err}` });
     }
   }, [step, onStartGame]);
 
   const handleBack = useCallback(() => {
+    sessionRef.current?.close();
+    sessionRef.current = null;
     hostRef.current?.destroy();
     hostRef.current = null;
     setCodeInput('');
