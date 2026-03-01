@@ -8,14 +8,16 @@ interface PlayerInfoProps {
   playerId: PlayerId;
   isOpponent: boolean;
   isValidTarget?: boolean;
-  onClick?: () => void;
+  onHeroClick?: () => void;
+  onDiscardClick?: () => void;
 }
 
 export function PlayerInfo({
   playerId,
   isOpponent,
   isValidTarget = false,
-  onClick,
+  onHeroClick,
+  onDiscardClick,
 }: PlayerInfoProps) {
   const player = useGameStore((s) => s.state?.players[playerId]);
   const energyCap = useGameStore((s) => s.state?.ruleset.energyCap ?? 10);
@@ -38,9 +40,13 @@ export function PlayerInfo({
 
   if (!player) return null;
 
-  const content = (
-    <>
-      {/* Avatar circle */}
+  const heroNode = onHeroClick ? (
+    <button
+      type="button"
+      className="appearance-none border-0 bg-transparent p-0 m-0"
+      onClick={onHeroClick}
+      aria-label={`Target ${isOpponent ? 'opponent' : 'your'} hero`}
+    >
       <div
         className={`
           w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold transition-all
@@ -53,6 +59,25 @@ export function PlayerInfo({
       >
         <span className="text-white/80">{isOpponent ? '👹' : '🧙'}</span>
       </div>
+    </button>
+  ) : (
+    <div
+      className={`
+        w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold transition-all
+        ${isOpponent
+          ? 'bg-gradient-to-br from-red-900 to-red-950 border-2 border-red-700/50'
+          : 'bg-gradient-to-br from-blue-900 to-blue-950 border-2 border-blue-700/50'
+        }
+        ${isValidTarget ? 'ring-4 ring-amber-300/75 shadow-[0_0_18px_rgba(251,191,36,0.65)] scale-105' : ''}
+      `}
+    >
+      <span className="text-white/80">{isOpponent ? '👹' : '🧙'}</span>
+    </div>
+  );
+
+  const content = (
+    <>
+      {heroNode}
 
       {/* Health */}
       <div ref={healthRef} className="flex items-center gap-1">
@@ -106,28 +131,22 @@ export function PlayerInfo({
 
       {/* Discard pile */}
       {player.discard.length > 0 && (
-        <div className="relative w-14 h-20 mt-0.5" title={`Discard: ${player.discard.length}`}>
+        <button
+          type="button"
+          className={`relative w-14 h-20 mt-0.5 ${onDiscardClick ? 'cursor-pointer hover:brightness-110' : 'cursor-default'}`}
+          title={`Discard: ${player.discard.length}`}
+          onClick={onDiscardClick}
+          disabled={!onDiscardClick}
+          data-testid={`discard-pile-${playerId}`}
+        >
           <div className="absolute inset-0 rounded bg-slate-900/80 border border-slate-600/30" />
           <div className="absolute -bottom-1 -right-1 bg-slate-800 border border-slate-600/50 rounded-full w-6 h-6 flex items-center justify-center">
             <span className="text-slate-400 text-[11px] font-bold tabular-nums">{player.discard.length}</span>
           </div>
-        </div>
+        </button>
       )}
     </>
   );
-
-  if (onClick) {
-    return (
-      <button
-        type="button"
-        className="appearance-none border-0 bg-transparent flex flex-col items-center gap-2 py-3 px-2 w-full cursor-pointer rounded-xl transition-colors hover:bg-white/6 focus-visible:bg-white/8"
-        onClick={onClick}
-        aria-label={`Target ${isOpponent ? 'opponent' : 'your'} hero`}
-      >
-        {content}
-      </button>
-    );
-  }
 
   return <div className="flex flex-col items-center gap-2 py-3 px-2 w-full">{content}</div>;
 }

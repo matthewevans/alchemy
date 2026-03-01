@@ -125,6 +125,7 @@ export function HandCard({
               src={elementIconPath}
               alt={card.element}
               className="select-none"
+              draggable={false}
               style={{
                 width: 'calc(var(--card-font-scale) * 0.75rem)',
                 height: 'calc(var(--card-font-scale) * 0.75rem)',
@@ -142,11 +143,10 @@ export function HandCard({
             background: artGradient,
           }}
         >
-          <img
-            src={artPath}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${artPath})` }}
           />
 
           {/* Art frame border */}
@@ -158,7 +158,7 @@ export function HandCard({
 
         {/* ── Text box (keywords + effects) ── */}
         <div
-          className="flex-1 mx-1 mt-1 mb-1 px-1.5 py-1 rounded-md overflow-hidden"
+          className="flex-1 mx-1 mt-1 mb-1 px-1.5 py-1 rounded-md overflow-visible"
           style={{
             background: 'rgba(15, 23, 42, 0.8)',
             border: '1px solid rgba(148, 163, 184, 0.15)',

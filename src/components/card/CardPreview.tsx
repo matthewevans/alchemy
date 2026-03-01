@@ -107,11 +107,10 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
             background: artGradient,
           }}
         >
-          <img
-            src={artPath}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${artPath})` }}
           />
           <div
             className="absolute inset-0 rounded pointer-events-none"

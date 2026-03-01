@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useUIStore } from '@game/uiStore';
+import type { CardInstance, PlayerId } from '@engine/types';
 import { getOpponent } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
 import { EFFECT_REGISTRY } from '@engine/effects';
@@ -36,6 +37,7 @@ export function GameBoard() {
   const inspectCard = useUIStore((s) => s.inspectCard);
   const dispatch = useGameDispatch();
   const [showHints, setShowHints] = useState(() => !loadHintsDismissed());
+  const [discardViewerPlayerId, setDiscardViewerPlayerId] = useState<PlayerId | null>(null);
 
   const phase = state?.phase;
   const isTargetingPhase = phase?.type === 'targeting';
@@ -53,6 +55,10 @@ export function GameBoard() {
     isTargetingPhase && phase.effectId in EFFECT_REGISTRY
       ? EFFECT_REGISTRY[phase.effectId].description
       : null;
+  const discardViewerCards = useMemo(() => {
+    if (!discardViewerPlayerId || !state) return [];
+    return summarizeDiscard(state.players[discardViewerPlayerId].discard);
+  }, [discardViewerPlayerId, state]);
 
   useEffect(() => {
     document.body.classList.add('game-active');
@@ -77,7 +83,10 @@ export function GameBoard() {
   }
 
   return (
-    <div className="h-screen flex flex-col select-none bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div
+      className="game-surface h-screen flex flex-col select-none bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       {/* ═══ Opponent hand — top edge ═══ */}
       <div className="shrink-0 pt-1 z-10">
         <OpponentHand />
@@ -100,7 +109,7 @@ export function GameBoard() {
           </div>
 
           {/* Player board */}
-          <div className="flex-1 flex items-start justify-center pt-1 min-h-0 overflow-hidden" data-player-board={humanPlayer}>
+          <div className="flex-1 flex items-start justify-center pt-1 min-h-0 overflow-hidden -translate-y-3 sm:-translate-y-4" data-player-board={humanPlayer}>
             <CreatureSlots playerId={humanPlayer} isOpponent={false} />
           </div>
         </div>
@@ -111,7 +120,7 @@ export function GameBoard() {
             playerId={opponentPlayer}
             isOpponent
             isValidTarget={validTargetPlayerIds.has(opponentPlayer)}
-            onClick={
+            onHeroClick={
               validTargetPlayerIds.has(opponentPlayer)
                 ? () =>
                     dispatch(
@@ -123,12 +132,13 @@ export function GameBoard() {
                     )
                 : undefined
             }
+            onDiscardClick={() => setDiscardViewerPlayerId(opponentPlayer)}
           />
           <PlayerInfo
             playerId={humanPlayer}
             isOpponent={false}
             isValidTarget={validTargetPlayerIds.has(humanPlayer)}
-            onClick={
+            onHeroClick={
               validTargetPlayerIds.has(humanPlayer)
                 ? () =>
                     dispatch(
@@ -140,6 +150,7 @@ export function GameBoard() {
                     )
                 : undefined
             }
+            onDiscardClick={() => setDiscardViewerPlayerId(humanPlayer)}
           />
         </div>
       </div>
@@ -212,6 +223,66 @@ export function GameBoard() {
           <CardPreview cardId={inspectedCardId} onDismiss={() => inspectCard(null)} />
         )}
       </AnimatePresence>
+
+      {/* Graveyard / discard viewer */}
+      <AnimatePresence>
+        {discardViewerPlayerId && (
+          <div className="fixed inset-0 z-50 bg-black/65 flex items-center justify-center p-4">
+            <div className="w-full max-w-md rounded-2xl border border-white/15 bg-slate-950 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-white text-lg font-bold">
+                  {discardViewerPlayerId === humanPlayer ? 'Your' : 'Opponent'} Graveyard
+                </h3>
+                <button
+                  type="button"
+                  className={gameButtonClass({
+                    tone: 'neutral',
+                    size: 'sm',
+                    className: 'px-4 py-2 text-xs',
+                  })}
+                  onClick={() => setDiscardViewerPlayerId(null)}
+                >
+                  Close
+                </button>
+              </div>
+
+              {discardViewerCards.length === 0 ? (
+                <p className="text-white/55 text-sm mt-4">No cards in graveyard.</p>
+              ) : (
+                <ul className="mt-3 max-h-80 overflow-auto space-y-1">
+                  {discardViewerCards.map((item) => (
+                    <li
+                      key={item.cardId}
+                      className="flex items-center justify-between rounded-lg bg-slate-900/85 border border-white/8 px-3 py-2"
+                    >
+                      <span className="text-white/90 text-sm">{item.name}</span>
+                      <span className="text-white/50 text-xs">x{item.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
+}
+
+function summarizeDiscard(discard: CardInstance[]): { cardId: string; name: string; count: number }[] {
+  const counts = new Map<string, number>();
+  const order: string[] = [];
+  for (let i = discard.length - 1; i >= 0; i -= 1) {
+    const { cardId } = discard[i];
+    if (!counts.has(cardId)) {
+      order.push(cardId);
+    }
+    counts.set(cardId, (counts.get(cardId) ?? 0) + 1);
+  }
+
+  return order.map((cardId) => ({
+    cardId,
+    name: CARD_REGISTRY[cardId]?.name ?? cardId,
+    count: counts.get(cardId) ?? 0,
+  }));
 }

@@ -25,7 +25,7 @@ export function KeywordBadge({ keyword }: KeywordBadgeProps) {
       <AnimatePresence>
         {hovered && (
           <motion.div
-            className="absolute bottom-full left-1/2 mb-1 px-2 py-1 rounded-lg bg-slate-800 border border-slate-600/50 shadow-xl whitespace-nowrap z-50 pointer-events-none"
+            className="absolute bottom-full left-1/2 mb-1 px-2 py-1 rounded-lg bg-slate-950 border border-slate-300/30 shadow-[0_8px_24px_rgba(0,0,0,0.7)] whitespace-nowrap z-50 pointer-events-none"
             style={{
               transform: 'translateX(-50%)',
               fontSize: '11px',
@@ -36,7 +36,7 @@ export function KeywordBadge({ keyword }: KeywordBadgeProps) {
             transition={{ duration: 0.15 }}
           >
             <span className="text-amber-300 font-bold capitalize">{kwDef.name}</span>
-            <span className="text-white/70"> — {kwDef.description}</span>
+            <span className="text-white"> — {kwDef.description}</span>
           </motion.div>
         )}
       </AnimatePresence>
