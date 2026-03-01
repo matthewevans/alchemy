@@ -85,6 +85,7 @@ export function GameBoard() {
   return (
     <div
       className="game-surface h-screen flex flex-col select-none bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      style={{ paddingRight: 'calc(6rem + env(safe-area-inset-right))' }}
       onContextMenu={(e) => e.preventDefault()}
     >
       {/* ═══ Opponent hand — top edge ═══ */}
@@ -92,7 +93,7 @@ export function GameBoard() {
         <OpponentHand />
       </div>
 
-      {/* ═══ Main arena: battlefield + right sidebar ═══ */}
+      {/* ═══ Main arena: battlefield ═══ */}
       <div
         className="flex-1 flex min-h-0 relative z-30"
         style={{ paddingBottom: 'calc(var(--card-height) * 0.28)' }}
@@ -116,51 +117,54 @@ export function GameBoard() {
             <CreatureSlots playerId={humanPlayer} isOpponent={false} />
           </div>
         </div>
-
-        {/* Right sidebar — MTGA-style avatar panels */}
-        <div className="shrink-0 w-24 flex flex-col justify-between border-l border-white/5 bg-slate-950/50">
-          <PlayerInfo
-            playerId={opponentPlayer}
-            isOpponent
-            isValidTarget={validTargetPlayerIds.has(opponentPlayer)}
-            onHeroClick={
-              validTargetPlayerIds.has(opponentPlayer)
-                ? () =>
-                    dispatch(
-                      {
-                        type: 'SELECT_TARGET',
-                        targetRef: { type: 'player', playerId: opponentPlayer },
-                      },
-                      humanPlayer,
-                    )
-                : undefined
-            }
-            onDiscardClick={() => setDiscardViewerPlayerId(opponentPlayer)}
-          />
-          <PlayerInfo
-            playerId={humanPlayer}
-            isOpponent={false}
-            isValidTarget={validTargetPlayerIds.has(humanPlayer)}
-            onHeroClick={
-              validTargetPlayerIds.has(humanPlayer)
-                ? () =>
-                    dispatch(
-                      {
-                        type: 'SELECT_TARGET',
-                        targetRef: { type: 'player', playerId: humanPlayer },
-                      },
-                      humanPlayer,
-                    )
-                : undefined
-            }
-            onDiscardClick={() => setDiscardViewerPlayerId(humanPlayer)}
-          />
-        </div>
       </div>
 
       {/* ═══ Player hand — bottom edge ═══ */}
       <div className="shrink-0 relative z-10">
         <PlayerHand />
+      </div>
+
+      {/* Right sidebar — full-height viewport panel */}
+      <div
+        data-testid="right-sidebar"
+        className="fixed inset-y-0 right-0 z-[35] w-24 flex flex-col justify-between border-l border-white/10 bg-slate-950/72 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      >
+        <PlayerInfo
+          playerId={opponentPlayer}
+          isOpponent
+          isValidTarget={validTargetPlayerIds.has(opponentPlayer)}
+          onHeroClick={
+            validTargetPlayerIds.has(opponentPlayer)
+              ? () =>
+                  dispatch(
+                    {
+                      type: 'SELECT_TARGET',
+                      targetRef: { type: 'player', playerId: opponentPlayer },
+                    },
+                    humanPlayer,
+                  )
+              : undefined
+          }
+          onDiscardClick={() => setDiscardViewerPlayerId(opponentPlayer)}
+        />
+        <PlayerInfo
+          playerId={humanPlayer}
+          isOpponent={false}
+          isValidTarget={validTargetPlayerIds.has(humanPlayer)}
+          onHeroClick={
+            validTargetPlayerIds.has(humanPlayer)
+              ? () =>
+                  dispatch(
+                    {
+                      type: 'SELECT_TARGET',
+                      targetRef: { type: 'player', playerId: humanPlayer },
+                    },
+                    humanPlayer,
+                  )
+              : undefined
+          }
+          onDiscardClick={() => setDiscardViewerPlayerId(humanPlayer)}
+        />
       </div>
 
       {/* Turn banner overlay */}

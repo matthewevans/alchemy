@@ -47,9 +47,16 @@ export function PhaseStrip() {
   const advanceInfo = getAdvanceAction(currentPhaseType);
 
   return (
-    <div className="flex items-center justify-center gap-2 px-4 py-1">
+    <div
+      className="fixed z-40 pointer-events-none rounded-xl border border-white/15 bg-slate-950/85 backdrop-blur-sm px-2 py-1"
+      style={{
+        right: 'calc(env(safe-area-inset-right) + 7rem)',
+        bottom: 'calc(env(safe-area-inset-bottom) + 0.65rem)',
+      }}
+    >
+      <div className="flex items-center justify-center gap-2">
       {/* Phase icons */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 pointer-events-none">
         {PHASES.map((p) => {
           const order = PHASE_ORDER[p.key];
           const isActive = p.key === currentPhaseType || (currentPhaseType === 'targeting' && p.key === 'play');
@@ -59,7 +66,7 @@ export function PhaseStrip() {
             <motion.div
               key={p.key}
               className={`
-                flex flex-col items-center px-2 py-1 rounded-md text-xs select-none
+                flex flex-col items-center px-2 py-1 rounded-md text-xs select-none pointer-events-none
                 ${isActive ? 'text-amber-300' : isCompleted ? 'text-slate-500' : 'text-white/50'}
               `}
               animate={
@@ -91,7 +98,7 @@ export function PhaseStrip() {
                   ? 'indigo'
                   : 'slate',
             size: 'sm',
-            className: 'ml-2 px-4 py-1.5 font-bold',
+            className: 'ml-2 px-4 py-1.5 font-bold pointer-events-auto',
           })}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -100,6 +107,7 @@ export function PhaseStrip() {
           {advanceInfo.label}
         </motion.button>
       )}
+      </div>
     </div>
   );
 }

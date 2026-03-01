@@ -110,16 +110,22 @@ export function QrScannerModal({ open, onClose, onScan, title }: QrScannerModalP
           if (cancelled || scannedRef.current) return;
           const activeVideo = videoRef.current;
           const activeDetector = detectorRef.current;
-          if (!activeVideo || !activeDetector) return;
+          if (!activeVideo) return;
 
           if (activeVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
             try {
               let raw: string | null = null;
 
               if (activeDetector) {
-                const results = await activeDetector.detect(activeVideo);
-                raw = results.find((item) => item.rawValue?.trim())?.rawValue?.trim() ?? null;
-              } else {
+                try {
+                  const results = await activeDetector.detect(activeVideo);
+                  raw = results.find((item) => item.rawValue?.trim())?.rawValue?.trim() ?? null;
+                } catch {
+                  raw = null;
+                }
+              }
+
+              if (!raw) {
                 const canvas = canvasRef.current;
                 const width = activeVideo.videoWidth;
                 const height = activeVideo.videoHeight;

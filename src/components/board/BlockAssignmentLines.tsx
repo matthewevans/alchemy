@@ -29,8 +29,9 @@ export function BlockAssignmentLines() {
 
   return (
     <svg
+      data-testid="block-assignment-overlay"
       className="fixed inset-0 pointer-events-none"
-      style={{ zIndex: 26, width: '100vw', height: '100vh' }}
+      style={{ zIndex: 100, width: '100vw', height: '100vh' }}
       viewBox={`0 0 ${window.innerWidth} ${window.innerHeight}`}
       preserveAspectRatio="none"
     >

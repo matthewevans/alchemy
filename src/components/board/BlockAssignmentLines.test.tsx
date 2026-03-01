@@ -35,6 +35,7 @@ describe('BlockAssignmentLines', () => {
 
     render(<BlockAssignmentLines />);
     expect(screen.getAllByTestId('block-assignment-line')).toHaveLength(1);
+    expect(screen.getByTestId('block-assignment-overlay')).toHaveStyle({ zIndex: '100' });
   });
 
   it('renders nothing outside declare_blockers phase', () => {
@@ -48,4 +49,3 @@ describe('BlockAssignmentLines', () => {
     expect(container.firstChild).toBeNull();
   });
 });
-

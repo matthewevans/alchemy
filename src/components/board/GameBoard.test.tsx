@@ -50,6 +50,17 @@ describe('GameBoard', () => {
     expect(prevented).toBe(true);
   });
 
+  it('renders the right sidebar as a full-height viewport panel', () => {
+    render(
+      <GameDispatchProvider controller={null}>
+        <GameBoard />
+      </GameDispatchProvider>,
+    );
+
+    const sidebar = screen.getByTestId('right-sidebar');
+    expect(sidebar).toHaveClass('fixed', 'inset-y-0', 'right-0');
+  });
+
   it('opens graveyard viewer when discard pile is tapped', () => {
     useGameStore.setState({
       state: createTestGameState({
@@ -75,5 +86,99 @@ describe('GameBoard', () => {
     fireEvent.click(screen.getByTestId('discard-pile-player1'));
     expect(screen.getByText('Your Graveyard')).toBeInTheDocument();
     expect(screen.getByText('Healing Rain')).toBeInTheDocument();
+  });
+
+  it('renders blocker controls as a translucent overlay above the phase strip', () => {
+    useGameStore.setState({
+      state: createTestGameState({
+        phase: {
+          type: 'battle',
+          step: 'declare_blockers',
+          confirmedAttackers: [],
+          tentativeBlockers: {},
+        },
+        activePlayer: 'player2',
+      }),
+      legalActions: [],
+      humanPlayer: 'player1',
+      events: [],
+      gameId: 'test-game',
+      player1DeckIds: [],
+      player2DeckIds: [],
+    });
+
+    render(
+      <GameDispatchProvider controller={null}>
+        <GameBoard />
+      </GameDispatchProvider>,
+    );
+
+    const overlay = screen.getByTestId('combat-controls');
+    expect(overlay).toHaveClass('fixed');
+    expect(overlay).toHaveStyle({
+      right: 'calc(env(safe-area-inset-right) + 7rem)',
+      bottom: 'calc(env(safe-area-inset-bottom) + 4.8rem)',
+    });
+
+    const blockerControls = screen.getByTestId('blocker-controls');
+    expect(blockerControls).toHaveClass('bg-slate-950/50', 'backdrop-blur-sm');
+    expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+  });
+
+  it('renders attacker controls as a translucent overlay above the phase strip', () => {
+    useGameStore.setState({
+      state: createTestGameState({
+        phase: {
+          type: 'battle',
+          step: 'declare_attackers',
+          tentativeAttackers: [],
+        },
+        activePlayer: 'player1',
+      }),
+      legalActions: [],
+      humanPlayer: 'player1',
+      events: [],
+      gameId: 'test-game',
+      player1DeckIds: [],
+      player2DeckIds: [],
+    });
+
+    render(
+      <GameDispatchProvider controller={null}>
+        <GameBoard />
+      </GameDispatchProvider>,
+    );
+
+    const skipButton = screen.getByRole('button', { name: 'Skip' });
+    expect(skipButton.parentElement).toHaveClass('bg-slate-950/50', 'backdrop-blur-sm');
+  });
+
+  it('renders resolving controls as a translucent overlay above the phase strip', () => {
+    useGameStore.setState({
+      state: createTestGameState({
+        phase: {
+          type: 'battle',
+          step: 'resolving',
+          attackers: [],
+          blockers: {},
+        },
+        activePlayer: 'player1',
+      }),
+      legalActions: [],
+      humanPlayer: 'player1',
+      events: [],
+      gameId: 'test-game',
+      player1DeckIds: [],
+      player2DeckIds: [],
+    });
+
+    render(
+      <GameDispatchProvider controller={null}>
+        <GameBoard />
+      </GameDispatchProvider>,
+    );
+
+    const resolvingLabel = screen.getByText('Resolving combat...');
+    expect(resolvingLabel.parentElement).toHaveClass('bg-slate-950/50', 'backdrop-blur-sm');
   });
 });
