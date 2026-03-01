@@ -29,6 +29,26 @@ interface BoardCardProps {
   onLongPress?: () => void;
 }
 
+interface StatusEffect {
+  icon: string;
+  label: string;
+  color: string;
+}
+
+function getActiveStatusEffects(permanent: Permanent): StatusEffect[] {
+  const effects: StatusEffect[] = [];
+  if (permanent.cantAttackThisTurn) {
+    effects.push({ icon: '🌿', label: 'Rooted', color: '#65a30d' });
+  }
+  if (permanent.temporaryAttackBonus > 0) {
+    effects.push({ icon: '⚔', label: `+${permanent.temporaryAttackBonus}`, color: '#f59e0b' });
+  }
+  if (permanent.temporaryHealthBonus > 0) {
+    effects.push({ icon: '♥', label: `+${permanent.temporaryHealthBonus}`, color: '#22c55e' });
+  }
+  return effects;
+}
+
 export function BoardCard({
   permanent,
   isAttacking,
@@ -53,12 +73,15 @@ export function BoardCard({
   const currentHealth = getCurrentHealth(permanent);
   const effectiveAttack = getEffectiveAttack(permanent);
   const isDamaged = permanent.damage > 0;
+  const isBuffed = permanent.temporaryAttackBonus > 0 || permanent.temporaryHealthBonus > 0;
   const hasSwift = card.keywords.includes('swift');
   const isSummoningSick = permanent.summonedThisTurn && !hasSwift;
+  const isEntangled = permanent.cantAttackThisTurn && !isSummoningSick;
   const isInteractable = isValidAttacker || isValidBlocker;
   const posRef = usePositionRegistry(permanent.permanentId);
   const baseZIndex = isOpponentCard ? 46 : 24;
   const activeZIndex = isOpponentCard ? 54 : 32;
+  const statusEffects = getActiveStatusEffects(permanent);
 
   return (
     <motion.div
@@ -166,6 +189,30 @@ export function BoardCard({
             style={{ backgroundImage: `url(${artPath})` }}
           />
 
+          {/* Entangle overlay — vines/root visual treatment */}
+          {isEntangled && (
+            <motion.div
+              className="absolute inset-0 rounded pointer-events-none"
+              style={{
+                background: 'linear-gradient(180deg, transparent 20%, rgba(22, 101, 52, 0.5) 70%, rgba(22, 101, 52, 0.7) 100%)',
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.6, 0.85, 0.6] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          )}
+
+          {/* Buff glow overlay */}
+          {isBuffed && !isEntangled && (
+            <div
+              className="absolute inset-0 rounded pointer-events-none"
+              style={{
+                background: 'linear-gradient(180deg, rgba(250, 204, 21, 0.1) 0%, rgba(250, 204, 21, 0.2) 100%)',
+                boxShadow: 'inset 0 0 8px rgba(250, 204, 21, 0.3)',
+              }}
+            />
+          )}
+
           {/* Keyword icons overlay */}
           {card.keywords.length > 0 && (
             <div
@@ -181,44 +228,71 @@ export function BoardCard({
           {/* Art frame border */}
           <div
             className="absolute inset-0 rounded pointer-events-none"
-            style={{ border: `1px solid ${elementColor}44` }}
+            style={{ border: `1px solid ${isEntangled ? '#166534' : elementColor + '44'}` }}
           />
         </div>
 
+        {/* ── Status bar (active buffs/debuffs) ── */}
+        {statusEffects.length > 0 && (
+          <div
+            className="flex items-center justify-center gap-1 mx-[3px] px-1"
+            style={{
+              height: 'calc(var(--card-font-scale) * 0.7rem)',
+              fontSize: 'calc(var(--card-font-scale) * 0.4rem)',
+              background: 'rgba(15, 23, 42, 0.8)',
+            }}
+          >
+            {statusEffects.map((effect) => (
+              <span
+                key={effect.label}
+                className="flex items-center gap-[1px] font-semibold"
+                style={{ color: effect.color }}
+              >
+                <span>{effect.icon}</span>
+                <span>{effect.label}</span>
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* ── Stat bar ── */}
         <div className="flex justify-between items-center px-[3px] py-[2px]">
-          {/* Attack - bottom left */}
+          {/* Attack */}
           <div
-            className="flex items-center justify-center rounded text-white font-black"
+            className="flex items-center gap-0.5 rounded-md font-black"
             style={{
-              minWidth: 'calc(var(--card-font-scale) * 1.3rem)',
-              height: 'calc(var(--card-font-scale) * 1.1rem)',
-              fontSize: 'calc(var(--card-font-scale) * 0.7rem)',
+              fontSize: 'calc(var(--card-font-scale) * 0.55rem)',
+              padding: 'calc(var(--card-font-scale) * 0.05rem) calc(var(--card-font-scale) * 0.2rem)',
+              color: effectiveAttack > (card.attack ?? 0) ? '#bbf7d0' : '#fecaca',
               background: effectiveAttack > (card.attack ?? 0)
-                ? 'linear-gradient(135deg, #16a34a, #059669)'
-                : 'linear-gradient(135deg, #dc2626, #991b1b)',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
-              padding: '0 3px',
+                ? 'rgba(34, 197, 94, 0.2)'
+                : 'rgba(239, 68, 68, 0.2)',
+              border: effectiveAttack > (card.attack ?? 0)
+                ? '1px solid rgba(134, 239, 172, 0.5)'
+                : '1px solid rgba(252, 165, 165, 0.5)',
             }}
           >
-            {effectiveAttack}
+            <span className="leading-none">⚔</span>
+            <span className="leading-none">{effectiveAttack}</span>
           </div>
 
-          {/* Health - bottom right */}
+          {/* Health */}
           <div
-            className="flex items-center justify-center rounded text-white font-black"
+            className="flex items-center gap-0.5 rounded-md font-black"
             style={{
-              minWidth: 'calc(var(--card-font-scale) * 1.3rem)',
-              height: 'calc(var(--card-font-scale) * 1.1rem)',
-              fontSize: 'calc(var(--card-font-scale) * 0.7rem)',
+              fontSize: 'calc(var(--card-font-scale) * 0.55rem)',
+              padding: 'calc(var(--card-font-scale) * 0.05rem) calc(var(--card-font-scale) * 0.2rem)',
+              color: isDamaged ? '#fecaca' : '#bbf7d0',
               background: isDamaged
-                ? 'linear-gradient(135deg, #dc2626, #7f1d1d)'
-                : 'linear-gradient(135deg, #16a34a, #14532d)',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
-              padding: '0 3px',
+                ? 'rgba(239, 68, 68, 0.2)'
+                : 'rgba(34, 197, 94, 0.2)',
+              border: isDamaged
+                ? '1px solid rgba(252, 165, 165, 0.5)'
+                : '1px solid rgba(134, 239, 172, 0.5)',
             }}
           >
-            {currentHealth}
+            <span className="leading-none">♥</span>
+            <span className="leading-none">{currentHealth}</span>
           </div>
         </div>
       </div>

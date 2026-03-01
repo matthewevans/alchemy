@@ -40,7 +40,6 @@ export function GameBoard() {
   const [discardViewerPlayerId, setDiscardViewerPlayerId] = useState<PlayerId | null>(null);
 
   const phase = state?.phase;
-  const isTargetingPhase = phase?.type === 'targeting';
   const validTargetPlayerIds = new Set(
     legalActions.flatMap((action) =>
       action.type === 'SELECT_TARGET' && action.targetRef.type === 'player'
@@ -50,9 +49,13 @@ export function GameBoard() {
   );
   const canCancelTargeting = legalActions.some((a) => a.type === 'CANCEL_TARGETING');
 
-  const targetingCardName = isTargetingPhase ? CARD_REGISTRY[phase.sourceCardId].name : null;
+  // Gate targeting prompt on legalActions (not phase type) so only the caster sees it
+  const isLocalPlayerTargeting = canCancelTargeting || validTargetPlayerIds.size > 0
+    || legalActions.some((a) => a.type === 'SELECT_TARGET');
+  const targetingCardName =
+    isLocalPlayerTargeting && phase?.type === 'targeting' ? CARD_REGISTRY[phase.sourceCardId].name : null;
   const targetingEffectText =
-    isTargetingPhase && phase.effectId in EFFECT_REGISTRY
+    isLocalPlayerTargeting && phase?.type === 'targeting' && phase.effectId in EFFECT_REGISTRY
       ? EFFECT_REGISTRY[phase.effectId].description
       : null;
   const discardViewerCards = useMemo(() => {
@@ -176,7 +179,7 @@ export function GameBoard() {
       <BlockAssignmentLines />
 
       {/* Targeting prompt overlay */}
-      {isTargetingPhase && (
+      {isLocalPlayerTargeting && (
         <div className="fixed top-[calc(env(safe-area-inset-top)+0.5rem)] left-1/2 -translate-x-1/2 z-30 pointer-events-none">
           <div className="pointer-events-auto rounded-xl border border-amber-300/40 bg-slate-900/90 px-4 py-2 shadow-xl shadow-black/40 backdrop-blur-sm text-center">
             <p className="text-amber-200 text-sm font-semibold">

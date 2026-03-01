@@ -19,12 +19,13 @@ describe('HandCard layout metadata', () => {
     expect(header.lastElementChild).toBe(cost);
   });
 
-  it('shows an explicit card type label in the text box', () => {
+  it('shows an explicit card type label in verbose (preview) mode', () => {
     render(
       <HandCard
         cardInstance={{ instanceId: 'c2', cardId: 'earth_mushroom_guard' }}
         isPlayable
         isSelected={false}
+        verbose
         onClick={() => {}}
         onHover={() => {}}
       />,
