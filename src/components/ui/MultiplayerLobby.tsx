@@ -96,6 +96,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
         if (!sent) throw new Error('Failed to send game setup. Connection may have been lost.');
 
         sessionRef.current = null;
+        hostRef.current = null;
         onStartGame(session, true, hostDeckIds, guestDeckIds, seed);
       } catch (err) {
         sessionRef.current?.close();
