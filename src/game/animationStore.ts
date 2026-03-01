@@ -35,7 +35,8 @@ export type AnimationEffect =
   | { type: 'death'; permanentId: string; position: ElementPosition; element?: Element; soundId?: string }
   | { type: 'spell_impact'; position: ElementPosition; element?: Element; soundId?: string }
   | { type: 'keyword'; permanentId: string; keyword: Keyword; position: ElementPosition; element?: Element }
-  | { type: 'summon'; permanentId: string; position: ElementPosition; element?: Element; soundId?: string };
+  | { type: 'summon'; permanentId: string; position: ElementPosition; element?: Element; soundId?: string }
+  | { type: 'card_reveal'; cardId: string };
 
 export interface AnimationStep {
   effects: AnimationEffect[];
@@ -132,7 +133,7 @@ function computeShakeIntensity(events: GameEvent[]): number | undefined {
   return 1;
 }
 
-const STEP_DURATIONS = {
+export const STEP_DURATIONS = {
   blockLink: 600,
   combatExchange: 1200,
   death: 900,
@@ -140,6 +141,7 @@ const STEP_DURATIONS = {
   etb: 900,
   standaloneDamage: 800,
   summon: 500,
+  cardReveal: 1200,
 } as const;
 
 /**

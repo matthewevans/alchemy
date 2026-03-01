@@ -40,6 +40,9 @@ export function triggerSoundEffect(effect: AnimationEffect): void {
     case 'keyword':
       playEffectSound('keyword', {});
       break;
+    case 'card_reveal':
+      // No dedicated sound — the card's effect sound plays on the subsequent step
+      break;
     default: {
       const _exhaustive: never = effect;
       return _exhaustive;

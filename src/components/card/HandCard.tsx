@@ -45,7 +45,7 @@ export function HandCard({
   const artPath = getCardArtPath(card.id, card.element);
   const effect = card.effectId ? EFFECT_REGISTRY[card.effectId] : null;
   const isCreature = card.type === 'creature';
-  const isPreview = cardInstance.instanceId === '__preview__';
+  const isPreview = cardInstance.instanceId === '__preview__' || cardInstance.instanceId === '__reveal__';
 
   // Draw shimmer — brief golden flash when card first appears in hand
   const [showDrawGlow, setShowDrawGlow] = useState(!isPreview);

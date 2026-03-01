@@ -6,6 +6,7 @@ import { KEYWORD_REGISTRY } from '@engine/keywords';
 import { triggerSoundEffect } from '@audio/triggerSoundEffect';
 import { FloatingNumber } from './FloatingNumber';
 import { BlockLink } from './BlockLink';
+import { CardReveal } from './CardReveal';
 import { DamageVignette } from './DamageVignette';
 import { ParticleCanvas } from './ParticleCanvas';
 import type { ParticleCanvasHandle } from './ParticleCanvas';
@@ -93,6 +94,13 @@ export function AnimationOverlay() {
                     text={KEYWORD_REGISTRY[effect.keyword].icon}
                     position={effect.position}
                     color="amber"
+                  />
+                );
+              case 'card_reveal':
+                return (
+                  <CardReveal
+                    key={`reveal-${effect.cardId}-${stepCount}`}
+                    cardId={effect.cardId}
                   />
                 );
               // combat_strike, spell_impact, death, summon — handled by particle canvas
@@ -184,6 +192,9 @@ function triggerParticleEffect(
       particles.summonBurst(cx, cy, effect.element);
       break;
     }
+    case 'card_reveal':
+      // No particle effects — rendered entirely by DOM layer
+      break;
     default: {
       const _exhaustive: never = effect;
       return _exhaustive;

@@ -1,6 +1,7 @@
 import type { GameAction, GameEvent, PlayerId } from '@engine/types';
 import { useGameStore } from './gameStore';
-import { groupEventsIntoSteps, getPositions, useAnimationStore } from './animationStore';
+import { groupEventsIntoSteps, getPositions, useAnimationStore, STEP_DURATIONS } from './animationStore';
+import type { AnimationStep } from './animationStore';
 
 type LocalActionHandler = (action: GameAction, actingPlayer: PlayerId) => void;
 
@@ -14,7 +15,7 @@ export function dispatchWithAnimations(
 
   // Snapshot permanentId → cardId before dispatch so we can resolve
   // the attacking creature's element even after it dies in combat.
-  const state = useGameStore.getState().state;
+  const { state, humanPlayer } = useGameStore.getState();
   const cardIdMap = new Map<string, string>();
   if (state) {
     for (const player of Object.values(state.players)) {
@@ -31,6 +32,20 @@ export function dispatchWithAnimations(
   onLocalAction?.(action, actingPlayer);
 
   const steps = groupEventsIntoSteps(events, positions, cardIdMap);
+
+  // Prepend a card reveal step when the opponent plays a card,
+  // so the human player can see what was played before effects resolve.
+  if (actingPlayer !== humanPlayer) {
+    const cardPlayedEvent = events.find((e) => e.type === 'CARD_PLAYED');
+    if (cardPlayedEvent && cardPlayedEvent.type === 'CARD_PLAYED') {
+      const revealStep: AnimationStep = {
+        effects: [{ type: 'card_reveal', cardId: cardPlayedEvent.cardId }],
+        durationMs: STEP_DURATIONS.cardReveal,
+      };
+      steps.unshift(revealStep);
+    }
+  }
+
   if (steps.length > 0) {
     useAnimationStore.getState().enqueueSteps(steps);
   }
