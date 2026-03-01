@@ -93,7 +93,10 @@ export function GameBoard() {
       </div>
 
       {/* ═══ Main arena: battlefield + right sidebar ═══ */}
-      <div className="flex-1 flex min-h-0 relative z-20">
+      <div
+        className="flex-1 flex min-h-0 relative z-20"
+        style={{ paddingBottom: 'calc(var(--card-height) * 0.42)' }}
+      >
         {/* Battlefield — takes all available width */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Opponent board */}
@@ -109,7 +112,7 @@ export function GameBoard() {
           </div>
 
           {/* Player board */}
-          <div className="flex-1 flex items-start justify-center pt-1 min-h-0 overflow-hidden -translate-y-3 sm:-translate-y-4" data-player-board={humanPlayer}>
+          <div className="flex-1 flex items-start justify-center pt-1 min-h-0 overflow-hidden -translate-y-6 sm:-translate-y-8" data-player-board={humanPlayer}>
             <CreatureSlots playerId={humanPlayer} isOpponent={false} />
           </div>
         </div>
@@ -156,7 +159,7 @@ export function GameBoard() {
       </div>
 
       {/* ═══ Player hand — bottom edge ═══ */}
-      <div className="shrink-0 relative z-30">
+      <div className="shrink-0 relative z-20">
         <PlayerHand />
       </div>
 
