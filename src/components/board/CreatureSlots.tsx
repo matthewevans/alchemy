@@ -32,7 +32,10 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
 
   const isPlayerBoard = playerId === humanPlayer;
   const isPlayPhase = phase?.type === 'play';
-  const showPlusOnEmpty = isPlayerBoard && activePlayer === humanPlayer && isPlayPhase && selectedHandIndex !== null;
+  const selectedCardPlayable = selectedHandIndex !== null && legalActions.some(
+    (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> => a.type === 'PLAY_CARD' && a.cardIndex === selectedHandIndex,
+  );
+  const showPlusOnEmpty = isPlayerBoard && activePlayer === humanPlayer && isPlayPhase && selectedCardPlayable;
 
   const isBattlePhase = phase?.type === 'battle';
   const tentativeAttackers = isBattlePhase && phase.step === 'declare_attackers' ? phase.tentativeAttackers : [];

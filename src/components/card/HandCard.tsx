@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import type { CardInstance } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
 import { EFFECT_REGISTRY } from '@engine/effects';
+import { KEYWORD_REGISTRY } from '@engine/keywords';
 import { useLongPress } from '@hooks/useLongPress';
 import {
   getElementColor,
@@ -17,6 +18,7 @@ interface HandCardProps {
   cardInstance: CardInstance;
   isPlayable: boolean;
   isSelected: boolean;
+  verbose?: boolean;
   onClick: () => void;
   onHover: (hovering: boolean) => void;
   onLongPress?: () => void;
@@ -27,6 +29,7 @@ export function HandCard({
   cardInstance,
   isPlayable,
   isSelected,
+  verbose,
   onClick,
   onHover,
   onLongPress: onLongPressProp,
@@ -46,7 +49,6 @@ export function HandCard({
     <motion.div
       className={`
         touch-target relative flex flex-col cursor-pointer select-none
-        ${isPlayable ? '' : 'brightness-[0.6] saturate-50'}
         ${isSelected ? 'shadow-xl' : 'shadow-lg shadow-black/50'}
       `}
       style={{
@@ -73,14 +75,17 @@ export function HandCard({
       {/* Playable glow ring */}
       {isPlayable && (
         <motion.div
-          className="absolute -inset-[2px] rounded-xl z-0 pointer-events-none"
+          className="absolute -inset-[3px] rounded-xl z-0 pointer-events-none"
           style={{
-            background: `linear-gradient(135deg, ${elementColor}, #fbbf24, ${elementColor})`,
+            background: 'linear-gradient(135deg, #06b6d4, #22d3ee, #67e8f9, #22d3ee, #06b6d4)',
             backgroundSize: '200% 200%',
+            boxShadow: isSelected
+              ? '0 0 12px 2px rgba(34, 211, 238, 0.6)'
+              : '0 0 8px 1px rgba(34, 211, 238, 0.3)',
           }}
           animate={{
             backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-            opacity: isSelected ? [0.9, 1, 0.9] : [0.5, 0.8, 0.5],
+            opacity: isSelected ? 1 : [0.7, 1, 0.7],
           }}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
         />
@@ -147,7 +152,7 @@ export function HandCard({
         >
           <div
             aria-hidden="true"
-            className="absolute inset-0 bg-cover bg-center pointer-events-none"
+            className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${artPath})` }}
           />
 
@@ -182,20 +187,52 @@ export function HandCard({
 
           {/* Keywords */}
           {card.keywords.length > 0 && (
-            <div className="flex flex-wrap gap-x-1 gap-y-0.5 mb-0.5">
-              {card.keywords.map((kw) => (
-                <KeywordBadge key={kw} keyword={kw} />
-              ))}
-            </div>
+            verbose ? (
+              <div className="flex flex-col gap-0.5 mb-0.5">
+                {card.keywords.map((kw) => {
+                  const kwDef = KEYWORD_REGISTRY[kw];
+                  return (
+                    <div
+                      key={kw}
+                      className="flex items-start gap-1 leading-tight"
+                      style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
+                    >
+                      <span>{kwDef.icon}</span>
+                      <span className="text-white/80">
+                        <span className="font-semibold text-amber-300 capitalize">{kwDef.name}</span>
+                        {' \u2014 '}{kwDef.description}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-x-1 gap-y-0.5 mb-0.5">
+                {card.keywords.map((kw) => (
+                  <KeywordBadge key={kw} keyword={kw} />
+                ))}
+              </div>
+            )
           )}
 
-          {/* Spell effect — symbolic shorthand */}
-          {effect && <EffectShorthand effect={effect} />}
+          {/* Spell effect */}
+          {effect && (
+            verbose ? (
+              <p
+                className="text-white/80 leading-tight"
+                style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
+              >
+                {effect.description}
+              </p>
+            ) : (
+              <EffectShorthand effect={effect} />
+            )
+          )}
 
-          {/* Flavor text (if space) */}
-          {card.flavor && !effect && card.keywords.length === 0 && (
+          {/* Flavor text */}
+          {card.flavor && (verbose || (!effect && card.keywords.length === 0)) && (
             <p
-              className="text-white/30 italic leading-tight"
+              className="text-white/30 italic leading-tight mt-0.5"
               style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
             >
               {card.flavor}

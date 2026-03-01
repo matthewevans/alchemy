@@ -105,11 +105,9 @@ export function GameBoard() {
             <CreatureSlots playerId={opponentPlayer} isOpponent />
           </div>
 
-          {/* Battle line + phase strip + combat controls */}
+          {/* Battle line */}
           <div className="relative z-10 shrink-0">
-            <PhaseStrip />
             <BattleLine />
-            <CombatControls />
           </div>
 
           {/* Player board */}
@@ -120,9 +118,13 @@ export function GameBoard() {
       </div>
 
       {/* ═══ Player hand — bottom edge ═══ */}
-      <div className="shrink-0 relative z-10">
+      <div className="shrink-0 relative z-40">
         <PlayerHand />
       </div>
+
+      {/* Fixed overlays — outside battlefield stacking context so their z-index beats hand z-40 */}
+      <PhaseStrip />
+      <CombatControls />
 
       {/* Right sidebar — full-height viewport panel */}
       <div
@@ -224,13 +226,6 @@ export function GameBoard() {
       {/* Animation overlay */}
       <AnimationOverlay />
 
-      {/* Card inspection overlay (long-press) */}
-      <AnimatePresence>
-        {inspectedCardId && (
-          <CardPreview cardId={inspectedCardId} onDismiss={() => inspectCard(null)} />
-        )}
-      </AnimatePresence>
-
       {/* Graveyard / discard viewer */}
       <AnimatePresence>
         {discardViewerPlayerId && (
@@ -260,7 +255,8 @@ export function GameBoard() {
                   {discardViewerCards.map((item) => (
                     <li
                       key={item.cardId}
-                      className="flex items-center justify-between rounded-lg bg-slate-900/85 border border-white/8 px-3 py-2"
+                      className="flex items-center justify-between rounded-lg bg-slate-900/85 border border-white/8 px-3 py-2 cursor-pointer hover:bg-slate-800/85 transition-colors"
+                      onClick={() => inspectCard(item.cardId)}
                     >
                       <span className="text-white/90 text-sm">{item.name}</span>
                       <span className="text-white/50 text-xs">x{item.count}</span>
@@ -270,6 +266,13 @@ export function GameBoard() {
               )}
             </div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Card inspection overlay (long-press / graveyard click) */}
+      <AnimatePresence>
+        {inspectedCardId && (
+          <CardPreview cardId={inspectedCardId} onDismiss={() => inspectCard(null)} />
         )}
       </AnimatePresence>
     </div>

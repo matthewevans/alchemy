@@ -52,9 +52,7 @@ export function PlayerHand() {
       }
       selectHandCard(null);
     } else {
-      if (playableIndices.has(index)) {
-        selectHandCard(index);
-      }
+      selectHandCard(index);
     }
   };
 
@@ -184,7 +182,7 @@ export function PlayerHand() {
                 marginLeft: index === 0 ? 0 : 'calc(var(--card-width) * -0.45)',
                 zIndex,
                 transformOrigin: 'bottom center',
-                opacity: isDragged ? 0.3 : 1,
+                visibility: isDragged ? 'hidden' : 'visible',
               }}
             >
               <HandCard
