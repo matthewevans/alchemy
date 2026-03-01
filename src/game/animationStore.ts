@@ -178,10 +178,10 @@ function groupCombatEvents(
     const effects: AnimationEffect[] = [];
 
     for (const e of damageEvents) {
-      const sourcePos = positions.get(e.source);
       if (e.type === 'DAMAGE_DEALT') {
         const pos = positions.get(e.targetId);
         if (pos) {
+          const sourcePos = positions.get(e.source);
           if (sourcePos) {
             effects.push({
               type: 'combat_strike',
@@ -195,6 +195,7 @@ function groupCombatEvents(
       } else if (e.type === 'PLAYER_DAMAGED') {
         const pos = positions.get(`player:${e.player}`);
         if (pos) {
+          const sourcePos = positions.get(e.source);
           if (sourcePos) {
             effects.push({
               type: 'combat_strike',
