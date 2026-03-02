@@ -1,11 +1,11 @@
 import { registerSW } from 'virtual:pwa-register';
 import { markPendingAutoUpdate } from './updateMarker';
-import { setUpdateStatus } from './updateStatus';
+import { setUpdateStatus, getUpdateStatus } from './updateStatus';
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
 
 let isRegistered = false;
-let manualCheckForUpdate: (() => void) | null = null;
+let manualCheckForUpdate: (() => Promise<void>) | null = null;
 
 export function checkForServiceWorkerUpdate(): boolean {
   if (import.meta.env.DEV || !('serviceWorker' in navigator) || !manualCheckForUpdate) {
@@ -13,7 +13,13 @@ export function checkForServiceWorkerUpdate(): boolean {
   }
 
   setUpdateStatus('checking');
-  manualCheckForUpdate();
+  manualCheckForUpdate().then(() => {
+    // If status is still 'checking' after the update() promise resolves,
+    // no new SW was found — reset to idle.
+    if (getUpdateStatus() === 'checking') {
+      setUpdateStatus('idle');
+    }
+  });
   return true;
 }
 
@@ -55,7 +61,7 @@ export function registerServiceWorker() {
       });
 
       const checkForUpdate = () => {
-        void swRegistration.update();
+        return swRegistration.update().then(() => {});
       };
       const handleVisibilityChange = () => {
         if (document.visibilityState !== 'visible') return;
