@@ -20,6 +20,9 @@ export function PlayerHand() {
   const hoverCard = useUIStore((s) => s.hoverCard);
   const inspectCard = useUIStore((s) => s.inspectCard);
 
+  // Hand tray expand/collapse — MTGA-style peek from bottom
+  const [handHovered, setHandHovered] = useState(false);
+
   // Drag state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
@@ -175,12 +178,26 @@ export function PlayerHand() {
   // Phantom card for drag
   const draggedCard = draggedIndex !== null ? hand[draggedIndex] : null;
 
+  // Hand expands when hovered (desktop) or a card is selected/dragged (touch)
+  const isExpanded = handHovered || selectedHandIndex !== null || draggedIndex !== null;
+
   return (
-    <div className="relative flex flex-col items-center bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pb-1">
-      {/* Fan layout — cards peek from bottom, hover/select lifts them */}
+    <div
+      data-hand-area
+      className="relative flex flex-col items-center bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pb-1 pointer-events-auto"
+      style={{
+        transform: isExpanded
+          ? 'translateY(0)'
+          : 'translateY(calc(var(--card-height) * 0.6))',
+        transition: 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+      }}
+      onMouseEnter={() => setHandHovered(true)}
+      onMouseLeave={() => setHandHovered(false)}
+    >
+      {/* Fan layout — full card height container, clipped below viewport when collapsed */}
       <div
         className="relative flex items-end justify-center"
-        style={{ height: 'calc(var(--card-height) * 0.52)' }}
+        style={{ height: 'var(--card-height)' }}
       >
         {hand.map((cardInstance, index) => {
           const angle = cardCount > 1 ? -maxFanAngle + fanStep * index : 0;
@@ -193,6 +210,7 @@ export function PlayerHand() {
           return (
             <div
               key={cardInstance.instanceId}
+              data-hand-card
               data-testid={`hand-card-${index}`}
               className="transition-transform duration-200"
               style={{

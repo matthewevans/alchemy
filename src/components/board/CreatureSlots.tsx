@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { GameAction, Permanent, Phase, PlayerId } from '@engine/types';
 import { getOpponent } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
+import { useAnimationStore } from '@game/animationStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useUIStore } from '@game/uiStore';
 import { BoardCard } from '@components/card';
@@ -45,7 +46,18 @@ function shouldFanOut(
 }
 
 export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
-  const board = useGameStore((s) => s.state?.players[playerId].board ?? []);
+  const liveBoard = useGameStore((s) => s.state?.players[playerId].board ?? []);
+  const boardSnapshot = useAnimationStore((s) => s.boardSnapshot);
+
+  // Merge snapshot: fill null slots from pre-dispatch board so dying creatures
+  // remain visible during combat animations preceding the death step.
+  const board = useMemo(() => {
+    if (!boardSnapshot) return liveBoard;
+    const snapshot = boardSnapshot[playerId];
+    if (!snapshot) return liveBoard;
+    return liveBoard.map((slot, i) => slot ?? snapshot[i] ?? null);
+  }, [liveBoard, boardSnapshot, playerId]);
+
   const phase = useGameStore((s) => s.state?.phase);
   const activePlayer = useGameStore((s) => s.state?.activePlayer);
   const humanPlayer = useGameStore((s) => s.humanPlayer);
@@ -73,6 +85,14 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   const confirmedAttackers = isBattlePhase && phase.step === 'declare_blockers' ? phase.confirmedAttackers : [];
   const resolvingAttackers = isBattlePhase && phase.step === 'resolving' ? phase.attackers : [];
   const allAttackers = [...tentativeAttackers, ...confirmedAttackers, ...resolvingAttackers];
+
+  // During animation, only shift forward the creature whose combat_strike is playing
+  const activeAttackerId = useAnimationStore((s) => {
+    const step = s.activeStep;
+    if (!step) return null;
+    const strike = step.effects.find((e) => e.type === 'combat_strike');
+    return strike && strike.type === 'combat_strike' ? strike.sourceId : null;
+  });
 
   const tentativeBlockers = isBattlePhase && phase.step === 'declare_blockers' ? phase.tentativeBlockers : {};
   const resolvingBlockers = isBattlePhase && phase.step === 'resolving' ? phase.blockers : {};
@@ -271,8 +291,9 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     if (!container || visualSlotCount === 0) return;
 
     const rootStyles = getComputedStyle(document.documentElement);
-    const baseWidth = Number.parseFloat(rootStyles.getPropertyValue('--board-card-width')) || 82;
-    const baseHeight = Number.parseFloat(rootStyles.getPropertyValue('--board-card-height')) || 115;
+    const uiScale = Number.parseFloat(rootStyles.getPropertyValue('--ui-scale')) || 1;
+    const baseWidth = (Number.parseFloat(rootStyles.getPropertyValue('--_board-w')) || 82) * uiScale;
+    const baseHeight = (Number.parseFloat(rootStyles.getPropertyValue('--_board-h')) || 115) * uiScale;
 
     const updateSize = () => {
       const rect = container.getBoundingClientRect();
@@ -298,7 +319,10 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   const cardHeight = cardSize?.height;
 
   const getCardProps = (permanent: Permanent) => {
-    const isAttacking = allAttackers.includes(permanent.permanentId);
+    // During combat animation, only the creature currently striking shifts forward
+    const isAttacking = activeAttackerId
+      ? permanent.permanentId === activeAttackerId
+      : allAttackers.includes(permanent.permanentId);
     const isBlocking = allBlockerIds.has(permanent.permanentId);
     const isValidTarget = validTargetPermanentIds.has(permanent.permanentId);
     const isValidAttacker = validAttackerIds.has(permanent.permanentId) || undeclareAttackerIds.has(permanent.permanentId);

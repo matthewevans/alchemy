@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useGameStore } from '@game/gameStore';
 import { getPositions } from '@game/animationStore';
 
@@ -29,13 +30,12 @@ export function BlockAssignmentLines() {
 
   if (links.length === 0) return null;
 
-  return (
+  return createPortal(
     <svg
       data-testid="block-assignment-overlay"
       className="fixed inset-0 pointer-events-none"
       style={{ zIndex: 100, width: '100vw', height: '100vh' }}
       viewBox={`0 0 ${window.innerWidth} ${window.innerHeight}`}
-      preserveAspectRatio="none"
     >
       <defs>
         <filter id="block-line-glow">
@@ -119,6 +119,7 @@ export function BlockAssignmentLines() {
           />
         </g>
       ))}
-    </svg>
+    </svg>,
+    document.body,
   );
 }

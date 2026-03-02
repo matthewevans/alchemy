@@ -1,31 +1,32 @@
 @import "tailwindcss";
 
-/* ─── Card Sizing (responsive via CSS custom properties) ─── */
+/* ─── Card Sizing (responsive via CSS custom properties) ───
+   Base values are private (_-prefixed), public values include UI scale. */
 :root {
-  --card-width: 90px;
-  --card-height: 130px;
-  --card-font-scale: 0.8;
-  --board-card-width: 82px;
-  --board-card-height: 115px;
+  --_card-w: 90px;
+  --_card-h: 130px;
+  --_card-fs: 0.8;
+  --_board-w: 82px;
+  --_board-h: 115px;
 }
 
 @media (min-width: 768px) {
   :root {
-    --card-width: 115px;
-    --card-height: 165px;
-    --card-font-scale: 0.92;
-    --board-card-width: 100px;
-    --board-card-height: 140px;
+    --_card-w: 115px;
+    --_card-h: 165px;
+    --_card-fs: 0.92;
+    --_board-w: 100px;
+    --_board-h: 140px;
   }
 }
 
 @media (min-width: 1024px) {
   :root {
-    --card-width: 140px;
-    --card-height: 200px;
-    --card-font-scale: 1.05;
-    --board-card-width: 120px;
-    --board-card-height: 168px;
+    --_card-w: clamp(112px, 17dvh, 140px);
+    --_card-h: clamp(160px, 24dvh, 200px);
+    --_card-fs: 1.05;
+    --_board-w: clamp(96px, 14.5dvh, 120px);
+    --_board-h: clamp(134px, 20dvh, 168px);
   }
 }
 
@@ -50,9 +51,15 @@
   min-height: 48px;
 }
 
-/* ─── UI Scale (user preference via preferencesStore) ─── */
-#root {
-  zoom: var(--ui-scale, 1);
+/* ─── UI Scale (user preference via preferencesStore) ───
+   Public variable names consumed by all components; includes --ui-scale factor
+   so cards scale without affecting viewport layout. */
+:root {
+  --card-width: calc(var(--_card-w) * var(--ui-scale, 1));
+  --card-height: calc(var(--_card-h) * var(--ui-scale, 1));
+  --card-font-scale: calc(var(--_card-fs) * var(--ui-scale, 1));
+  --board-card-width: calc(var(--_board-w) * var(--ui-scale, 1));
+  --board-card-height: calc(var(--_board-h) * var(--ui-scale, 1));
 }
 
 /* ─── Base ─── */
@@ -87,6 +94,10 @@ body.game-active svg {
 
 body.game-active img {
   pointer-events: none;
+}
+
+body.game-active .version-badge {
+  display: none;
 }
 
 button,

@@ -88,7 +88,7 @@ describe('GameBoard', () => {
     expect(screen.getByText('Healing Rain')).toBeInTheDocument();
   });
 
-  it('renders blocker controls as a translucent overlay above the phase strip', () => {
+  it('renders blocker controls with Done button during declare_blockers', () => {
     useGameStore.setState({
       state: createTestGameState({
         phase: {
@@ -113,19 +113,12 @@ describe('GameBoard', () => {
       </GameDispatchProvider>,
     );
 
-    const overlay = screen.getByTestId('combat-controls');
-    expect(overlay).toHaveClass('fixed');
-    expect(overlay).toHaveStyle({
-      right: 'calc(env(safe-area-inset-right) + 7rem)',
-      bottom: 'calc(env(safe-area-inset-bottom) + 4.8rem)',
-    });
-
-    const blockerControls = screen.getByTestId('blocker-controls');
-    expect(blockerControls).toHaveClass('bg-slate-950/50', 'backdrop-blur-sm');
+    expect(screen.getByTestId('combat-controls')).toHaveClass('fixed');
+    expect(screen.getByTestId('blocker-controls')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
   });
 
-  it('renders attacker controls as a translucent overlay above the phase strip', () => {
+  it('renders attacker controls with Skip button during declare_attackers', () => {
     useGameStore.setState({
       state: createTestGameState({
         phase: {
@@ -149,11 +142,10 @@ describe('GameBoard', () => {
       </GameDispatchProvider>,
     );
 
-    const skipButton = screen.getByRole('button', { name: 'Skip' });
-    expect(skipButton.parentElement).toHaveClass('bg-slate-950/50', 'backdrop-blur-sm');
+    expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
   });
 
-  it('renders resolving controls as a translucent overlay above the phase strip', () => {
+  it('renders resolving label during combat resolution', () => {
     useGameStore.setState({
       state: createTestGameState({
         phase: {
@@ -178,7 +170,6 @@ describe('GameBoard', () => {
       </GameDispatchProvider>,
     );
 
-    const resolvingLabel = screen.getByText('⚔ Resolving combat...');
-    expect(resolvingLabel.parentElement).toHaveClass('bg-slate-950/50', 'backdrop-blur-sm');
+    expect(screen.getByText('Resolving...')).toBeInTheDocument();
   });
 });

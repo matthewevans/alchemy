@@ -1,13 +1,22 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import type { Element } from '@engine/types';
+import type { Element, Tier } from '@engine/types';
 import { ELEMENT_META } from '@engine/elements';
 import { getCardsByElement } from '@engine/cards';
+import { TIER_ORDER } from '@engine/ruleset';
 import { getElementColor, getElementIconPath } from '@components/card/cardUtils';
 import { gameButtonClass } from './buttonStyles';
 
-interface DeckSelectorProps {
+const TIER_LABELS: Record<Tier, { label: string; description: string }> = {
+  apprentice: { label: 'Apprentice', description: 'Simple rules, small decks' },
+  alchemist: { label: 'Alchemist', description: 'More keywords, bigger decks' },
+  archmage: { label: 'Archmage', description: 'Full rules, combat tricks' },
+};
+
+export interface DeckSelectorProps {
   onSelectDeck: (deckCardIds: string[]) => void;
   onBack: () => void;
+  tier?: Tier;
+  onTierChange?: (tier: Tier) => void;
 }
 
 interface DeckOption {
@@ -100,14 +109,14 @@ function ElementIcon({ element }: { element: Element }) {
   );
 }
 
-export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
+export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTierChange }: DeckSelectorProps) {
   const shouldReduceMotion = useReducedMotion();
 
   return (
     <div className="h-screen w-screen bg-slate-950 overflow-y-auto pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="relative flex items-center justify-center mb-8">
+        <div className="relative flex items-center justify-center mb-6">
           <motion.button
             className={gameButtonClass({
               tone: 'neutral',
@@ -129,6 +138,33 @@ export function DeckSelector({ onSelectDeck, onBack }: DeckSelectorProps) {
             Choose Your Deck
           </motion.h1>
         </div>
+
+        {/* Tier selector — hidden when onTierChange is not provided (e.g. multiplayer) */}
+        {onTierChange && <div className="flex justify-center gap-2 mb-6">
+          {TIER_ORDER.map((t) => {
+            const isActive = t === tier;
+            return (
+              <motion.button
+                key={t}
+                className={gameButtonClass({
+                  tone: isActive ? 'amber' : 'neutral',
+                  size: 'sm',
+                  className: `px-4 py-1.5 text-sm font-semibold ${isActive ? '' : 'opacity-60'}`,
+                })}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onTierChange(t)}
+              >
+                <div className="flex flex-col items-center">
+                  <span>{TIER_LABELS[t].label}</span>
+                  <span className={`text-[10px] font-normal ${isActive ? 'text-white/70' : 'text-white/40'}`}>
+                    {TIER_LABELS[t].description}
+                  </span>
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>}
 
         {/* Deck grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

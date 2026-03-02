@@ -121,7 +121,7 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <CardFace cardId={cardId} viewLevel="verbose" />
+        <CardFace cardId={cardId} viewLevel="normal" />
       </motion.div>
     </motion.div>
   );

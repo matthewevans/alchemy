@@ -103,10 +103,11 @@ export function AnimationOverlay() {
                     cardId={effect.cardId}
                   />
                 );
-              // combat_strike, spell_impact, death, summon — handled by particle canvas
+              // combat_strike, spell_impact, death, bounce, summon — handled by particle canvas
               case 'combat_strike':
               case 'spell_impact':
               case 'death':
+              case 'bounce':
               case 'summon':
                 return null;
               default: {
@@ -185,6 +186,11 @@ function triggerParticleEffect(
     case 'keyword': {
       const { cx, cy } = effectCenter(effect.position);
       particles.keywordFlash(cx, cy, effect.element);
+      break;
+    }
+    case 'bounce': {
+      const { cx, cy } = effectCenter(effect.position);
+      particles.summonBurst(cx, cy, effect.element);
       break;
     }
     case 'summon': {

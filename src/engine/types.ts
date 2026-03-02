@@ -179,6 +179,7 @@ export type GameEvent =
   | { type: 'CREATURE_HEALED'; permanentId: string; amount: number }
   | { type: 'PLAYER_HEALED'; player: PlayerId; amount: number }
   | { type: 'CREATURE_DIED'; permanentId: string; cardId: string }
+  | { type: 'CREATURE_BOUNCED'; permanentId: string; cardId: string }
   | { type: 'CREATURE_TAPPED'; permanentId: string }
   | { type: 'CREATURES_UNTAPPED'; permanentIds: string[] }
   | { type: 'TURN_STARTED'; player: PlayerId; turn: number }

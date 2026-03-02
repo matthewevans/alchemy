@@ -34,6 +34,9 @@ export function triggerSoundEffect(effect: AnimationEffect): void {
     case 'player_heal':
       playEffectSound('heal', { amount: effect.amount });
       break;
+    case 'bounce':
+      playEffectSound('summon', { element: effect.element });
+      break;
     case 'summon':
       playEffectSound('summon', { element: effect.element, soundId: effect.soundId });
       break;

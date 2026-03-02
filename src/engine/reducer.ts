@@ -763,7 +763,7 @@ function bounceCreature(
   ownerPs.hand = [...ownerPs.hand, cardInstance];
 
   events.push({
-    type: 'CREATURE_DIED',
+    type: 'CREATURE_BOUNCED',
     permanentId: found.permanent.permanentId,
     cardId: found.permanent.cardId,
   });

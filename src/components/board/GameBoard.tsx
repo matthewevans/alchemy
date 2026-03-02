@@ -9,12 +9,13 @@ import { EFFECT_REGISTRY } from '@engine/effects';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useScreenShake } from '@hooks/useScreenShake';
 import { PlayerInfo } from './PlayerInfo';
+import { HeroHUD } from './HeroHUD';
+import { ActionButton } from './ActionButton';
 import { CreatureSlots } from './CreatureSlots';
 import { BattleLine } from './BattleLine';
 import { BlockAssignmentLines } from './BlockAssignmentLines';
 import { PlayerHand, OpponentHand } from '@components/hand';
-import { CombatControls } from '@components/combat';
-import { PhaseStrip, TurnBanner } from '@components/phase';
+import { TurnBanner } from '@components/phase';
 import { AnimationOverlay } from '@components/animation';
 import { CardPreview } from '@components/card';
 import { gameButtonClass } from '@components/ui/buttonStyles';
@@ -37,6 +38,7 @@ export function GameBoard() {
   const opponentPlayer = getOpponent(humanPlayer);
   const inspectedCardId = useUIStore((s) => s.inspectedCardId);
   const inspectCard = useUIStore((s) => s.inspectCard);
+  const selectHandCard = useUIStore((s) => s.selectHandCard);
   const dispatch = useGameDispatch();
   const [showHints, setShowHints] = useState(() => !loadHintsDismissed());
   const [discardViewerPlayerId, setDiscardViewerPlayerId] = useState<PlayerId | null>(null);
@@ -92,17 +94,40 @@ export function GameBoard() {
       className={`game-surface h-screen flex flex-col select-none bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${shakeClass}`}
       style={{ paddingRight: 'calc(6rem + env(safe-area-inset-right))' }}
       onContextMenu={(e) => e.preventDefault()}
+      onClick={(e) => {
+        if (!(e.target as HTMLElement).closest('[data-hand-card]')) {
+          selectHandCard(null);
+        }
+      }}
     >
       {/* ═══ Opponent hand — top edge ═══ */}
       <div className="shrink-0 pt-1 z-10">
         <OpponentHand />
       </div>
 
+      {/* ═══ Opponent HeroHUD ═══ */}
+      <div className="shrink-0 z-20">
+        <HeroHUD
+          playerId={opponentPlayer}
+          isOpponent
+          isValidTarget={validTargetPlayerIds.has(opponentPlayer)}
+          onHeroClick={
+            validTargetPlayerIds.has(opponentPlayer)
+              ? () =>
+                  dispatch(
+                    {
+                      type: 'SELECT_TARGET',
+                      targetRef: { type: 'player', playerId: opponentPlayer },
+                    },
+                    humanPlayer,
+                  )
+              : undefined
+          }
+        />
+      </div>
+
       {/* ═══ Main arena: battlefield ═══ */}
-      <div
-        className="flex-1 flex min-h-0 relative z-30"
-        style={{ paddingBottom: 'calc(var(--card-height) * 0.28)' }}
-      >
+      <div className="flex-1 flex min-h-0 relative z-30">
         {/* Battlefield — takes all available width */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Opponent board */}
@@ -122,45 +147,9 @@ export function GameBoard() {
         </div>
       </div>
 
-      {/* ═══ Player hand — bottom edge ═══ */}
-      <div className="shrink-0 relative z-40">
-        <PlayerHand />
-      </div>
-
-      {/* Fixed overlays — outside battlefield stacking context so their z-index beats hand z-40 */}
-      <PhaseStrip />
-      <CombatControls />
-
-      {/* Right sidebar — full-height viewport panel */}
-      <div
-        data-testid="right-sidebar"
-        className="fixed inset-y-0 right-0 z-[35] w-24 flex flex-col justify-between bg-gradient-to-b from-slate-950 via-slate-900/90 to-slate-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
-        style={{
-          borderLeft: '1px solid rgba(148, 163, 184, 0.12)',
-          boxShadow: 'inset 4px 0 16px rgba(0, 0, 0, 0.3)',
-        }}
-      >
-        <PlayerInfo
-          playerId={opponentPlayer}
-          isOpponent
-          isValidTarget={validTargetPlayerIds.has(opponentPlayer)}
-          onHeroClick={
-            validTargetPlayerIds.has(opponentPlayer)
-              ? () =>
-                  dispatch(
-                    {
-                      type: 'SELECT_TARGET',
-                      targetRef: { type: 'player', playerId: opponentPlayer },
-                    },
-                    humanPlayer,
-                  )
-              : undefined
-          }
-          onDiscardClick={() => setDiscardViewerPlayerId(opponentPlayer)}
-        />
-        {/* Decorative divider */}
-        <div className="mx-3 shrink-0" style={{ height: 1, background: 'linear-gradient(90deg, transparent 0%, rgba(148, 163, 184, 0.2) 50%, transparent 100%)' }} />
-        <PlayerInfo
+      {/* ═══ Player HeroHUD ═══ */}
+      <div className="shrink-0 relative z-[35]">
+        <HeroHUD
           playerId={humanPlayer}
           isOpponent={false}
           isValidTarget={validTargetPlayerIds.has(humanPlayer)}
@@ -176,6 +165,47 @@ export function GameBoard() {
                   )
               : undefined
           }
+        />
+      </div>
+
+      {/* ═══ Player hand spacer — reserves space for the collapsed hand peek ═══ */}
+      <div className="shrink-0" style={{ height: 'calc(var(--card-height) * 0.5)' }} />
+
+      {/* ═══ Player hand — fixed overlay at bottom, slides up on interaction.
+           pointer-events:none on wrapper so clicks in the "empty" area above
+           the visible cards pass through to the battlefield. ═══ */}
+      <div
+        className="fixed bottom-0 left-0 z-40 pointer-events-none"
+        style={{
+          right: 'calc(6rem + env(safe-area-inset-right))',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        <PlayerHand />
+      </div>
+
+      {/* Fixed overlays */}
+      <ActionButton />
+
+      {/* Right sidebar — deck+discard only */}
+      <div
+        data-testid="right-sidebar"
+        className="fixed inset-y-0 right-0 z-[35] w-24 flex flex-col justify-between bg-gradient-to-b from-slate-950 via-slate-900/90 to-slate-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+        style={{
+          borderLeft: '1px solid rgba(148, 163, 184, 0.12)',
+          boxShadow: 'inset 4px 0 16px rgba(0, 0, 0, 0.3)',
+        }}
+      >
+        <PlayerInfo
+          playerId={opponentPlayer}
+          isOpponent
+          onDiscardClick={() => setDiscardViewerPlayerId(opponentPlayer)}
+        />
+        {/* Decorative divider */}
+        <div className="mx-3 shrink-0" style={{ height: 1, background: 'linear-gradient(90deg, transparent 0%, rgba(148, 163, 184, 0.2) 50%, transparent 100%)' }} />
+        <PlayerInfo
+          playerId={humanPlayer}
+          isOpponent={false}
           onDiscardClick={() => setDiscardViewerPlayerId(humanPlayer)}
         />
       </div>

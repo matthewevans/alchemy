@@ -1,6 +1,6 @@
 import { useState, useCallback, lazy, Suspense } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import type { PlayerId } from '@engine/types';
+import type { PlayerId, Tier } from '@engine/types';
 import { createRNG } from '@engine/prng';
 import { TIER_CONFIGS } from '@engine/ruleset';
 import { ELEMENTS } from '@engine/elements';
@@ -44,6 +44,7 @@ export function HomePage() {
   const location = useLocation();
   const locationState = location.state as HomeLocationState | null;
   const [subScreen, setSubScreen] = useState<SubScreen>(locationState?.initialScreen ?? 'title');
+  const [selectedTier, setSelectedTier] = useState<Tier>('apprentice');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initGame = useGameStore((s) => s.initGame);
@@ -94,7 +95,7 @@ export function HomePage() {
 
       const gameId = initGame(
         {
-          ruleset: TIER_CONFIGS.apprentice,
+          ruleset: TIER_CONFIGS[selectedTier],
           player1Deck: deckCardIds,
           player2Deck: aiDeck,
           rng,
@@ -104,7 +105,7 @@ export function HomePage() {
 
       navigate(`/game/${gameId}`);
     },
-    [initGame, navigate, searchParams],
+    [initGame, navigate, searchParams, selectedTier],
   );
 
   const handleMultiplayerStart = useCallback(
@@ -117,7 +118,7 @@ export function HomePage() {
 
       const gameId = initGame(
         {
-          ruleset: TIER_CONFIGS.apprentice,
+          ruleset: TIER_CONFIGS[selectedTier],
           player1Deck,
           player2Deck,
           rng,
@@ -140,7 +141,7 @@ export function HomePage() {
     case 'deck_select':
       return (
         <Suspense fallback={<HomeLoading label="Loading decks..." />}>
-          <DeckSelectorScreen onSelectDeck={handleSelectDeck} onBack={handleBack} />
+          <DeckSelectorScreen onSelectDeck={handleSelectDeck} onBack={handleBack} tier={selectedTier} onTierChange={setSelectedTier} />
         </Suspense>
       );
     case 'deck_builder':

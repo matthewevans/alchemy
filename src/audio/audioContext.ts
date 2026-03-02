@@ -53,3 +53,24 @@ export function setMusicVolume(volume: number): void {
   ensureContext();
   musicGain!.gain.linearRampToValueAtTime(volume * MUSIC_GAIN_CEILING, ctx!.currentTime + 0.1);
 }
+
+/**
+ * Warm up the AudioContext during a user gesture (required by iOS/iPadOS).
+ * Call once on the first touch/click — subsequent calls are no-ops.
+ */
+let warmedUp = false;
+export function warmUpAudio(): void {
+  if (warmedUp) return;
+  warmedUp = true;
+  ensureContext();
+}
+
+// Auto-attach a one-time listener so the AudioContext is created during a user gesture.
+// iOS/iPadOS blocks AudioContext creation outside gesture handlers.
+if (typeof window !== 'undefined') {
+  const onFirstInteraction = () => {
+    warmUpAudio();
+    window.removeEventListener('pointerdown', onFirstInteraction, true);
+  };
+  window.addEventListener('pointerdown', onFirstInteraction, true);
+}

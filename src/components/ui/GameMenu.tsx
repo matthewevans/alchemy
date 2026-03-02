@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePreferencesStore } from '@game/preferencesStore';
+import { useGameStore } from '@game/gameStore';
+import { useAnimationStore } from '@game/animationStore';
 import { useAudioStore } from '@audio/audioStore';
 import { gameButtonClass } from './buttonStyles';
 import { useDialogA11y } from '@hooks/useDialogA11y';
@@ -13,9 +15,32 @@ interface GameMenuProps {
 
 export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
   const [confirmingConcede, setConfirmingConcede] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [copied, setCopied] = useState(false);
   const dialogRef = useDialogA11y({ open: true, onClose: onResume });
   const { uiScale, setUIScale, resetUIScale } = usePreferencesStore();
   const { sfxVolume, setSfxVolume, musicVolume, setMusicVolume } = useAudioStore();
+  const gameState = useGameStore((s) => s.state);
+  const humanPlayer = useGameStore((s) => s.humanPlayer);
+  const legalActions = useGameStore((s) => s.legalActions);
+  const isAnimating = useAnimationStore((s) => s.isAnimating);
+  const animQueueLength = useAnimationStore((s) => s.queue.length);
+  const activeStepType = useAnimationStore((s) => s.activeStep?.effects[0]?.type ?? null);
+
+  const handleCopyState = async () => {
+    const snapshot = {
+      gameState,
+      humanPlayer,
+      legalActionCount: legalActions.length,
+      legalActionTypes: [...new Set(legalActions.map((a) => a.type))],
+      animation: { isAnimating, queueLength: animQueueLength, activeStepType },
+      timestamp: new Date().toISOString(),
+      version: __APP_VERSION__,
+    };
+    await navigator.clipboard.writeText(JSON.stringify(snapshot, null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <motion.div
@@ -189,6 +214,49 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
             Main Menu
           </button>
         )}
+
+        {/* Debug panel */}
+        <button
+          type="button"
+          className="w-full text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer text-center"
+          onClick={() => setShowDebug(!showDebug)}
+        >
+          {showDebug ? '▾ Debug' : '▸ Debug'}
+        </button>
+        <AnimatePresence>
+          {showDebug && gameState && (
+            <motion.div
+              className="w-full rounded-lg bg-slate-900/80 border border-slate-600/20 p-3 text-xs text-slate-400 space-y-1 font-mono"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <div>Phase: <span className="text-white/80">{gameState.phase.type}{gameState.phase.type === 'battle' ? ` → ${gameState.phase.step}` : ''}</span></div>
+              <div>Turn: <span className="text-white/80">{gameState.turn}</span> Active: <span className="text-white/80">{gameState.activePlayer}</span></div>
+              <div>Tier: <span className="text-white/80">{gameState.ruleset.tier}</span></div>
+              <div>P1: <span className="text-white/80">{gameState.players.player1.health}hp {gameState.players.player1.currentEnergy}/{gameState.players.player1.maxEnergy}e</span> hand={gameState.players.player1.hand.length} deck={gameState.players.player1.deck.length}</div>
+              <div>P2: <span className="text-white/80">{gameState.players.player2.health}hp {gameState.players.player2.currentEnergy}/{gameState.players.player2.maxEnergy}e</span> hand={gameState.players.player2.hand.length} deck={gameState.players.player2.deck.length}</div>
+              <div>Legal: <span className="text-white/80">{legalActions.length}</span> actions</div>
+              <div>Anim: <span className="text-white/80">{isAnimating ? `playing (${animQueueLength} queued${activeStepType ? `, ${activeStepType}` : ''})` : 'idle'}</span></div>
+              <button
+                type="button"
+                className={gameButtonClass({
+                  tone: 'slate',
+                  size: 'sm',
+                  className: 'w-full mt-2 text-xs',
+                })}
+                onClick={handleCopyState}
+              >
+                {copied ? '✓ Copied!' : 'Copy Game State'}
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Version info */}
+        <div className="mt-1 text-[10px] text-slate-500 text-center">
+          v{__APP_VERSION__} <span className="text-slate-600">{__BUILD_HASH__}</span>
+        </div>
       </motion.div>
     </motion.div>
   );

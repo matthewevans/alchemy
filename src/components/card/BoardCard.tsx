@@ -243,7 +243,7 @@ export function BoardCard({
 
       <CardFace
         cardId={permanent.cardId}
-        viewLevel="compact"
+        viewLevel="normal"
         stats={{
           attack: effectiveAttack,
           health: currentHealth,

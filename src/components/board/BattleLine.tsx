@@ -36,25 +36,25 @@ export function BattleLine() {
       <motion.div
         className="w-full"
         style={{
-          height: isBattlePhase ? 2 : 1,
-          background: 'linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.4), transparent)',
+          height: isBattlePhase ? 1.5 : 1,
+          background: 'linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.2), transparent)',
         }}
         animate={
           isBattlePhase && !shouldReduceMotion
             ? {
                 boxShadow: [
-                  '0 0 8px 2px rgba(239, 68, 68, 0.3), 0 0 20px 4px rgba(239, 68, 68, 0.15)',
-                  '0 0 20px 6px rgba(239, 68, 68, 0.7), 0 0 40px 10px rgba(239, 68, 68, 0.3)',
-                  '0 0 8px 2px rgba(239, 68, 68, 0.3), 0 0 20px 4px rgba(239, 68, 68, 0.15)',
+                  '0 0 6px 1px rgba(239, 68, 68, 0.2), 0 0 14px 3px rgba(239, 68, 68, 0.1)',
+                  '0 0 12px 3px rgba(239, 68, 68, 0.4), 0 0 24px 6px rgba(239, 68, 68, 0.15)',
+                  '0 0 6px 1px rgba(239, 68, 68, 0.2), 0 0 14px 3px rgba(239, 68, 68, 0.1)',
                 ],
                 background: [
-                  'linear-gradient(90deg, transparent 5%, rgba(239, 68, 68, 0.4) 30%, rgba(251, 146, 60, 0.5) 50%, rgba(239, 68, 68, 0.4) 70%, transparent 95%)',
-                  'linear-gradient(90deg, transparent 5%, rgba(239, 68, 68, 0.7) 30%, rgba(251, 146, 60, 0.8) 50%, rgba(239, 68, 68, 0.7) 70%, transparent 95%)',
-                  'linear-gradient(90deg, transparent 5%, rgba(239, 68, 68, 0.4) 30%, rgba(251, 146, 60, 0.5) 50%, rgba(239, 68, 68, 0.4) 70%, transparent 95%)',
+                  'linear-gradient(90deg, transparent 5%, rgba(239, 68, 68, 0.25) 30%, rgba(251, 146, 60, 0.3) 50%, rgba(239, 68, 68, 0.25) 70%, transparent 95%)',
+                  'linear-gradient(90deg, transparent 5%, rgba(239, 68, 68, 0.45) 30%, rgba(251, 146, 60, 0.5) 50%, rgba(239, 68, 68, 0.45) 70%, transparent 95%)',
+                  'linear-gradient(90deg, transparent 5%, rgba(239, 68, 68, 0.25) 30%, rgba(251, 146, 60, 0.3) 50%, rgba(239, 68, 68, 0.25) 70%, transparent 95%)',
                 ],
               }
             : {
-                boxShadow: '0 0 4px 1px rgba(148, 163, 184, 0.1)',
+                boxShadow: '0 0 3px 1px rgba(148, 163, 184, 0.06)',
               }
         }
         transition={

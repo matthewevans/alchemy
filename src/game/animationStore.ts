@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { CARD_REGISTRY } from '@engine/cards';
-import type { Element, GameEvent, Keyword, PlayerId } from '@engine/types';
+import type { Element, GameEvent, Keyword, Permanent, PlayerId } from '@engine/types';
 
 // ─── Types ───
 
@@ -33,6 +33,7 @@ export type AnimationEffect =
   | { type: 'player_damage'; player: PlayerId; amount: number; position: ElementPosition }
   | { type: 'player_heal'; player: PlayerId; amount: number; position: ElementPosition }
   | { type: 'death'; permanentId: string; position: ElementPosition; element?: Element; soundId?: string }
+  | { type: 'bounce'; permanentId: string; position: ElementPosition; element?: Element }
   | { type: 'spell_impact'; position: ElementPosition; element?: Element; soundId?: string }
   | { type: 'keyword'; permanentId: string; keyword: Keyword; position: ElementPosition; element?: Element }
   | { type: 'summon'; permanentId: string; position: ElementPosition; element?: Element; soundId?: string }
@@ -66,15 +67,20 @@ export function getPositions(): Map<string, ElementPosition> {
 
 // ─── Store ───
 
+/** Pre-dispatch board state preserved so dying creatures remain visible during combat animations. */
+export type BoardSnapshot = Record<PlayerId, (Permanent | null)[]>;
+
 interface AnimationStore {
   queue: AnimationStep[];
   activeStep: AnimationStep | null;
   isAnimating: boolean;
   speedMultiplier: number;
+  boardSnapshot: BoardSnapshot | null;
 
   setSpeedMultiplier: (m: number) => void;
   enqueueSteps: (steps: AnimationStep[]) => void;
   advanceStep: () => void;
+  setBoardSnapshot: (snapshot: BoardSnapshot | null) => void;
   clear: () => void;
 }
 
@@ -84,6 +90,7 @@ export const useAnimationStore = create<AnimationStore>()(
     activeStep: null,
     isAnimating: false,
     speedMultiplier: 1,
+    boardSnapshot: null,
 
     setSpeedMultiplier: (m) => set({ speedMultiplier: m }),
 
@@ -107,14 +114,18 @@ export const useAnimationStore = create<AnimationStore>()(
       const { queue } = get();
       if (queue.length > 0) {
         const [next, ...rest] = queue;
-        set({ activeStep: next, queue: rest });
+        // Clear snapshot when death step begins — AnimatePresence exit runs alongside death particles
+        const hasDeath = next.effects.some((e) => e.type === 'death');
+        set({ activeStep: next, queue: rest, boardSnapshot: hasDeath ? null : get().boardSnapshot });
       } else {
-        set({ activeStep: null, isAnimating: false });
+        set({ activeStep: null, isAnimating: false, boardSnapshot: null });
       }
     },
 
+    setBoardSnapshot: (snapshot) => set({ boardSnapshot: snapshot }),
+
     clear: () => {
-      set({ queue: [], activeStep: null, isAnimating: false });
+      set({ queue: [], activeStep: null, isAnimating: false, boardSnapshot: null });
     },
   })),
 );
@@ -181,6 +192,10 @@ function mapEventToEffect(
     case 'CREATURE_DIED': {
       const pos = positions.get(event.permanentId);
       return pos ? { type: 'death', permanentId: event.permanentId, position: pos, element: getCardElement(event.cardId) } : null;
+    }
+    case 'CREATURE_BOUNCED': {
+      const pos = positions.get(event.permanentId);
+      return pos ? { type: 'bounce', permanentId: event.permanentId, position: pos, element: getCardElement(event.cardId) } : null;
     }
     default:
       return null;

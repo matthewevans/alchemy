@@ -42,8 +42,8 @@ describe('TIER_CONFIGS', () => {
     expect(TIER_CONFIGS.archmage.allowCombatTricks).toBe(true);
   });
 
-  it('apprentice has persistent damage; higher tiers heal EOT', () => {
-    expect(TIER_CONFIGS.apprentice.damagePersists).toBe(true);
+  it('no tier has persistent damage — all heal EOT', () => {
+    expect(TIER_CONFIGS.apprentice.damagePersists).toBe(false);
     expect(TIER_CONFIGS.alchemist.damagePersists).toBe(false);
     expect(TIER_CONFIGS.archmage.damagePersists).toBe(false);
   });

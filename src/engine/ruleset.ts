@@ -31,7 +31,7 @@ export const TIER_CONFIGS: Record<Tier, RulesetConfig> = {
     maxBoardSize: 6,
     startingHealth: 20,
     startingHandSize: 4,
-    damagePersists: true,
+    damagePersists: false,
     allowCombatTricks: false,
     availableKeywords: APPRENTICE_KEYWORDS,
   },

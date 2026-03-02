@@ -17,7 +17,11 @@ export function calculateBoardCardSize({
   const perSlotWidth = (availableWidth - 8 * (safeSlotCount - 1)) / safeSlotCount;
   const maxHeight = Math.max(0, containerHeight * 0.94);
   const widthFromHeight = maxHeight / aspectRatio;
-  const width = Math.max(20, Math.min(baseWidth, perSlotWidth, widthFromHeight));
+  // No hard cap at baseWidth — let container geometry govern sizing.
+  // Cards fill available space when few, shrink naturally as more are added.
+  // Cap at 2x base to prevent extreme sizing with a single creature.
+  const maxWidth = baseWidth * 2;
+  const width = Math.max(20, Math.min(maxWidth, perSlotWidth, widthFromHeight));
   return { width, height: width * aspectRatio };
 }
 
