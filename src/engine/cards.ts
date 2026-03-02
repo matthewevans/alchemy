@@ -6,8 +6,8 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'fire_ember_sprite', name: 'Ember Sprite', type: 'creature', element: 'fire', cost: 1, attack: 1, health: 2, creatureType: 'elemental', keywords: ['swift'], tier: 'apprentice', flavor: 'Born from a candle flame and twice as restless.' },
   { id: 'fire_flame_fox', name: 'Flame Fox', type: 'creature', element: 'fire', cost: 1, attack: 2, health: 1, creatureType: 'beast', keywords: [], tier: 'apprentice', flavor: 'It leaves little embers wherever it steps.' },
   { id: 'fire_lava_hound', name: 'Lava Hound', type: 'creature', element: 'fire', cost: 2, attack: 2, health: 3, creatureType: 'beast', keywords: [], tier: 'apprentice', flavor: 'Good boy. Very hot boy.' },
-  { id: 'fire_fire_dancer', name: 'Fire Dancer', type: 'creature', element: 'fire', cost: 2, attack: 1, health: 2, creatureType: 'human', keywords: ['blast'], tier: 'apprentice', flavor: 'Every step is a spark, every spin an inferno.' },
-  { id: 'fire_magma_golem', name: 'Magma Golem', type: 'creature', element: 'fire', cost: 3, attack: 3, health: 4, creatureType: 'golem', keywords: [], tier: 'apprentice', flavor: 'Slow to anger, impossible to stop.' },
+  { id: 'fire_fire_dancer', name: 'Fire Dancer', type: 'creature', element: 'fire', cost: 2, attack: 2, health: 2, creatureType: 'human', keywords: ['blast'], tier: 'apprentice', flavor: 'Every step is a spark, every spin an inferno.' },
+  { id: 'fire_magma_golem', name: 'Magma Golem', type: 'creature', element: 'fire', cost: 3, attack: 3, health: 4, creatureType: 'golem', keywords: ['blast'], tier: 'apprentice', flavor: 'Slow to anger, impossible to stop.' },
   { id: 'fire_phoenix_chick', name: 'Phoenix Chick', type: 'creature', element: 'fire', cost: 4, attack: 3, health: 3, creatureType: 'elemental', keywords: ['swift'], tier: 'apprentice', flavor: '"It hatched again?!" —Every alchemist, eventually' },
   { id: 'fire_dragon_whelp', name: 'Dragon Whelp', type: 'creature', element: 'fire', cost: 5, attack: 5, health: 4, creatureType: 'dragon', keywords: ['blast'], tier: 'apprentice', flavor: 'Small for a dragon. Big for a problem.' },
 
@@ -27,7 +27,7 @@ export const ALL_CARDS: CardDefinition[] = [
 
   // ─── Water Spells ───
   { id: 'water_splash', name: 'Splash', type: 'spell', element: 'water', cost: 1, keywords: [], tier: 'apprentice', effectId: 'splash', flavor: 'Knowledge flows to those who seek it.' },
-  { id: 'water_tidal_wave', name: 'Tidal Wave', type: 'spell', element: 'water', cost: 4, keywords: [], tier: 'apprentice', effectId: 'tidal_wave', flavor: 'The ocean always takes back what it lends.' },
+  { id: 'water_tidal_wave', name: 'Tidal Wave', type: 'spell', element: 'water', cost: 5, keywords: [], tier: 'apprentice', effectId: 'tidal_wave', flavor: 'The ocean always takes back what it lends.' },
   { id: 'water_healing_rain', name: 'Healing Rain', type: 'spell', element: 'water', cost: 2, keywords: [], tier: 'apprentice', effectId: 'healing_rain', flavor: 'Every raindrop carries a tiny mending spell.' },
 
   // ─── Earth Creatures ───

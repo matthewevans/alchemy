@@ -4,10 +4,19 @@ import { EFFECT_REGISTRY } from './effects';
 import { getCurrentHealth, getEffectiveAttack, getOpponent } from './types';
 import { enumerateLegalActions } from './validation';
 import { computeValidTargets, reduce } from './reducer';
+import type { SeededRNG } from './prng';
+import { restoreRNG } from './prng';
+import type { AIConfig } from './aiConfig';
+import { evaluateState, softmaxSelect } from './aiEval';
 
 // ─── Core AI Function ───
 
-export function chooseAction(state: GameState, aiPlayer: PlayerId, rng: RNG): GameAction {
+export function chooseAction(
+  state: GameState,
+  aiPlayer: PlayerId,
+  rng: RNG,
+  config?: AIConfig,
+): GameAction {
   const legalActions = enumerateLegalActions(state, aiPlayer);
   if (legalActions.length === 0) {
     throw new Error('No legal actions available');
@@ -29,16 +38,56 @@ export function chooseAction(state: GameState, aiPlayer: PlayerId, rng: RNG): Ga
     case 'end':
       return { type: 'ADVANCE_PHASE' };
     case 'play':
-      return choosePlayAction(state, aiPlayer, actions);
+      return choosePlayAction(state, aiPlayer, actions, rng, config);
     case 'targeting':
-      return chooseTargetingAction(state, aiPlayer, actions);
+      return chooseTargetingAction(state, aiPlayer, actions, rng, config);
     case 'battle':
-      return chooseBattleAction(state, aiPlayer, actions);
+      return chooseBattleAction(state, aiPlayer, actions, rng, config);
     case 'discard':
       return chooseDiscardAction(state, aiPlayer, actions);
     default:
       return pickRandom(actions, rng);
   }
+}
+
+// ─── Lookahead Helpers ───
+
+function isSeededRNG(rng: RNG): rng is SeededRNG {
+  return typeof (rng as SeededRNG).getState === 'function';
+}
+
+/**
+ * Simulate an action without advancing the real RNG.
+ * Returns the resulting game state, or null if simulation fails.
+ */
+function simulateAction(
+  state: GameState,
+  action: GameAction,
+  aiPlayer: PlayerId,
+  rng: SeededRNG,
+): GameState | null {
+  try {
+    const simRng = restoreRNG(rng.getState());
+    return reduce(state, action, aiPlayer, simRng).newState;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Score a list of candidate actions and select one via softmax temperature.
+ * `scoreFn` assigns a numeric score to each candidate.
+ */
+function selectByScore(
+  candidates: GameAction[],
+  scoreFn: (action: GameAction, index: number) => number,
+  temperature: number,
+  rng: RNG,
+): GameAction {
+  if (candidates.length === 1) return candidates[0];
+  const scores = candidates.map(scoreFn);
+  const idx = softmaxSelect(scores, temperature, rng());
+  return candidates[idx];
 }
 
 // ─── Phase-Specific Strategy ───
@@ -89,6 +138,8 @@ function choosePlayAction(
   state: GameState,
   aiPlayer: PlayerId,
   actions: GameAction[],
+  rng: RNG,
+  config?: AIConfig,
 ): GameAction {
   const playActions = actions.filter((a) => a.type === 'PLAY_CARD');
 
@@ -96,51 +147,83 @@ function choosePlayAction(
     return { type: 'ADVANCE_PHASE' };
   }
 
-  // Group play actions by card, pick highest cost card
+  // Deduplicate by cardIndex — for creatures, keep leftmost slot variant
   const playerState = state.players[aiPlayer];
-  let bestAction: GameAction | null = null;
-  let bestCost = -1;
-
+  const byCard = new Map<number, GameAction>();
   for (const action of playActions) {
     if (action.type !== 'PLAY_CARD') continue;
-    const cardInstance = playerState.hand[action.cardIndex];
-    const cardDef = CARD_REGISTRY[cardInstance.cardId];
+    const cardDef = CARD_REGISTRY[playerState.hand[action.cardIndex].cardId];
 
-    // Skip targeted spells that currently have no legal targets.
+    // Skip targeted spells with no legal targets
     if (cardDef.type === 'spell' && cardDef.targetingType) {
       const validTargets = computeValidTargets(state, aiPlayer, cardDef.targetingType);
-      if (validTargets.length === 0) {
-        continue;
-      }
+      if (validTargets.length === 0) continue;
     }
 
-    if (cardDef.cost > bestCost) {
-      bestCost = cardDef.cost;
-      // For creatures, prefer the leftmost empty slot
-      if (cardDef.type === 'creature') {
-        const slotsForThisCard = playActions
-          .filter(
-            (a) => a.type === 'PLAY_CARD' && a.cardIndex === action.cardIndex,
-          )
-          .sort((a, b) => {
-            const slotA = a.type === 'PLAY_CARD' ? (a.targetSlot ?? 0) : 0;
-            const slotB = b.type === 'PLAY_CARD' ? (b.targetSlot ?? 0) : 0;
-            return slotA - slotB;
-          });
-        bestAction = slotsForThisCard[0];
-      } else {
-        bestAction = action;
-      }
+    const existing = byCard.get(action.cardIndex);
+    if (!existing) {
+      byCard.set(action.cardIndex, action);
+    } else if (
+      action.type === 'PLAY_CARD' &&
+      existing.type === 'PLAY_CARD' &&
+      (action.targetSlot ?? 0) < (existing.targetSlot ?? 0)
+    ) {
+      byCard.set(action.cardIndex, action);
     }
   }
 
-  return bestAction ?? { type: 'ADVANCE_PHASE' };
+  if (byCard.size === 0) {
+    return { type: 'ADVANCE_PHASE' };
+  }
+
+  const candidates = [...byCard.values(), { type: 'ADVANCE_PHASE' } as GameAction];
+
+  if (!config) {
+    // Legacy: pick highest cost card
+    let bestAction: GameAction = { type: 'ADVANCE_PHASE' };
+    let bestCost = -1;
+    for (const action of byCard.values()) {
+      if (action.type !== 'PLAY_CARD') continue;
+      const cost = CARD_REGISTRY[playerState.hand[action.cardIndex].cardId].cost;
+      if (cost > bestCost) {
+        bestCost = cost;
+        bestAction = action;
+      }
+    }
+    return bestAction;
+  }
+
+  // Scored selection: lookahead or heuristic
+  const useLookahead = config.playLookahead && isSeededRNG(rng);
+
+  return selectByScore(
+    candidates,
+    (action) => {
+      if (action.type === 'ADVANCE_PHASE') {
+        // Passing = current board value (baseline)
+        return useLookahead ? evaluateState(state, aiPlayer, config.weights) : 0;
+      }
+      if (useLookahead) {
+        const result = simulateAction(state, action, aiPlayer, rng as SeededRNG);
+        return result ? evaluateState(result, aiPlayer, config.weights) : 0;
+      }
+      // Heuristic: score by mana cost
+      if (action.type === 'PLAY_CARD') {
+        return CARD_REGISTRY[playerState.hand[action.cardIndex].cardId].cost;
+      }
+      return 0;
+    },
+    config.temperature,
+    rng,
+  );
 }
 
 function chooseTargetingAction(
   state: GameState,
   aiPlayer: PlayerId,
   actions: GameAction[],
+  rng: RNG,
+  config?: AIConfig,
 ): GameAction {
   if (state.phase.type !== 'targeting') {
     return actions[0];
@@ -151,6 +234,20 @@ function chooseTargetingAction(
     return actions.find((a) => a.type === 'CANCEL_TARGETING') ?? actions[0];
   }
 
+  // With combat lookahead: simulate each target, evaluate
+  if (config?.combatLookahead && isSeededRNG(rng)) {
+    return selectByScore(
+      selectActions,
+      (action) => {
+        const result = simulateAction(state, action, aiPlayer, rng as SeededRNG);
+        return result ? evaluateState(result, aiPlayer, config.weights) : 0;
+      },
+      config.temperature,
+      rng,
+    );
+  }
+
+  // Heuristic targeting (existing logic)
   const effectDef = EFFECT_REGISTRY[state.phase.effectId];
 
   if (effectDef) {
@@ -162,11 +259,26 @@ function chooseTargetingAction(
     const hasPreventAttack = steps.some((s) => s.type === 'prevent_attack');
 
     if (hasDamage || hasDestroy || hasBounce || hasPreventAttack) {
-      // Offensive: target enemy creature with highest attack, or lowest health for damage
+      if (config) {
+        // Scored heuristic: rank targets but apply temperature
+        return selectByScore(
+          selectActions,
+          (action) => scoreEnemyTarget(state, aiPlayer, action, hasDamage),
+          config.temperature,
+          rng,
+        );
+      }
       return pickBestEnemyTarget(state, aiPlayer, selectActions, hasDamage);
     }
     if (hasBuff) {
-      // Buff: target own creature with highest attack
+      if (config) {
+        return selectByScore(
+          selectActions,
+          (action) => scoreFriendlyTarget(state, aiPlayer, action),
+          config.temperature,
+          rng,
+        );
+      }
       return pickBestFriendlyTarget(state, aiPlayer, selectActions);
     }
   }
@@ -175,41 +287,62 @@ function chooseTargetingAction(
   return selectActions[0];
 }
 
+function scoreEnemyTarget(
+  state: GameState,
+  aiPlayer: PlayerId,
+  action: GameAction,
+  preferLowestHealth: boolean,
+): number {
+  if (action.type !== 'SELECT_TARGET') return 0;
+  const { targetRef } = action;
+  const opponent = getOpponent(aiPlayer);
+
+  if (targetRef.type === 'creature') {
+    const creature = state.players[opponent].board.find(
+      (p) => p !== null && p.permanentId === targetRef.permanentId,
+    );
+    if (creature) {
+      return preferLowestHealth
+        ? -getCurrentHealth(creature)
+        : getEffectiveAttack(creature);
+    }
+  } else if (targetRef.type === 'player' && targetRef.playerId === opponent) {
+    return -1; // Prefer creatures over face, but face over nothing
+  }
+  return -Infinity;
+}
+
+function scoreFriendlyTarget(
+  state: GameState,
+  aiPlayer: PlayerId,
+  action: GameAction,
+): number {
+  if (action.type !== 'SELECT_TARGET') return 0;
+  const { targetRef } = action;
+
+  if (targetRef.type === 'creature') {
+    const creature = state.players[aiPlayer].board.find(
+      (p) => p !== null && p.permanentId === targetRef.permanentId,
+    );
+    if (creature) return getEffectiveAttack(creature);
+  }
+  return 0;
+}
+
 function pickBestEnemyTarget(
   state: GameState,
   aiPlayer: PlayerId,
   selectActions: GameAction[],
   preferLowestHealth: boolean,
 ): GameAction {
-  const opponent = getOpponent(aiPlayer);
-  const opponentBoard = state.players[opponent].board;
   let bestAction = selectActions[0];
   let bestScore = -Infinity;
 
   for (const action of selectActions) {
-    if (action.type !== 'SELECT_TARGET') continue;
-    const { targetRef } = action;
-
-    if (targetRef.type === 'creature') {
-      const creature = opponentBoard.find(
-        (p) => p !== null && p.permanentId === targetRef.permanentId,
-      );
-      if (creature) {
-        // For damage spells: prefer lowest remaining health (finish it off)
-        // For removal: prefer highest attack (remove biggest threat)
-        const score = preferLowestHealth
-          ? -getCurrentHealth(creature)
-          : getEffectiveAttack(creature);
-        if (score > bestScore) {
-          bestScore = score;
-          bestAction = action;
-        }
-      }
-    } else if (targetRef.type === 'player') {
-      // If targeting players is an option and no creatures found, target opponent
-      if (targetRef.playerId === opponent && bestScore === -Infinity) {
-        bestAction = action;
-      }
+    const score = scoreEnemyTarget(state, aiPlayer, action, preferLowestHealth);
+    if (score > bestScore) {
+      bestScore = score;
+      bestAction = action;
     }
   }
 
@@ -221,25 +354,14 @@ function pickBestFriendlyTarget(
   aiPlayer: PlayerId,
   selectActions: GameAction[],
 ): GameAction {
-  const myBoard = state.players[aiPlayer].board;
   let bestAction = selectActions[0];
-  let bestAttack = -1;
+  let bestScore = -Infinity;
 
   for (const action of selectActions) {
-    if (action.type !== 'SELECT_TARGET') continue;
-    const { targetRef } = action;
-
-    if (targetRef.type === 'creature') {
-      const creature = myBoard.find(
-        (p) => p !== null && p.permanentId === targetRef.permanentId,
-      );
-      if (creature) {
-        const attack = getEffectiveAttack(creature);
-        if (attack > bestAttack) {
-          bestAttack = attack;
-          bestAction = action;
-        }
-      }
+    const score = scoreFriendlyTarget(state, aiPlayer, action);
+    if (score > bestScore) {
+      bestScore = score;
+      bestAction = action;
     }
   }
 
@@ -250,48 +372,68 @@ function chooseBattleAction(
   state: GameState,
   aiPlayer: PlayerId,
   actions: GameAction[],
+  rng: RNG,
+  config?: AIConfig,
 ): GameAction {
   if (state.phase.type !== 'battle') {
     return actions[0];
   }
 
   if (state.phase.step === 'declare_attackers') {
-    return chooseAttackerAction(state, aiPlayer, actions);
+    return chooseAttackerAction(state, aiPlayer, actions, rng, config);
   }
 
   if (state.phase.step === 'declare_blockers') {
-    return chooseBlockerAction(state, aiPlayer, actions);
+    return chooseBlockerAction(state, aiPlayer, actions, rng, config);
   }
 
   return actions[0];
 }
 
 function chooseAttackerAction(
-  _state: GameState,
-  _aiPlayer: PlayerId,
+  state: GameState,
+  aiPlayer: PlayerId,
   actions: GameAction[],
+  rng: RNG,
+  config?: AIConfig,
 ): GameAction {
-  // Declare all eligible creatures as attackers, then confirm
   const declareActions = actions.filter((a) => a.type === 'DECLARE_ATTACKER');
+  const confirmAction = actions.find((a) => a.type === 'CONFIRM_ATTACKERS');
 
-  if (declareActions.length > 0) {
-    // Declare the first available attacker
+  if (declareActions.length === 0) {
+    return confirmAction ?? actions[0];
+  }
+
+  if (!config) {
+    // Legacy: declare all, then confirm
     return declareActions[0];
   }
 
-  // All creatures declared — confirm
-  const confirmAction = actions.find((a) => a.type === 'CONFIRM_ATTACKERS');
-  if (confirmAction) {
-    return confirmAction;
-  }
+  // Scored: each creature gets an attack-value score, compete against "confirm"
+  const myBoard = state.players[aiPlayer].board;
+  const candidates = [...declareActions, ...(confirmAction ? [confirmAction] : [])];
 
-  return actions[0];
+  return selectByScore(
+    candidates,
+    (action) => {
+      if (action.type === 'CONFIRM_ATTACKERS') return 0;
+      if (action.type !== 'DECLARE_ATTACKER') return 0;
+      const creature = myBoard.find(
+        (p) => p !== null && p.permanentId === action.permanentId,
+      );
+      return creature ? getEffectiveAttack(creature) : 0;
+    },
+    config.temperature,
+    rng,
+  );
 }
 
 function chooseBlockerAction(
   state: GameState,
   aiPlayer: PlayerId,
   actions: GameAction[],
+  rng: RNG,
+  config?: AIConfig,
 ): GameAction {
   if (state.phase.type !== 'battle' || state.phase.step !== 'declare_blockers') {
     return actions[0];
@@ -308,64 +450,58 @@ function chooseBlockerAction(
   const opponent = getOpponent(aiPlayer);
   const opponentBoard = state.players[opponent].board;
 
-  // Find the best blocking assignment
-  let bestBlock: GameAction | null = null;
-  let bestBlockScore = -Infinity;
+  // Score each possible block assignment
+  const candidates = [...assignActions, ...(confirmAction ? [confirmAction] : [])];
 
-  for (const action of assignActions) {
-    if (action.type !== 'ASSIGN_BLOCKER') continue;
+  const scoreFn = (action: GameAction): number => {
+    if (action.type === 'CONFIRM_BLOCKERS') return 0;
+    if (action.type !== 'ASSIGN_BLOCKER') return 0;
+
     const blocker = myBoard.find(
       (p) => p !== null && p.permanentId === action.blockerPermanentId,
     );
     const attacker = opponentBoard.find(
       (p) => p !== null && p.permanentId === action.attackerPermanentId,
     );
-    if (!blocker || !attacker) continue;
+    if (!blocker || !attacker) return -Infinity;
 
     const blockerHealth = getCurrentHealth(blocker);
     const blockerAttack = getEffectiveAttack(blocker);
     const attackerHealth = getCurrentHealth(attacker);
     const attackerAttack = getEffectiveAttack(attacker);
 
-    // Don't bother blocking small attackers (1-2 damage) — take the hit
-    if (attackerAttack < 3) {
-      continue;
-    }
+    // Small attackers aren't worth blocking
+    if (attackerAttack < 3) return -1;
 
-    // Favorable trade: we survive AND we kill the attacker
+    // Favorable trade: we survive AND kill the attacker
     if (blockerHealth > attackerAttack && blockerAttack >= attackerHealth) {
-      const score = 100 + attackerAttack; // prefer killing bigger attackers
-      if (score > bestBlockScore) {
-        bestBlockScore = score;
-        bestBlock = action;
-      }
-      continue;
+      return 100 + attackerAttack;
     }
 
     // Even trade: both die, but attacker was big
     if (blockerAttack >= attackerHealth) {
-      const score = 50 + attackerAttack - blockerAttack;
-      if (score > bestBlockScore) {
-        bestBlockScore = score;
-        bestBlock = action;
-      }
-      continue;
+      return 50 + attackerAttack - blockerAttack;
     }
 
     // Chump block: we die but prevent big damage to hero
-    const score = attackerAttack - blockerAttack; // prefer chump blocking big attackers with small creatures
+    return attackerAttack - blockerAttack;
+  };
+
+  if (config) {
+    return selectByScore(candidates, scoreFn, config.temperature, rng);
+  }
+
+  // Legacy: pick single best block or confirm
+  let bestBlock: GameAction | null = null;
+  let bestBlockScore = -Infinity;
+  for (const action of assignActions) {
+    const score = scoreFn(action);
     if (score > bestBlockScore) {
       bestBlockScore = score;
       bestBlock = action;
     }
   }
-
-  if (bestBlock) {
-    return bestBlock;
-  }
-
-  // No good blocks — confirm
-  return confirmAction ?? actions[0];
+  return bestBlock && bestBlockScore > 0 ? bestBlock : (confirmAction ?? actions[0]);
 }
 
 function chooseDiscardAction(
@@ -407,6 +543,7 @@ export function runAITurn(
   state: GameState,
   aiPlayer: PlayerId,
   rng: RNG,
+  config?: AIConfig,
 ): { finalState: GameState; actions: GameAction[]; events: GameEvent[] } {
   const actions: GameAction[] = [];
   const events: GameEvent[] = [];
@@ -431,7 +568,7 @@ export function runAITurn(
       break;
     }
 
-    const action = chooseAction(currentState, aiPlayer, rng);
+    const action = chooseAction(currentState, aiPlayer, rng, config);
     const result = reduce(currentState, action, aiPlayer, rng);
     actions.push(action);
     events.push(...result.events);

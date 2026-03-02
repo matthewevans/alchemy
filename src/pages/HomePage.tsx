@@ -3,6 +3,8 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import type { PlayerId, Tier } from '@engine/types';
 import { createRNG } from '@engine/prng';
 import { TIER_CONFIGS } from '@engine/ruleset';
+import type { AIDifficulty } from '@engine/aiConfig';
+import { createAIConfig } from '@engine/aiConfig';
 import { ELEMENTS } from '@engine/elements';
 import { getCardsByElement } from '@engine/cards';
 import { useGameStore } from '@game/gameStore';
@@ -45,6 +47,7 @@ export function HomePage() {
   const locationState = location.state as HomeLocationState | null;
   const [subScreen, setSubScreen] = useState<SubScreen>(locationState?.initialScreen ?? 'title');
   const [selectedTier, setSelectedTier] = useState<Tier>('apprentice');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<AIDifficulty>('medium');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initGame = useGameStore((s) => s.initGame);
@@ -88,6 +91,11 @@ export function HomePage() {
       const seed = seedParam ? parseInt(seedParam, 10) : Date.now();
       console.log(`[Alchemy] Game seed: ${seed}`);
       const rng = createRNG(seed);
+
+      // Create AI config (personality is randomly chosen via seeded RNG)
+      const aiConfig = createAIConfig(selectedDifficulty, rng);
+      console.log(`[Alchemy] AI: ${aiConfig.difficulty} / ${aiConfig.personality}`);
+
       const availableElements = ELEMENTS.filter((el) => !humanElements.has(el));
       const aiElement = availableElements[Math.floor(rng() * availableElements.length)];
       const aiCards = getCardsByElement(aiElement);
@@ -101,11 +109,12 @@ export function HomePage() {
           rng,
         },
         'player1',
+        aiConfig,
       );
 
       navigate(`/game/${gameId}`);
     },
-    [initGame, navigate, searchParams, selectedTier],
+    [initGame, navigate, searchParams, selectedTier, selectedDifficulty],
   );
 
   const handleMultiplayerStart = useCallback(
@@ -141,7 +150,7 @@ export function HomePage() {
     case 'deck_select':
       return (
         <Suspense fallback={<HomeLoading label="Loading decks..." />}>
-          <DeckSelectorScreen onSelectDeck={handleSelectDeck} onBack={handleBack} tier={selectedTier} onTierChange={setSelectedTier} />
+          <DeckSelectorScreen onSelectDeck={handleSelectDeck} onBack={handleBack} tier={selectedTier} onTierChange={setSelectedTier} difficulty={selectedDifficulty} onDifficultyChange={setSelectedDifficulty} />
         </Suspense>
       );
     case 'deck_builder':

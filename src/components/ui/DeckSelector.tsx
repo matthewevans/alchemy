@@ -3,6 +3,8 @@ import type { Element, Tier } from '@engine/types';
 import { ELEMENT_META } from '@engine/elements';
 import { getCardsByElement } from '@engine/cards';
 import { TIER_ORDER } from '@engine/ruleset';
+import type { AIDifficulty } from '@engine/aiConfig';
+import { DIFFICULTY_ORDER, DIFFICULTY_LABELS } from '@engine/aiConfig';
 import { getElementColor, getElementIconPath } from '@components/card/cardUtils';
 import { gameButtonClass } from './buttonStyles';
 
@@ -17,6 +19,8 @@ export interface DeckSelectorProps {
   onBack: () => void;
   tier?: Tier;
   onTierChange?: (tier: Tier) => void;
+  difficulty?: AIDifficulty;
+  onDifficultyChange?: (difficulty: AIDifficulty) => void;
 }
 
 interface DeckOption {
@@ -109,7 +113,7 @@ function ElementIcon({ element }: { element: Element }) {
   );
 }
 
-export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTierChange }: DeckSelectorProps) {
+export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTierChange, difficulty = 'medium', onDifficultyChange }: DeckSelectorProps) {
   const shouldReduceMotion = useReducedMotion();
 
   return (
@@ -140,7 +144,7 @@ export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTier
         </div>
 
         {/* Tier selector — hidden when onTierChange is not provided (e.g. multiplayer) */}
-        {onTierChange && <div className="flex justify-center gap-2 mb-6">
+        {onTierChange && <div className="flex justify-center gap-2 mb-4">
           {TIER_ORDER.map((t) => {
             const isActive = t === tier;
             return (
@@ -161,6 +165,29 @@ export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTier
                     {TIER_LABELS[t].description}
                   </span>
                 </div>
+              </motion.button>
+            );
+          })}
+        </div>}
+
+        {/* AI Difficulty selector */}
+        {onDifficultyChange && <div className="flex justify-center gap-1.5 mb-6">
+          {DIFFICULTY_ORDER.map((d) => {
+            const isActive = d === difficulty;
+            return (
+              <motion.button
+                key={d}
+                className={gameButtonClass({
+                  tone: isActive ? 'indigo' : 'neutral',
+                  size: 'xs',
+                  className: `px-3 py-1 text-xs font-semibold ${isActive ? '' : 'opacity-50'}`,
+                })}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onDifficultyChange(d)}
+                title={DIFFICULTY_LABELS[d].description}
+              >
+                {DIFFICULTY_LABELS[d].label}
               </motion.button>
             );
           })}

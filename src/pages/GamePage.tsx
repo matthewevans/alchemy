@@ -67,11 +67,12 @@ export function GamePage() {
         setController(netController); // eslint-disable-line react-hooks/set-state-in-effect -- init-once effect
         setIsMultiplayer(true);
       } else {
-        // Single player: set up AI controller
+        // Single player: set up AI controller with difficulty config
+        const storeAiConfig = useGameStore.getState().aiConfig;
         const ai = createAIController({
           getState: () => useGameStore.getState(),
           dispatch: (action, player) => dispatchWithAnimations(action, player),
-        });
+        }, storeAiConfig ?? undefined);
         setController(ai);
       }
       return;
@@ -85,7 +86,7 @@ export function GamePage() {
         const ai = createAIController({
           getState: () => useGameStore.getState(),
           dispatch: (action, player) => dispatchWithAnimations(action, player),
-        });
+        }, saved.persisted.aiConfig);
         setController(ai);
         return;
       }

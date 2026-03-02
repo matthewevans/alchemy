@@ -1,6 +1,7 @@
 import type { GameAction, GameEvent, GameState, PlayerId } from '@engine/types';
 import { getOpponent } from '@engine/types';
 import { chooseAction } from '@engine/ai';
+import type { AIConfig } from '@engine/aiConfig';
 import type { SeededRNG } from '@engine/prng';
 import { useAnimationStore } from '@game/animationStore';
 import type { OpponentController } from './types';
@@ -21,7 +22,7 @@ interface StoreAccessor {
   dispatch: (action: GameAction, actingPlayer: PlayerId) => GameEvent[];
 }
 
-export function createAIController(store: StoreAccessor): OpponentController {
+export function createAIController(store: StoreAccessor, aiConfig?: AIConfig): OpponentController {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   const scheduleAIAction = () => {
@@ -44,7 +45,7 @@ export function createAIController(store: StoreAccessor): OpponentController {
       const aiPlayer = getOpponent(humanPlayer);
       if (!isOpponentPhase(state, aiPlayer)) return;
 
-      const action = chooseAction(state, aiPlayer, rng);
+      const action = chooseAction(state, aiPlayer, rng, aiConfig);
       store.dispatch(action, aiPlayer);
 
       // Check if AI still needs to act (multi-step turns like declaring attackers)

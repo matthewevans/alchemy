@@ -1,4 +1,5 @@
 import type { GameState, PlayerId, Tier } from '@engine/types';
+import type { AIConfig } from '@engine/aiConfig';
 import { TIER_CONFIGS } from '@engine/ruleset';
 
 // ─── Types ───
@@ -13,6 +14,7 @@ export interface PersistedGame {
   humanPlayer: PlayerId;
   player1DeckIds: string[];
   player2DeckIds: string[];
+  aiConfig?: AIConfig;
 }
 
 /** GameState with availableKeywords stripped (reconstructed on load). */
@@ -60,6 +62,7 @@ export function saveGame(
   humanPlayer: PlayerId,
   player1DeckIds: string[],
   player2DeckIds: string[],
+  aiConfig?: AIConfig,
 ): void {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { availableKeywords: _, ...rulesetWithoutKeywords } = gameState.ruleset;
@@ -72,6 +75,7 @@ export function saveGame(
     humanPlayer,
     player1DeckIds,
     player2DeckIds,
+    aiConfig,
   };
   localStorage.setItem(GAME_KEY_PREFIX + gameId, JSON.stringify(persisted));
 }
