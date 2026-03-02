@@ -126,14 +126,15 @@
 }
 
 /* ─── UI Scale (user preference via preferencesStore) ───
-   Public variable names consumed by all components; includes --ui-scale factor
-   so cards scale without affecting viewport layout. */
+   Public variable names consumed by all components; includes scale factors
+   so cards scale without affecting viewport layout.
+   --ui-scale controls hand cards; --board-scale controls battlefield cards. */
 :root {
   --card-width: calc(var(--_card-w) * var(--ui-scale, 1));
   --card-height: calc(var(--_card-h) * var(--ui-scale, 1));
   --card-font-scale: calc(var(--_card-fs) * var(--ui-scale, 1));
-  --board-card-width: calc(var(--_board-w) * var(--ui-scale, 1));
-  --board-card-height: calc(var(--_board-h) * var(--ui-scale, 1));
+  --board-card-width: calc(var(--_board-w) * var(--board-scale, 1));
+  --board-card-height: calc(var(--_board-h) * var(--board-scale, 1));
 }
 
 /* ─── Base ─── */
@@ -219,6 +220,15 @@ a,
 .shake-light { animation: shake-light 0.2s ease-out; }
 .shake-medium { animation: shake-medium 0.35s ease-out; }
 .shake-heavy { animation: shake-heavy 0.5s ease-out; }
+
+/* ─── Scrollbar Hide ─── */
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,

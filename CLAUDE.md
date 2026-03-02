@@ -11,6 +11,8 @@ pnpm lint           # ESLint
 pnpm test           # Vitest (single run)
 pnpm test:watch     # Vitest (watch mode)
 pnpm vitest run src/engine/__tests__/reducer.test.ts  # Run a single test file
+npx cypress open     # Cypress E2E tests (interactive)
+npx cypress run      # Cypress E2E tests (headless)
 ```
 
 ## Project Overview
@@ -34,7 +36,10 @@ Alchemy is a browser-based 1v1 elemental card battler (MTG-inspired, kid-friendl
 - **`elements.ts`** — Five-element color wheel (fire, water, earth, air, shadow).
 - **`prng.ts`** — Seeded RNG (`createRNG(seed)`) for deterministic gameplay and multiplayer sync.
 - **`ruleset.ts`** — `TIER_CONFIGS` for apprentice/alchemist/archmage difficulty tiers.
-- **`ai.ts`** — AI opponent decision logic.
+- **`ai.ts`** — AI opponent decision logic (action selection, lookahead).
+- **`aiConfig.ts`** — AI difficulty/personality presets (`AIDifficulty`, `AIPersonality`, `EvalWeights`).
+- **`aiEval.ts`** — Pure board-state evaluation function used by AI scoring.
+- **`starterDecks.ts`** — Pre-built deck archetypes per element and tier.
 
 ### Game State Layer (`src/game/`) — Zustand stores + dispatch orchestration
 
@@ -42,6 +47,7 @@ Alchemy is a browser-based 1v1 elemental card battler (MTG-inspired, kid-friendl
 - **`uiStore.ts`** — UI-only state: card selection, hovering, targeting mode, combat selections.
 - **`animationStore.ts`** — Animation queue. Steps block game progression until animations complete.
 - **`dispatchWithAnimations.ts`** — Wraps `gameStore.dispatch` to capture element positions and enqueue animation steps from events.
+- **`preferencesStore.ts`** — User preferences (difficulty, tier, battlefield, UI scale). localStorage-persisted Zustand store.
 - **`controllers/`** — `OpponentController` interface with `aiController` (single-player) and `networkController` (peer-to-peer WebRTC).
 
 ### Data Flow
@@ -74,6 +80,10 @@ Two routes: `/` (HomePage — menus, deck select) and `/game/:id` (GamePage — 
 
 ### Storage (`src/storage/`) — IndexedDB persistence for game state and decks. `shareCode.ts` handles deck compression/sharing.
 
+### Battlefields (`src/components/board/battlefields.ts`) — Registry of battlefield backgrounds with per-battlefield particle configs. Follows the same registry pattern as cards/effects.
+
+### PWA (`src/pwa/`) — Service worker registration, update status tracking, and version badge integration.
+
 ## Testing
 
 Tests live in `src/engine/__tests__/` and alongside components as `*.test.{ts,tsx}`. Test fixtures in `__fixtures__/testHelpers.ts` provide:
@@ -82,6 +92,8 @@ Tests live in `src/engine/__tests__/` and alongside components as `*.test.{ts,ts
 - `resetTestCounters()` — call in `beforeEach` for deterministic instance IDs
 
 Vitest uses jsdom environment. `src/test-setup.ts` polyfills `matchMedia` and `ResizeObserver`.
+
+Cypress E2E tests live in `cypress/e2e/`. Seeded games (`?seed=N`) enable deterministic replay for regression testing.
 
 ## Conventions
 

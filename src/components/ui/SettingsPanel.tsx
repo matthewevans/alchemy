@@ -121,7 +121,7 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
-  const { uiScale, setUIScale, resetUIScale, battlefieldAmbience, setBattlefieldAmbience, battlefield, setBattlefield } = usePreferencesStore();
+  const { uiScale, setUIScale, resetUIScale, boardScale, setBoardScale, resetBoardScale, battlefieldAmbience, setBattlefieldAmbience, battlefield, setBattlefield } = usePreferencesStore();
   const { sfxVolume, setSfxVolume, musicVolume, setMusicVolume } = useAudioStore();
 
   return (
@@ -138,6 +138,19 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         onChange={setUIScale}
         onReset={resetUIScale}
         showReset={uiScale !== 1}
+      />
+      <SettingsSlider
+        id="board-scale"
+        label="Board Scale"
+        value={boardScale}
+        displayValue={`${Math.round(boardScale * 100)}%`}
+        min={0.6}
+        max={1.4}
+        step={0.05}
+        accentColor="#34d399"
+        onChange={setBoardScale}
+        onReset={resetBoardScale}
+        showReset={boardScale !== 1}
       />
       <SettingsSlider
         id="sfx-volume"

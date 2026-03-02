@@ -254,9 +254,9 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     if (!container || visualSlotCount === 0) return;
 
     const rootStyles = getComputedStyle(document.documentElement);
-    const uiScale = Number.parseFloat(rootStyles.getPropertyValue('--ui-scale')) || 1;
-    const baseWidth = (Number.parseFloat(rootStyles.getPropertyValue('--_board-w')) || 82) * uiScale;
-    const baseHeight = (Number.parseFloat(rootStyles.getPropertyValue('--_board-h')) || 115) * uiScale;
+    const boardScale = Number.parseFloat(rootStyles.getPropertyValue('--board-scale')) || 1;
+    const baseWidth = (Number.parseFloat(rootStyles.getPropertyValue('--_board-w')) || 82) * boardScale;
+    const baseHeight = (Number.parseFloat(rootStyles.getPropertyValue('--_board-h')) || 115) * boardScale;
 
     const updateSize = () => {
       const rect = container.getBoundingClientRect();
@@ -313,30 +313,13 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   return (
     <div
       ref={containerRef}
-      className="flex items-center justify-center gap-2 px-3 py-1 w-full h-full min-w-0"
+      className="w-full h-full min-w-0 overflow-x-auto scrollbar-hide"
       data-board-player={playerId}
     >
-      <AnimatePresence mode="popLayout">
-        {fanned || !stacks ? (
-          creatures.map((permanent) => {
-            const props = getCardProps(permanent);
-            return (
-              <BoardCard
-                key={permanent.permanentId}
-                permanent={permanent}
-                isOpponentCard={isOpponent}
-                cardWidth={cardWidth}
-                cardHeight={cardHeight}
-                {...props}
-              />
-            );
-          })
-        ) : (
-          stacks.map((entry) => {
-            if (!entry) return null;
-
-            if (entry.permanents.length === 1) {
-              const permanent = entry.permanents[0];
+      <div className="flex items-center gap-2 px-3 py-1 h-full w-fit mx-auto">
+        <AnimatePresence mode="popLayout">
+          {fanned || !stacks ? (
+            creatures.map((permanent) => {
               const props = getCardProps(permanent);
               return (
                 <BoardCard
@@ -348,21 +331,40 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
                   {...props}
                 />
               );
-            }
+            })
+          ) : (
+            stacks.map((entry) => {
+              if (!entry) return null;
 
-            return (
-              <CardStackGroup
-                key={`stack-${entry.stateKey}`}
-                permanents={entry.permanents}
-                cardWidth={cardWidth}
-                cardHeight={cardHeight}
-                isOpponent={isOpponent}
-                getCardProps={getCardProps}
-              />
-            );
-          })
-        )}
-      </AnimatePresence>
+              if (entry.permanents.length === 1) {
+                const permanent = entry.permanents[0];
+                const props = getCardProps(permanent);
+                return (
+                  <BoardCard
+                    key={permanent.permanentId}
+                    permanent={permanent}
+                    isOpponentCard={isOpponent}
+                    cardWidth={cardWidth}
+                    cardHeight={cardHeight}
+                    {...props}
+                  />
+                );
+              }
+
+              return (
+                <CardStackGroup
+                  key={`stack-${entry.stateKey}`}
+                  permanents={entry.permanents}
+                  cardWidth={cardWidth}
+                  cardHeight={cardHeight}
+                  isOpponent={isOpponent}
+                  getCardProps={getCardProps}
+                />
+              );
+            })
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
