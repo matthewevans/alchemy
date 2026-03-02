@@ -53,12 +53,21 @@ export interface AnimationStep {
 
 const positionRegistry = new Map<string, ElementPosition>();
 
-export function registerPosition(id: string, pos: ElementPosition) {
+/** Tracks which component instance last registered each position (prevents AnimatePresence exit cleanup races). */
+const positionOwners = new Map<string, object>();
+
+export function registerPosition(id: string, pos: ElementPosition, ownerToken?: object) {
   positionRegistry.set(id, pos);
+  if (ownerToken) positionOwners.set(id, ownerToken);
 }
 
-export function unregisterPosition(id: string) {
+export function unregisterPosition(id: string, ownerToken?: object) {
+  // If a token is provided, only remove if we still own the entry.
+  // This prevents an exiting AnimatePresence component from removing
+  // a position that a newly-mounted component has already registered.
+  if (ownerToken && positionOwners.get(id) !== ownerToken) return;
   positionRegistry.delete(id);
+  positionOwners.delete(id);
 }
 
 export function getPositions(): Map<string, ElementPosition> {

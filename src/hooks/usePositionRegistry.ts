@@ -3,11 +3,15 @@ import { registerPosition, unregisterPosition } from '@game/animationStore';
 
 export function usePositionRegistry(id: string | null): React.RefObject<HTMLDivElement | null> {
   const ref = useRef<HTMLDivElement | null>(null);
+  // Unique token per mount — prevents AnimatePresence exit cleanup
+  // from removing a position that a newly-mounted sibling registered.
+  const tokenRef = useRef<object>({});
 
   useLayoutEffect(() => {
     if (!id || !ref.current) return;
 
     const element = ref.current;
+    const token = tokenRef.current;
 
     const updatePosition = () => {
       const rect = element.getBoundingClientRect();
@@ -16,7 +20,7 @@ export function usePositionRegistry(id: string | null): React.RefObject<HTMLDivE
         y: rect.y,
         width: rect.width,
         height: rect.height,
-      });
+      }, token);
     };
 
     updatePosition();
@@ -26,7 +30,7 @@ export function usePositionRegistry(id: string | null): React.RefObject<HTMLDivE
 
     return () => {
       observer.disconnect();
-      unregisterPosition(id);
+      unregisterPosition(id, token);
     };
   }, [id]);
 
