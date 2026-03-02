@@ -63,6 +63,7 @@ export function GameOverScreen({ winner, humanPlayer, onPlayAgain, onMainMenu }:
       role="dialog"
       aria-modal="true"
       aria-labelledby="game-over-title"
+      data-testid={isVictory ? 'victory-screen' : 'defeat-screen'}
       tabIndex={-1}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       style={{ background: isVictory ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.85)' }}

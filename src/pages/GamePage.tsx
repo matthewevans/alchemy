@@ -8,6 +8,7 @@ import { createAIController } from '@game/controllers/aiController';
 import { createNetworkController } from '@game/controllers/networkController';
 import type { OpponentController } from '@game/controllers/types';
 import { takePendingSession } from '@network/sessionTransfer';
+import { useAnimationStore } from '@game/animationStore';
 import { useGameLoop } from '@hooks/useGameLoop';
 import { useAmbientMusic } from '@hooks/useAmbientMusic';
 import { loadGame, clearSavedGame, saveHistoryEntry } from '@storage/persistence';
@@ -193,10 +194,26 @@ function PlayingScreenInner({
     initialFocusRef: disconnectPrimaryRef,
   });
 
+  // Defer game-over callback until all animations have finished
   useEffect(() => {
-    if (phase?.type === 'game_over') {
+    if (phase?.type !== 'game_over') return;
+
+    if (!useAnimationStore.getState().isAnimating) {
       onGameOver(phase.winner);
+      return;
     }
+
+    // Animations still playing — wait for them to finish
+    const unsub = useAnimationStore.subscribe(
+      (s) => s.isAnimating,
+      (isAnimating) => {
+        if (!isAnimating) {
+          onGameOver(phase.winner);
+          unsub();
+        }
+      },
+    );
+    return unsub;
   }, [phase, onGameOver]);
 
   return (

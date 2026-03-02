@@ -21,24 +21,14 @@ describe('Seeded game — seed 300, earth deck', () => {
     cy.waitForPhase('play');
     cy.waitForAnimations();
 
-    // Find a playable creature from the store, then click it onto the board
-    cy.window().then((win) => {
-      const store = (win as Window & { __gameStore: { getState: () => {
-        legalActions: Array<{ type: string; cardIndex?: number; targetSlot?: number }>;
-      }}}).__gameStore;
-      const { legalActions } = store.getState();
+    // Find a playable creature from the store and dispatch it directly
+    cy.getGameState().then(({ legalActions }) => {
       const playAction = legalActions.find(
         (a) => a.type === 'PLAY_CARD' && a.targetSlot !== undefined,
       );
       if (!playAction) throw new Error('No playable creature card found');
-
-      cy.clickHandCard(playAction.cardIndex!);
-      // Wait for React re-render (green "+" slots prove selection registered)
-      cy.get(`[data-slot-index="${playAction.targetSlot}"][data-board-player="player1"]`)
-        .should('contain.text', '+');
-      cy.clickBoardSlot(playAction.targetSlot!);
+      cy.dispatchPlayCard(playAction.cardIndex!, playAction.targetSlot!);
     });
-    cy.waitForAnimations();
 
     // Should have 1 creature on board
     cy.assertBoardCount('player1', 1);

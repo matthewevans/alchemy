@@ -42,6 +42,34 @@ describe('groupEventsIntoSteps (combat)', () => {
   });
 });
 
+describe('groupEventsIntoSteps (auto-skipped blockers)', () => {
+  it('creates separate staggered steps per attacker when blockers are auto-skipped', () => {
+    const attacker1 = 'perm-a1';
+    const attacker2 = 'perm-a2';
+    const positions = new Map([
+      [attacker1, pos(100, 300)],
+      [attacker2, pos(200, 300)],
+      ['player:player2', { x: 400, y: 50, width: 56, height: 56 }],
+    ]);
+
+    const events: GameEvent[] = [
+      { type: 'CREATURE_TAPPED', permanentId: attacker1 },
+      { type: 'CREATURE_TAPPED', permanentId: attacker2 },
+      { type: 'ATTACKERS_DECLARED', attackerIds: [attacker1, attacker2] },
+      { type: 'PLAYER_DAMAGED', player: 'player2', amount: 3, source: attacker1 },
+      { type: 'PLAYER_DAMAGED', player: 'player2', amount: 2, source: attacker2 },
+    ];
+
+    const steps = groupEventsIntoSteps(events, positions);
+
+    // Should have 2 separate combat exchange steps (one per attacker), NOT a single step
+    const exchangeSteps = steps.filter((s) =>
+      s.effects.some((e) => e.type === 'combat_strike' || e.type === 'player_damage'),
+    );
+    expect(exchangeSteps).toHaveLength(2);
+  });
+});
+
 describe('groupEventsIntoSteps (spells)', () => {
   it('produces spell_impact effects at target positions', () => {
     const targetId = 'perm-target';

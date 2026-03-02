@@ -1247,35 +1247,42 @@ function resolveCombat(
   let currentState = state;
   const defender = getOpponent(state.activePlayer);
 
-  // Invert blockers: attacker → blocker
-  const attackerToBlocker: Record<string, string> = {};
+  // Invert blockers: attacker → blockerIds[] (supports multiple blockers per attacker)
+  const attackerToBlockers: Record<string, string[]> = {};
   for (const [blockerId, attackerId] of Object.entries(blockers)) {
-    attackerToBlocker[attackerId] = blockerId;
+    if (!attackerToBlockers[attackerId]) attackerToBlockers[attackerId] = [];
+    attackerToBlockers[attackerId].push(blockerId);
   }
 
   for (const attackerId of attackers) {
-    const blockerId = attackerToBlocker[attackerId];
+    const blockerIds = attackerToBlockers[attackerId];
 
     // Re-find the attacker (may have died from previous combat)
     const attackerFound = findPermanent(currentState, attackerId);
     if (!attackerFound) continue;
     const attacker = attackerFound.permanent;
 
-    if (blockerId) {
-      // Blocked combat
-      const blockerFound = findPermanent(currentState, blockerId);
-      if (!blockerFound) {
-        // Blocker died — attacker goes unblocked
+    if (blockerIds && blockerIds.length > 0) {
+      // Filter out blockers that may have died from prior combat
+      const livingBlockerIds = blockerIds.filter((id) => findPermanent(currentState, id));
+
+      if (livingBlockerIds.length === 0) {
+        // All blockers died — attacker goes unblocked
         const result = resolveUnblockedAttack(currentState, attacker, defender);
         currentState = result.newState;
         events.push(...result.events);
-        continue;
+      } else if (livingBlockerIds.length === 1) {
+        // Single blocker — use existing resolution
+        const blocker = findPermanent(currentState, livingBlockerIds[0])!.permanent;
+        const result = resolveBlockedCombat(currentState, attacker, blocker);
+        currentState = result.newState;
+        events.push(...result.events);
+      } else {
+        // Multiple blockers
+        const result = resolveMultiBlockCombat(currentState, attacker, livingBlockerIds);
+        currentState = result.newState;
+        events.push(...result.events);
       }
-      const blocker = blockerFound.permanent;
-
-      const result = resolveBlockedCombat(currentState, attacker, blocker);
-      currentState = result.newState;
-      events.push(...result.events);
     } else {
       // Unblocked
       const result = resolveUnblockedAttack(currentState, attacker, defender);
@@ -1285,6 +1292,168 @@ function resolveCombat(
 
     if (currentState.phase.type === 'game_over') break;
   }
+
+  return { newState: currentState, events };
+}
+
+/**
+ * Resolve combat where multiple blockers are assigned to a single attacker.
+ * Attacker distributes its damage among blockers in order (first takes up to lethal, overflow to next).
+ * All blockers simultaneously deal their damage back to the attacker.
+ */
+function resolveMultiBlockCombat(
+  state: GameState,
+  attacker: Permanent,
+  blockerIds: string[],
+): EffectResult {
+  const events: GameEvent[] = [];
+  const players = clonePlayers(state.players);
+
+  let attackDamage = getEffectiveAttack(attacker);
+  if (hasKeyword(attacker, 'fury')) attackDamage *= 2;
+
+  // Distribute attacker damage among blockers in order
+  let remainingDmg = attackDamage;
+  for (const blockerId of blockerIds) {
+    const bf = findPermanent({ ...state, players }, blockerId);
+    if (!bf || remainingDmg <= 0) continue;
+    const blocker = bf.permanent;
+
+    // With deathtouch, 1 damage is enough to kill any blocker
+    const blockerHP = getCurrentHealth(blocker);
+    let dmgToAssign: number;
+    if (hasKeyword(attacker, 'deathtouch')) {
+      dmgToAssign = Math.min(remainingDmg, 1);
+    } else {
+      dmgToAssign = Math.min(remainingDmg, blockerHP);
+    }
+
+    // Blocker armor reduces incoming damage
+    if (hasKeyword(blocker, 'armor') && !blocker.armorUsedThisTurn && dmgToAssign > 0) {
+      dmgToAssign = Math.max(0, dmgToAssign - 1);
+      players[bf.owner].board[bf.slotIndex] = {
+        ...blocker,
+        damage: blocker.damage + dmgToAssign,
+        armorUsedThisTurn: true,
+      };
+    } else {
+      players[bf.owner].board[bf.slotIndex] = {
+        ...blocker,
+        damage: blocker.damage + dmgToAssign,
+      };
+    }
+
+    remainingDmg -= dmgToAssign;
+    events.push({
+      type: 'DAMAGE_DEALT',
+      targetId: blocker.permanentId,
+      amount: dmgToAssign,
+      source: attacker.permanentId,
+    });
+  }
+
+  // All blockers deal damage to attacker simultaneously
+  let totalBlockerDmg = 0;
+  let attackerArmorUsed = false;
+  for (const blockerId of blockerIds) {
+    const bf = findPermanent({ ...state, players }, blockerId);
+    if (!bf) continue;
+    const blocker = bf.permanent;
+
+    let blockDmg = getEffectiveAttack(blocker);
+    if (hasKeyword(blocker, 'fury')) blockDmg *= 2;
+
+    // Attacker armor reduces the first source of blocker damage (once)
+    if (hasKeyword(attacker, 'armor') && !attacker.armorUsedThisTurn && !attackerArmorUsed && blockDmg > 0) {
+      blockDmg = Math.max(0, blockDmg - 1);
+      attackerArmorUsed = true;
+    }
+
+    totalBlockerDmg += blockDmg;
+    events.push({
+      type: 'DAMAGE_DEALT',
+      targetId: attacker.permanentId,
+      amount: blockDmg,
+      source: blocker.permanentId,
+    });
+  }
+
+  // Apply total blocker damage to attacker
+  const af = findPermanent({ ...state, players }, attacker.permanentId);
+  if (af) {
+    players[af.owner].board[af.slotIndex] = {
+      ...attacker,
+      damage: attacker.damage + totalBlockerDmg,
+      armorUsedThisTurn: attacker.armorUsedThisTurn || attackerArmorUsed,
+    };
+  }
+
+  let currentState: GameState = { ...state, players };
+
+  // Deathtouch checks
+  const playersAfterDT = clonePlayers(currentState.players);
+  if (hasKeyword(attacker, 'deathtouch') && attackDamage > 0) {
+    for (const blockerId of blockerIds) {
+      const bf = findPermanent(currentState, blockerId);
+      if (bf) {
+        const dtPerm = playersAfterDT[bf.owner].board[bf.slotIndex];
+        if (dtPerm) {
+          playersAfterDT[bf.owner].board[bf.slotIndex] = {
+            ...dtPerm,
+            damage: dtPerm.health + dtPerm.temporaryHealthBonus,
+          };
+        }
+      }
+    }
+  }
+  for (const blockerId of blockerIds) {
+    const bf = findPermanent(currentState, blockerId);
+    if (!bf) continue;
+    const blocker = bf.permanent;
+    if (hasKeyword(blocker, 'deathtouch') && getEffectiveAttack(blocker) > 0) {
+      const attackerRef = findPermanent(currentState, attacker.permanentId);
+      if (attackerRef) {
+        const dtPerm = playersAfterDT[attackerRef.owner].board[attackerRef.slotIndex];
+        if (dtPerm) {
+          playersAfterDT[attackerRef.owner].board[attackerRef.slotIndex] = {
+            ...dtPerm,
+            damage: dtPerm.health + dtPerm.temporaryHealthBonus,
+          };
+        }
+      }
+      break; // One deathtouch blocker is enough to kill the attacker
+    }
+  }
+  currentState = { ...currentState, players: playersAfterDT };
+
+  // Lifesteal checks
+  if (hasKeyword(attacker, 'lifesteal') && attackDamage > 0) {
+    const lifestealPlayers = clonePlayers(currentState.players);
+    const totalDealt = attackDamage - remainingDmg;
+    lifestealPlayers[attacker.ownerId].health += totalDealt;
+    events.push({ type: 'PLAYER_HEALED', player: attacker.ownerId, amount: totalDealt });
+    currentState = { ...currentState, players: lifestealPlayers };
+  }
+  for (const blockerId of blockerIds) {
+    const bf = findPermanent(state, blockerId);
+    if (!bf) continue;
+    const blocker = bf.permanent;
+    if (hasKeyword(blocker, 'lifesteal')) {
+      let blockDmg = getEffectiveAttack(blocker);
+      if (hasKeyword(blocker, 'fury')) blockDmg *= 2;
+      if (blockDmg > 0) {
+        const lifestealPlayers = clonePlayers(currentState.players);
+        lifestealPlayers[blocker.ownerId].health += blockDmg;
+        events.push({ type: 'PLAYER_HEALED', player: blocker.ownerId, amount: blockDmg });
+        currentState = { ...currentState, players: lifestealPlayers };
+      }
+    }
+  }
+
+  // Check deaths
+  const deathResult = checkAndRemoveDeadCreatures(currentState);
+  events.push(...deathResult.events);
+  currentState = deathResult.newState;
 
   return { newState: currentState, events };
 }

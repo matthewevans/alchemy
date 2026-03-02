@@ -1081,6 +1081,137 @@ describe('Combat - double block', () => {
   });
 });
 
+// ─── Combat: Multi-Block (multiple blockers on one attacker) ───
+
+describe('Combat - multi-block', () => {
+  it('two blockers on one attacker both deal damage', () => {
+    // Attacker: 4/6. Blocker1: 2/3, Blocker2: 1/2
+    const attacker = makePermanent('fire_magma_golem', 'player1', {
+      attack: 4,
+      health: 6,
+    });
+    const blocker1 = makePermanent('earth_treant_sapling', 'player2', {
+      attack: 2,
+      health: 3,
+    });
+    const blocker2 = makePermanent('earth_pebble_pup', 'player2', {
+      attack: 1,
+      health: 2,
+    });
+
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_blockers',
+        confirmedAttackers: [attacker.permanentId],
+        tentativeBlockers: {
+          [blocker1.permanentId]: attacker.permanentId,
+          [blocker2.permanentId]: attacker.permanentId,
+        },
+      },
+      player1: {
+        board: [{ ...attacker, isTapped: true }, null, null, null, null],
+      },
+      player2: {
+        board: [blocker1, blocker2, null, null, null],
+        health: 20,
+      },
+    });
+
+    const { newState, events } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+
+    // No face damage — attacker was fully blocked
+    expect(newState.players.player2.health).toBe(20);
+
+    // Attacker takes 2+1=3 damage from both blockers → 6-3=3 HP remaining
+    const attackerAfter = newState.players.player1.board.find(
+      (p) => p?.permanentId === attacker.permanentId,
+    );
+    expect(attackerAfter).toBeTruthy();
+    expect(attackerAfter!.damage).toBe(3);
+
+    // Blocker1 takes up to 3 (its HP) from attacker's 4 damage → dies
+    // Blocker2 takes remaining 1 → 2-1=1 HP remaining
+    const blocker1Alive = newState.players.player2.board.some(
+      (p) => p?.permanentId === blocker1.permanentId,
+    );
+    expect(blocker1Alive).toBe(false); // died
+
+    const blocker2After = newState.players.player2.board.find(
+      (p) => p?.permanentId === blocker2.permanentId,
+    );
+    expect(blocker2After).toBeTruthy();
+    expect(blocker2After!.damage).toBe(1);
+
+    // Both blockers' DAMAGE_DEALT events have different sources
+    const dmgToAttacker = events.filter(
+      (e) => e.type === 'DAMAGE_DEALT' && e.targetId === attacker.permanentId,
+    );
+    expect(dmgToAttacker).toHaveLength(2);
+  });
+
+  it('multi-block with no excess damage does not deal face damage', () => {
+    // Attacker: 2/2. Blocker1: 1/3, Blocker2: 1/3
+    const attacker = makePermanent('fire_flame_fox', 'player1', {
+      attack: 2,
+      health: 2,
+    });
+    const blocker1 = makePermanent('earth_treant_sapling', 'player2', {
+      attack: 1,
+      health: 3,
+    });
+    const blocker2 = makePermanent('earth_pebble_pup', 'player2', {
+      attack: 1,
+      health: 3,
+    });
+
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_blockers',
+        confirmedAttackers: [attacker.permanentId],
+        tentativeBlockers: {
+          [blocker1.permanentId]: attacker.permanentId,
+          [blocker2.permanentId]: attacker.permanentId,
+        },
+      },
+      player1: {
+        board: [{ ...attacker, isTapped: true }, null, null, null, null],
+      },
+      player2: {
+        board: [blocker1, blocker2, null, null, null],
+        health: 20,
+      },
+    });
+
+    const { newState } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+
+    expect(newState.players.player2.health).toBe(20);
+
+    // Attacker takes 1+1=2 total blocker damage → 2-2=0 → dies
+    const attackerAfter = newState.players.player1.board.find(
+      (p) => p?.permanentId === attacker.permanentId,
+    );
+    expect(attackerAfter).toBeUndefined();
+
+    // Blocker1 takes 2 damage (all of attacker's damage since 2 < blocker1's 3 HP)
+    const b1After = newState.players.player2.board.find(
+      (p) => p?.permanentId === blocker1.permanentId,
+    );
+    expect(b1After).toBeTruthy();
+    expect(b1After!.damage).toBe(2);
+
+    // Blocker2 takes 0 damage (no overflow)
+    const b2After = newState.players.player2.board.find(
+      (p) => p?.permanentId === blocker2.permanentId,
+    );
+    expect(b2After).toBeTruthy();
+    expect(b2After!.damage).toBe(0);
+  });
+});
+
 // ─── Combat: Creature Dies ───
 
 describe('Combat - creature dies', () => {

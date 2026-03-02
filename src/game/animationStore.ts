@@ -230,13 +230,15 @@ export function groupEventsIntoSteps(
   cardIdMap?: Map<string, string>,
 ): AnimationStep[] {
   const hasBlockersConfirmed = events.some((e) => e.type === 'BLOCKERS_DECLARED');
+  const hasAttackersDeclared = events.some((e) => e.type === 'ATTACKERS_DECLARED');
   const hasSpellResolved = events.some((e) => e.type === 'SPELL_RESOLVED');
   const hasKeywordTriggered = events.some((e) => e.type === 'KEYWORD_TRIGGERED');
   const hasCreatureEntered = events.some((e) => e.type === 'CREATURE_ENTERED');
   const hasPlayerDamaged = events.some((e) => e.type === 'PLAYER_DAMAGED');
   const hasDamageDealt = events.some((e) => e.type === 'DAMAGE_DEALT');
 
-  if (hasBlockersConfirmed) return groupCombatEvents(events, positions, cardIdMap);
+  // Route both blocker-confirmed AND auto-skipped-blocker combat through per-attacker grouping
+  if (hasBlockersConfirmed || hasAttackersDeclared) return groupCombatEvents(events, positions, cardIdMap);
   if (hasSpellResolved) return groupSpellEvents(events, positions);
   if (hasCreatureEntered && hasKeywordTriggered) return groupETBEvents(events, positions);
   if (hasCreatureEntered) return groupSummonEvents(events, positions);
