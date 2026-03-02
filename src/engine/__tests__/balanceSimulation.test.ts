@@ -5,8 +5,8 @@ import { chooseAction } from '../ai';
 import { createRNG } from '../prng';
 import { reduce } from '../reducer';
 import { TIER_CONFIGS } from '../ruleset';
-import { getOpponent } from '../types';
-import type { GameState, PlayerId } from '../types';
+import { getActingPlayer } from '../types';
+import type { PlayerId } from '../types';
 
 const ELEMENTS = ['fire', 'water', 'earth', 'air', 'shadow'] as const;
 type Element = (typeof ELEMENTS)[number];
@@ -40,29 +40,6 @@ function buildMonoDeck(element: Element): string[] {
   return getCardsByElement(element).slice(0, 10).flatMap((card) => [card.id, card.id]);
 }
 
-function getActingPlayer(state: GameState): PlayerId {
-  const { phase } = state;
-
-  switch (phase.type) {
-    case 'mulligan':
-      return phase.player;
-    case 'discard':
-      return phase.player;
-    case 'targeting':
-      return phase.casterId;
-    case 'battle':
-      if (phase.step === 'declare_attackers') {
-        return state.activePlayer;
-      }
-      if (phase.step === 'declare_blockers') {
-        return getOpponent(state.activePlayer);
-      }
-      return state.activePlayer;
-    default:
-      return state.activePlayer;
-  }
-}
-
 function runGame(seed: number, p1: Element, p2: Element, startingPlayer: PlayerId): { winner: PlayerId; turns: number } {
   const rng = createRNG(seed);
   let state = createInitialGameState({
@@ -78,7 +55,7 @@ function runGame(seed: number, p1: Element, p2: Element, startingPlayer: PlayerI
       return { winner: state.phase.winner, turns: state.turn };
     }
 
-    const actingPlayer = getActingPlayer(state);
+    const actingPlayer = getActingPlayer(state)!;
     const action = chooseAction(state, actingPlayer, rng);
     const result = reduce(state, action, actingPlayer, rng);
     state = result.newState;

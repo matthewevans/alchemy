@@ -7,8 +7,8 @@ import { reduce } from '../reducer';
 import { createInitialGameState } from '../gameInit';
 import { TIER_CONFIGS } from '../ruleset';
 import { getCardsByElement } from '../cards';
-import { getOpponent } from '../types';
-import type { GameState, PlayerId } from '../types';
+import { getActingPlayer } from '../types';
+import type { PlayerId } from '../types';
 
 const RULESET = TIER_CONFIGS.apprentice;
 const MAX_STEPS = 500;
@@ -17,25 +17,6 @@ function makeDeckIds(element: string): string[] {
   return getCardsByElement(element as 'fire' | 'water' | 'earth' | 'air' | 'shadow')
     .slice(0, 10)
     .map((c) => c.id);
-}
-
-function getActingPlayer(state: GameState): PlayerId | null {
-  const { phase } = state;
-  switch (phase.type) {
-    case 'mulligan':
-      return phase.player;
-    case 'discard':
-      return phase.player;
-    case 'targeting':
-      return phase.casterId;
-    case 'battle':
-      if (phase.step === 'declare_blockers') return getOpponent(state.activePlayer);
-      return state.activePlayer;
-    case 'game_over':
-      return null;
-    default:
-      return state.activePlayer;
-  }
 }
 
 function runFullGame(

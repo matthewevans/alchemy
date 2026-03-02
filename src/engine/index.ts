@@ -19,7 +19,7 @@ export type {
   ReducerResult,
   ValidationResult,
 } from './types';
-export { getOpponent, getCurrentHealth, getEffectiveAttack } from './types';
+export { getOpponent, getCurrentHealth, getEffectiveAttack, getActingPlayer } from './types';
 
 // Registries
 export { CARD_REGISTRY, ALL_CARDS, getCardsByElement, getCardsByTier } from './cards';
@@ -40,6 +40,10 @@ export type { GameInitConfig } from './gameInit';
 
 // AI
 export { chooseAction, runAITurn } from './ai';
+
+// Simulation
+export { simulateGame, simulateMatchup } from './simulate';
+export type { SimulationConfig, GameResult, MatchupStats } from './simulate';
 
 // Utilities
 export { createRNG, restoreRNG, shuffle } from './prng';

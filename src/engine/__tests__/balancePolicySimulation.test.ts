@@ -7,7 +7,7 @@ import { createRNG } from '../prng';
 import { computeValidTargets, reduce } from '../reducer';
 import { TIER_CONFIGS } from '../ruleset';
 import { enumerateLegalActions } from '../validation';
-import { getOpponent } from '../types';
+import { getActingPlayer } from '../types';
 import type { GameAction, GameState, PlayerId } from '../types';
 
 const GAMES_PER_CELL = 20;
@@ -43,29 +43,6 @@ interface PolicyBalanceSummary {
   deckWinRate: Record<AlliedDeckId, number>;
   policyWinRate: Record<Policy, number>;
   firstPlayerWinRate: number;
-}
-
-function getActingPlayer(state: GameState): PlayerId {
-  const { phase } = state;
-
-  switch (phase.type) {
-    case 'mulligan':
-      return phase.player;
-    case 'discard':
-      return phase.player;
-    case 'targeting':
-      return phase.casterId;
-    case 'battle':
-      if (phase.step === 'declare_attackers') {
-        return state.activePlayer;
-      }
-      if (phase.step === 'declare_blockers') {
-        return getOpponent(state.activePlayer);
-      }
-      return state.activePlayer;
-    default:
-      return state.activePlayer;
-  }
 }
 
 function buildAlliedDecks(): DeckConfig[] {
@@ -213,7 +190,7 @@ function runGame(
       return { winner: state.phase.winner, turns: state.turn };
     }
 
-    const actingPlayer = getActingPlayer(state);
+    const actingPlayer = getActingPlayer(state)!;
     const policy = actingPlayer === 'player1' ? policy1 : policy2;
     const action = choosePolicyAction(state, actingPlayer, policy, rng);
     const result = reduce(state, action, actingPlayer, rng);

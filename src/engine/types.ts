@@ -243,3 +243,23 @@ export function getCurrentHealth(permanent: Permanent): number {
 export function getEffectiveAttack(permanent: Permanent): number {
   return permanent.attack + permanent.temporaryAttackBonus;
 }
+
+/** Returns the player who should act in the current phase, or null if no one acts (game over). */
+export function getActingPlayer(state: GameState): PlayerId | null {
+  const { phase } = state;
+  switch (phase.type) {
+    case 'mulligan':
+      return phase.player;
+    case 'discard':
+      return phase.player;
+    case 'targeting':
+      return phase.casterId;
+    case 'battle':
+      if (phase.step === 'declare_blockers') return getOpponent(state.activePlayer);
+      return state.activePlayer;
+    case 'game_over':
+      return null;
+    default:
+      return state.activePlayer;
+  }
+}

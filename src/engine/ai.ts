@@ -1,7 +1,7 @@
 import type { GameAction, GameEvent, GameState, PlayerId, RNG } from './types';
 import { CARD_REGISTRY } from './cards';
 import { EFFECT_REGISTRY } from './effects';
-import { getCurrentHealth, getEffectiveAttack, getOpponent } from './types';
+import { getActingPlayer, getCurrentHealth, getEffectiveAttack, getOpponent } from './types';
 import { enumerateLegalActions } from './validation';
 import { computeValidTargets, reduce } from './reducer';
 import type { SeededRNG } from './prng';
@@ -569,7 +569,7 @@ export function runAITurn(
 
     // Check if it's still our turn to act. During mulligan/discard the acting player
     // is determined by the phase, not activePlayer.
-    if (!isAIActing(currentState, aiPlayer)) {
+    if (getActingPlayer(currentState) !== aiPlayer) {
       break;
     }
 
@@ -583,28 +583,3 @@ export function runAITurn(
   return { finalState: currentState, actions, events };
 }
 
-function isAIActing(state: GameState, aiPlayer: PlayerId): boolean {
-  const { phase } = state;
-
-  switch (phase.type) {
-    case 'mulligan':
-      return phase.player === aiPlayer;
-    case 'discard':
-      return phase.player === aiPlayer;
-    case 'targeting':
-      return phase.casterId === aiPlayer;
-    case 'battle':
-      if (phase.step === 'declare_attackers') {
-        return state.activePlayer === aiPlayer;
-      }
-      if (phase.step === 'declare_blockers') {
-        return getOpponent(state.activePlayer) === aiPlayer;
-      }
-      return false;
-    case 'game_over':
-      return false;
-    default:
-      // draw, energy, play, end — active player acts
-      return state.activePlayer === aiPlayer;
-  }
-}
