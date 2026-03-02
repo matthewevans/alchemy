@@ -4,16 +4,23 @@ import { useGameStore } from '@game/gameStore';
 import { loadGame, loadActiveGameId } from '@storage/persistence';
 import { checkForServiceWorkerUpdate } from './pwa/registerServiceWorker';
 import { consumeRecentAutoUpdateMarker } from './pwa/updateMarker';
+import { useUpdateStatus } from './pwa/updateStatus';
 import { router } from './router';
 import './index.css';
 
 const UPDATED_LABEL_MS = 4500;
 const didAutoUpdate = consumeRecentAutoUpdateMarker();
 
+const UPDATE_STATUS_LABELS: Record<string, string> = {
+  checking: 'checking…',
+  downloading: 'downloading…',
+  activating: 'updating…',
+};
+
 function App() {
   const restoreGame = useGameStore((s) => s.restoreGame);
   const [showUpdatedLabel, setShowUpdatedLabel] = useState(didAutoUpdate);
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const updateStatus = useUpdateStatus();
   const didRestore = useRef(false);
 
   // On cold start only, restore an in-progress game from localStorage
@@ -45,15 +52,8 @@ function App() {
     };
   }, [showUpdatedLabel]);
 
-  const handleManualUpdateCheck = () => {
-    const didCheck = checkForServiceWorkerUpdate();
-    if (!didCheck) return;
-
-    setIsCheckingUpdate(true);
-    window.setTimeout(() => {
-      setIsCheckingUpdate(false);
-    }, 900);
-  };
+  const statusLabel = UPDATE_STATUS_LABELS[updateStatus];
+  const isActive = updateStatus !== 'idle';
 
   return (
     <>
@@ -64,14 +64,15 @@ function App() {
           <span className="text-slate-400">{__BUILD_HASH__}</span>
           <button
             type="button"
-            onClick={handleManualUpdateCheck}
-            className={`ml-1 text-slate-300/90 hover:text-white transition-colors cursor-pointer ${isCheckingUpdate ? 'animate-spin' : ''}`}
+            onClick={checkForServiceWorkerUpdate}
+            className={`ml-1 text-slate-300/90 hover:text-white transition-colors cursor-pointer ${isActive ? 'animate-spin' : ''}`}
             aria-label="Check for updates"
             title="Check for updates"
           >
             ↻
           </button>
-          {showUpdatedLabel && <span className="ml-1 text-emerald-300">updated</span>}
+          {statusLabel && <span className="ml-1 text-cyan-300">{statusLabel}</span>}
+          {showUpdatedLabel && !statusLabel && <span className="ml-1 text-emerald-300">updated</span>}
         </div>
       </div>
     </>

@@ -1,5 +1,6 @@
 import { registerSW } from 'virtual:pwa-register';
 import { markPendingAutoUpdate } from './updateMarker';
+import { setUpdateStatus } from './updateStatus';
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
 
@@ -11,6 +12,7 @@ export function checkForServiceWorkerUpdate(): boolean {
     return false;
   }
 
+  setUpdateStatus('checking');
   manualCheckForUpdate();
   return true;
 }
@@ -32,11 +34,25 @@ export function registerServiceWorker() {
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
+      setUpdateStatus('activating');
       markPendingAutoUpdate();
       void updateSW(true);
     },
     onRegisteredSW(_swUrl, swRegistration) {
       if (!swRegistration) return;
+
+      // Surface the download phase — fires when a new SW starts installing
+      swRegistration.addEventListener('updatefound', () => {
+        const newWorker = swRegistration.installing;
+        if (!newWorker) return;
+        setUpdateStatus('downloading');
+
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed') {
+            setUpdateStatus('activating');
+          }
+        });
+      });
 
       const checkForUpdate = () => {
         void swRegistration.update();
