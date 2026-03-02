@@ -18,7 +18,8 @@ import { BlockAssignmentLines } from './BlockAssignmentLines';
 import { PlayerHand, OpponentHand } from '@components/hand';
 import { TurnBanner } from '@components/phase';
 import { AnimationOverlay } from '@components/animation';
-import { CardPreview, CardFace } from '@components/card';
+import { CardPreview } from '@components/card';
+import { CardReveal } from '@components/animation/CardReveal';
 import { gameButtonClass } from '@components/ui/buttonStyles';
 
 const HINTS_DISMISSED_KEY = 'alchemy:gameplay-hints-dismissed';
@@ -265,31 +266,12 @@ export function GameBoard() {
               }}
               transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <div className="flex items-center gap-3">
-                {/* Inline card thumbnail */}
-                {phase?.type === 'targeting' && (
-                  <div
-                    className="shrink-0 pointer-events-none"
-                    style={{
-                      width: 60,
-                      height: 84,
-                      '--card-width': '60px',
-                      '--card-height': '84px',
-                      '--card-font-scale': '0.45',
-                    } as React.CSSProperties}
-                  >
-                    <CardFace cardId={phase.sourceCardId} viewLevel="compact" />
-                  </div>
-                )}
-                <div>
-                  <p className="text-cyan-200 text-sm font-semibold">
-                    Choose a target for {targetingCardName}
-                  </p>
-                  {targetingEffectText && (
-                    <p className="text-white/70 text-xs mt-0.5">{targetingEffectText}</p>
-                  )}
-                </div>
-              </div>
+              <p className="text-cyan-200 text-sm font-semibold">
+                Choose a target for {targetingCardName}
+              </p>
+              {targetingEffectText && (
+                <p className="text-white/70 text-xs mt-0.5">{targetingEffectText}</p>
+              )}
               {canCancelTargeting && (
                 <button
                   className={gameButtonClass({
@@ -304,6 +286,13 @@ export function GameBoard() {
               )}
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Targeting card reveal — persists while picking a target */}
+      <AnimatePresence>
+        {isLocalPlayerTargeting && phase?.type === 'targeting' && (
+          <CardReveal cardId={phase.sourceCardId} />
         )}
       </AnimatePresence>
 
