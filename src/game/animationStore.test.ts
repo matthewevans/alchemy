@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { GameEvent } from '@engine/types';
-import { groupEventsIntoSteps } from './animationStore';
+import { groupEventsIntoSteps, useAnimationStore } from './animationStore';
 
 const pos = (x = 100, y = 100) => ({ x, y, width: 80, height: 120 });
 
@@ -142,5 +142,70 @@ describe('groupEventsIntoSteps (summon)', () => {
     expect(allEffects.some((e) => e.type === 'keyword')).toBe(true);
     expect(allEffects.some((e) => e.type === 'damage')).toBe(true);
     expect(allEffects.some((e) => e.type === 'card_reveal')).toBe(false);
+  });
+});
+
+describe('displayHealth — per-step health updates', () => {
+  beforeEach(() => {
+    useAnimationStore.getState().clear();
+  });
+
+  it('applies player_damage deltas as each step becomes active', () => {
+    const store = useAnimationStore.getState();
+
+    // Set initial display health (pre-dispatch snapshot)
+    store.setDisplayHealth({ player1: 20, player2: 20 });
+
+    // Enqueue two combat steps — attacker A deals 3, attacker B deals 2
+    store.enqueueSteps([
+      {
+        effects: [{ type: 'player_damage', player: 'player2', amount: 3, position: pos() }],
+        durationMs: 1000,
+      },
+      {
+        effects: [{ type: 'player_damage', player: 'player2', amount: 2, position: pos() }],
+        durationMs: 1000,
+      },
+    ]);
+
+    // First step is active — its delta applied: 20 - 3 = 17
+    expect(useAnimationStore.getState().displayHealth).toEqual({ player1: 20, player2: 17 });
+
+    // Advance to second step — its delta applied: 17 - 2 = 15
+    useAnimationStore.getState().advanceStep();
+    expect(useAnimationStore.getState().displayHealth).toEqual({ player1: 20, player2: 15 });
+
+    // Advance past last step — displayHealth cleared
+    useAnimationStore.getState().advanceStep();
+    expect(useAnimationStore.getState().displayHealth).toBeNull();
+  });
+
+  it('handles player_heal effects alongside damage', () => {
+    const store = useAnimationStore.getState();
+    store.setDisplayHealth({ player1: 15, player2: 18 });
+
+    store.enqueueSteps([
+      {
+        effects: [
+          { type: 'player_damage', player: 'player2', amount: 4, position: pos() },
+          { type: 'player_heal', player: 'player1', amount: 2, position: pos() },
+        ],
+        durationMs: 1000,
+      },
+    ]);
+
+    expect(useAnimationStore.getState().displayHealth).toEqual({ player1: 17, player2: 14 });
+  });
+
+  it('does not apply deltas when displayHealth is null', () => {
+    // No setDisplayHealth — steps without health overlay should not crash
+    useAnimationStore.getState().enqueueSteps([
+      {
+        effects: [{ type: 'player_damage', player: 'player2', amount: 5, position: pos() }],
+        durationMs: 1000,
+      },
+    ]);
+
+    expect(useAnimationStore.getState().displayHealth).toBeNull();
   });
 });

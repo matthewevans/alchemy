@@ -58,6 +58,19 @@ export function dispatchWithAnimations(
     if (hasDeaths && preDispatchBoard) {
       useAnimationStore.getState().setBoardSnapshot(preDispatchBoard);
     }
+
+    // Initialize display health overlay so player HP updates per-step during animations
+    // instead of jumping to the final value immediately.
+    const hasHealthEffects = steps.some((s) =>
+      s.effects.some((e) => e.type === 'player_damage' || e.type === 'player_heal'),
+    );
+    if (hasHealthEffects && state) {
+      useAnimationStore.getState().setDisplayHealth({
+        player1: state.players.player1.health,
+        player2: state.players.player2.health,
+      });
+    }
+
     useAnimationStore.getState().enqueueSteps(steps);
   }
 

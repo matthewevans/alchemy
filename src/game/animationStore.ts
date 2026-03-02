@@ -85,11 +85,14 @@ interface AnimationStore {
   isAnimating: boolean;
   speedMultiplier: number;
   boardSnapshot: BoardSnapshot | null;
+  /** Intermediate health values shown during animations so damage/healing appears per-step, not all at once. */
+  displayHealth: Record<PlayerId, number> | null;
 
   setSpeedMultiplier: (m: number) => void;
   enqueueSteps: (steps: AnimationStep[]) => void;
   advanceStep: () => void;
   setBoardSnapshot: (snapshot: BoardSnapshot | null) => void;
+  setDisplayHealth: (health: Record<PlayerId, number>) => void;
   clear: () => void;
 }
 
@@ -100,6 +103,7 @@ export const useAnimationStore = create<AnimationStore>()(
     isAnimating: false,
     speedMultiplier: 1,
     boardSnapshot: null,
+    displayHealth: null,
 
     setSpeedMultiplier: (m) => set({ speedMultiplier: m }),
 
@@ -115,29 +119,63 @@ export const useAnimationStore = create<AnimationStore>()(
         set({ queue: [...queue, ...scaled] });
       } else {
         const [first, ...rest] = scaled;
-        set({ activeStep: first, queue: rest, isAnimating: true });
+        const dh = get().displayHealth;
+        set({
+          activeStep: first,
+          queue: rest,
+          isAnimating: true,
+          displayHealth: dh ? applyStepHealthDeltas(dh, first) : null,
+        });
       }
     },
 
     advanceStep: () => {
-      const { queue } = get();
+      const { queue, displayHealth } = get();
       if (queue.length > 0) {
         const [next, ...rest] = queue;
         // Clear snapshot when death step begins — AnimatePresence exit runs alongside death particles
         const hasDeath = next.effects.some((e) => e.type === 'death');
-        set({ activeStep: next, queue: rest, boardSnapshot: hasDeath ? null : get().boardSnapshot });
+        set({
+          activeStep: next,
+          queue: rest,
+          boardSnapshot: hasDeath ? null : get().boardSnapshot,
+          displayHealth: displayHealth ? applyStepHealthDeltas(displayHealth, next) : null,
+        });
       } else {
-        set({ activeStep: null, isAnimating: false, boardSnapshot: null });
+        set({ activeStep: null, isAnimating: false, boardSnapshot: null, displayHealth: null });
       }
     },
 
     setBoardSnapshot: (snapshot) => set({ boardSnapshot: snapshot }),
 
+    setDisplayHealth: (health) => set({ displayHealth: health }),
+
     clear: () => {
-      set({ queue: [], activeStep: null, isAnimating: false, boardSnapshot: null });
+      set({ queue: [], activeStep: null, isAnimating: false, boardSnapshot: null, displayHealth: null });
     },
   })),
 );
+
+// ─── Health Display Helpers ───
+
+/** Apply player_damage / player_heal deltas from a step to the running display health. */
+function applyStepHealthDeltas(
+  health: Record<PlayerId, number>,
+  step: AnimationStep,
+): Record<PlayerId, number> {
+  let p1 = health.player1;
+  let p2 = health.player2;
+  for (const effect of step.effects) {
+    if (effect.type === 'player_damage') {
+      if (effect.player === 'player1') p1 -= effect.amount;
+      else p2 -= effect.amount;
+    } else if (effect.type === 'player_heal') {
+      if (effect.player === 'player1') p1 += effect.amount;
+      else p2 += effect.amount;
+    }
+  }
+  return { player1: p1, player2: p2 };
+}
 
 // ─── Helpers ───
 

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import type { PlayerId } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
+import { useAnimationStore } from '@game/animationStore';
 import { usePositionRegistry } from '@hooks/usePositionRegistry';
 
 interface HealthBadgeProps {
@@ -13,7 +14,9 @@ interface HealthBadgeProps {
  * Designed to be absolutely positioned overlapping the bottom of the portrait.
  */
 export function HealthBadge({ playerId }: HealthBadgeProps) {
-  const health = useGameStore((s) => s.state?.players[playerId]?.health);
+  const displayHealth = useAnimationStore((s) => s.displayHealth?.[playerId]);
+  const storeHealth = useGameStore((s) => s.state?.players[playerId]?.health);
+  const health = displayHealth ?? storeHealth;
   const healthControls = useAnimationControls();
   const prevHealthRef = useRef(health);
   const healthRef = usePositionRegistry(`player:${playerId}`);
