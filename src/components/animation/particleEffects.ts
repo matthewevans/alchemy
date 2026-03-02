@@ -11,8 +11,8 @@ const ELEMENT_COLORS: Record<Element, RGB> = {
   fire: { r: 255, g: 120, b: 40 },
   water: { r: 80, g: 170, b: 255 },
   earth: { r: 90, g: 210, b: 110 },
-  air: { r: 190, g: 130, b: 255 },
-  shadow: { r: 160, g: 170, b: 200 },
+  air: { r: 245, g: 200, b: 60 },
+  shadow: { r: 190, g: 130, b: 255 },
 };
 
 const COMBAT_COLOR: RGB = { r: 255, g: 180, b: 60 };
