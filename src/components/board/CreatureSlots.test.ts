@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { calculateBoardCardSize } from './boardSizing';
 
 describe('calculateBoardCardSize', () => {
-  it('keeps base size when space is sufficient', () => {
+  it('grows beyond base size when space allows', () => {
     const size = calculateBoardCardSize({
       containerWidth: 900,
       containerHeight: 320,
@@ -11,8 +11,9 @@ describe('calculateBoardCardSize', () => {
       baseHeight: 168,
     });
 
-    expect(size.width).toBe(120);
-    expect(size.height).toBe(168);
+    // Cards should fill available height, not be capped at base size
+    expect(size.width).toBeGreaterThan(120);
+    expect(size.height).toBeGreaterThan(168);
   });
 
   it('shrinks cards as slot count increases', () => {
@@ -33,5 +34,17 @@ describe('calculateBoardCardSize', () => {
 
     expect(eightSlots.width).toBeLessThan(fiveSlots.width);
     expect(eightSlots.height).toBeLessThan(fiveSlots.height);
+  });
+
+  it('caps at 2x base size to prevent extreme scaling', () => {
+    const size = calculateBoardCardSize({
+      containerWidth: 2000,
+      containerHeight: 1000,
+      slotCount: 1,
+      baseWidth: 120,
+      baseHeight: 168,
+    });
+
+    expect(size.width).toBeLessThanOrEqual(240);
   });
 });

@@ -15,7 +15,7 @@ export function calculateBoardCardSize({
   const aspectRatio = baseHeight / baseWidth;
   const availableWidth = Math.max(0, containerWidth - 24);
   const perSlotWidth = (availableWidth - 8 * (safeSlotCount - 1)) / safeSlotCount;
-  const maxHeight = Math.max(0, containerHeight * 0.94);
+  const maxHeight = Math.max(0, containerHeight * 0.85);
   const widthFromHeight = maxHeight / aspectRatio;
   // No hard cap at baseWidth — let container geometry govern sizing.
   // Cards fill available space when few, shrink naturally as more are added.

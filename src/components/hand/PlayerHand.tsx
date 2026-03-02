@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useUIStore } from '@game/uiStore';
-import { CARD_REGISTRY } from '@engine/cards';
 import type { GameAction } from '@engine/types';
 import { HandCard } from '@components/card';
 
@@ -56,16 +55,14 @@ export function PlayerHand() {
     if (dragActiveRef.current) return;
 
     if (selectedHandIndex === index) {
-      // Second tap on same card — check if it's an untargeted spell we can auto-play
-      const cardInstance = hand[index];
-      const cardDef = CARD_REGISTRY[cardInstance.cardId];
-      if (cardDef.type === 'spell' && playableIndices.has(index)) {
-        const spellAction = legalActions.find(
+      // Second tap on same card — auto-play if possible
+      if (playableIndices.has(index)) {
+        const playAction = legalActions.find(
           (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
-            a.type === 'PLAY_CARD' && a.cardIndex === index && a.targetSlot === undefined,
+            a.type === 'PLAY_CARD' && a.cardIndex === index,
         );
-        if (spellAction) {
-          dispatch(spellAction, humanPlayer);
+        if (playAction) {
+          dispatch(playAction, humanPlayer);
           selectHandCard(null);
           return;
         }
@@ -91,34 +88,19 @@ export function PlayerHand() {
       const el = document.elementFromPoint(x, y);
       if (!el) return;
 
-      // Check for slot drop target
-      const slotEl = (el as HTMLElement).closest('[data-slot-index]');
-      if (slotEl) {
-        const slotIndex = Number(slotEl.getAttribute('data-slot-index'));
-        const boardPlayer = slotEl.getAttribute('data-board-player');
-        if (boardPlayer === humanPlayer) {
+      // Drop on player board area — auto-place to first available slot
+      const boardArea = (el as HTMLElement).closest('[data-player-board], [data-board-player]');
+      if (boardArea) {
+        const player = boardArea.getAttribute('data-player-board') ?? boardArea.getAttribute('data-board-player');
+        if (player === humanPlayer) {
           const playAction = legalActions.find(
             (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
-              a.type === 'PLAY_CARD' && a.cardIndex === cardIndex && a.targetSlot === slotIndex,
+              a.type === 'PLAY_CARD' && a.cardIndex === cardIndex,
           );
           if (playAction) {
             dispatch(playAction, humanPlayer);
             selectHandCard(null);
-            return;
           }
-        }
-      }
-
-      // Check for board area drop (untargeted spells)
-      const boardArea = (el as HTMLElement).closest('[data-player-board]');
-      if (boardArea && boardArea.getAttribute('data-player-board') === humanPlayer) {
-        const spellAction = legalActions.find(
-          (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
-            a.type === 'PLAY_CARD' && a.cardIndex === cardIndex && a.targetSlot === undefined,
-        );
-        if (spellAction) {
-          dispatch(spellAction, humanPlayer);
-          selectHandCard(null);
         }
       }
     },

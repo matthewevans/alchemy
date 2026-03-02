@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import type { GameAction, Permanent, Phase, PlayerId } from '@engine/types';
 import { getOpponent } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
@@ -74,11 +74,6 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   const [cardSize, setCardSize] = useState<{ width: number; height: number } | null>(null);
 
   const isPlayerBoard = playerId === humanPlayer;
-  const isPlayPhase = phase?.type === 'play';
-  const selectedCardPlayable = selectedHandIndex !== null && legalActions.some(
-    (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> => a.type === 'PLAY_CARD' && a.cardIndex === selectedHandIndex,
-  );
-  const showPlusOnEmpty = isPlayerBoard && activePlayer === humanPlayer && isPlayPhase && selectedCardPlayable;
 
   const isBattlePhase = phase?.type === 'battle';
   const tentativeAttackers = isBattlePhase && phase.step === 'declare_attackers' ? phase.tentativeAttackers : [];
@@ -236,45 +231,29 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     }
   };
 
-  const handleEmptySlotClick = (slotIndex: number) => {
-    // Play phase: place creature in empty slot or cast spell
-    if (isPlayPhase && isPlayerBoard && selectedHandIndex !== null) {
-      const playAction = legalActions.find(
-        (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
-          a.type === 'PLAY_CARD' && a.cardIndex === selectedHandIndex && a.targetSlot === slotIndex,
-      );
-      if (playAction) {
-        dispatch(playAction, humanPlayer);
-        selectHandCard(null);
-        return;
-      }
-      // Spell cast — spells have no targetSlot, so any slot click triggers them
-      const spellAction = legalActions.find(
-        (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
-          a.type === 'PLAY_CARD' && a.cardIndex === selectedHandIndex && a.targetSlot === undefined,
-      );
-      if (spellAction) {
-        dispatch(spellAction, humanPlayer);
-        selectHandCard(null);
-      }
+  // Auto-play: clicking the board background plays the selected hand card
+  const handleBoardAutoPlay = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('[data-testid^="board-card-"]')) return;
+    if (!isPlayerBoard || selectedHandIndex === null) return;
+    const playAction = legalActions.find(
+      (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
+        a.type === 'PLAY_CARD' && a.cardIndex === selectedHandIndex,
+    );
+    if (playAction) {
+      dispatch(playAction, humanPlayer);
+      selectHandCard(null);
     }
   };
 
-  const slots = useMemo(() => {
-    const s = [...board];
-    if (showPlusOnEmpty && !s.some((slot) => slot === null)) {
-      s.push(null);
-    }
-    return s;
-  }, [board, showPlusOnEmpty]);
+  const creatures = useMemo(() => board.filter((p): p is Permanent => p !== null), [board]);
 
   const fanned = shouldFanOut(phase, isPlayerBoard, humanPlayer, activePlayer);
-  const stacks = useMemo(() => fanned ? null : groupIntoStacks(slots), [fanned, slots]);
+  const stacks = useMemo(() => fanned ? null : groupIntoStacks(creatures), [fanned, creatures]);
 
   // Visual slot count for sizing — stacks take fewer visual slots
   const visualSlotCount = stacks
     ? stacks.length
-    : slots.length;
+    : creatures.length;
 
   useLayoutEffect(() => {
     if (
@@ -347,89 +326,33 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     };
   };
 
-  const renderEmptySlot = (slotIndex: number) => {
-    if (showPlusOnEmpty) {
-      return (
-        <motion.div
-          key={`empty-${slotIndex}`}
-          className="flex items-center justify-center rounded-xl border-2 border-dashed border-green-500/40 cursor-pointer"
-          style={{
-            width: cardWidth ? `${cardWidth}px` : 'var(--board-card-width)',
-            height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
-          }}
-          animate={{
-            borderColor: ['rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.6)', 'rgba(34, 197, 94, 0.3)'],
-            boxShadow: [
-              'inset 0 0 12px rgba(34, 197, 94, 0.05)',
-              'inset 0 0 20px rgba(34, 197, 94, 0.15)',
-              'inset 0 0 12px rgba(34, 197, 94, 0.05)',
-            ],
-          }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-          whileHover={{ backgroundColor: 'rgba(34, 197, 94, 0.08)', scale: 1.02 }}
-          data-slot-index={slotIndex}
-          data-board-player={playerId}
-          onClick={() => handleEmptySlotClick(slotIndex)}
-        >
-          <motion.span
-            className="text-green-400/40 text-xl font-bold select-none"
-            animate={{ opacity: [0.3, 0.7, 0.3] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            +
-          </motion.span>
-        </motion.div>
-      );
-    }
-
-    return (
-      <div
-        key={`empty-${slotIndex}`}
-        className={`
-          flex items-center justify-center rounded-xl border border-dashed border-slate-700/30
-          ${isOpponent ? 'cursor-default' : ''}
-        `}
-        style={{
-          width: cardWidth ? `${cardWidth}px` : 'var(--board-card-width)',
-          height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
-        }}
-        data-slot-index={slotIndex}
-        data-board-player={playerId}
-        onClick={() => handleEmptySlotClick(slotIndex)}
-      />
-    );
-  };
-
   return (
-    <div ref={containerRef} className="flex items-center justify-center gap-2 px-3 py-1 w-full h-full overflow-hidden">
+    <div
+      ref={containerRef}
+      className="flex items-center justify-center gap-2 px-3 py-1 w-full h-full"
+      data-board-player={playerId}
+      onClick={handleBoardAutoPlay}
+    >
       <AnimatePresence mode="popLayout">
         {fanned || !stacks ? (
-          // Fanned: render individual cards (used during combat/targeting)
-          slots.map((permanent, slotIndex) => {
-            if (permanent) {
-              const props = getCardProps(permanent);
-              return (
-                <BoardCard
-                  key={permanent.permanentId}
-                  permanent={permanent}
-                  isOpponentCard={isOpponent}
-                  cardWidth={cardWidth}
-                  cardHeight={cardHeight}
-                  {...props}
-                />
-              );
-            }
-            return renderEmptySlot(slotIndex);
+          creatures.map((permanent) => {
+            const props = getCardProps(permanent);
+            return (
+              <BoardCard
+                key={permanent.permanentId}
+                permanent={permanent}
+                isOpponentCard={isOpponent}
+                cardWidth={cardWidth}
+                cardHeight={cardHeight}
+                {...props}
+              />
+            );
           })
         ) : (
-          // Stacked: group identical permanents
-          stacks.map((entry, stackIndex) => {
-            if (!entry) {
-              return renderEmptySlot(entry === null && stackIndex < slots.length ? stackIndex : stackIndex);
-            }
+          stacks.map((entry) => {
+            if (!entry) return null;
 
             if (entry.permanents.length === 1) {
-              // Single card — render as normal BoardCard
               const permanent = entry.permanents[0];
               const props = getCardProps(permanent);
               return (
@@ -444,7 +367,6 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
               );
             }
 
-            // Multi-card stack
             return (
               <CardStackGroup
                 key={`stack-${entry.stateKey}`}

@@ -131,17 +131,17 @@ export function GameBoard() {
         {/* Battlefield — takes all available width */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Opponent board */}
-          <div className="relative z-20 flex-1 flex items-end justify-center pb-3 sm:pb-4 min-h-0 overflow-hidden">
+          <div className="relative z-20 flex-1 flex items-end justify-center pb-3 sm:pb-4 min-h-0">
             <CreatureSlots playerId={opponentPlayer} isOpponent />
           </div>
 
           {/* Battle line */}
-          <div className="relative z-10 shrink-0">
+          <div className="relative z-10 shrink-0 -translate-y-2">
             <BattleLine />
           </div>
 
           {/* Player board */}
-          <div className="relative z-20 flex-1 flex items-start justify-center pt-1 min-h-0 overflow-hidden -translate-y-2 sm:-translate-y-3" data-player-board={humanPlayer}>
+          <div className="relative z-20 flex-1 flex items-start justify-center pt-1 min-h-0 -translate-y-2 sm:-translate-y-3" data-player-board={humanPlayer}>
             <CreatureSlots playerId={humanPlayer} isOpponent={false} />
           </div>
         </div>
