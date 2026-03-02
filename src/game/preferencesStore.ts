@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { Element, Tier } from '@engine/types';
+import type { Tier } from '@engine/types';
 import type { AIDifficulty } from '@engine/aiConfig';
 
-export type BattlefieldPreference = Element | 'auto';
+/** Battlefield ID (e.g. 'fire_molten', 'shadow_haunted_graveyard') or 'auto'. */
+export type BattlefieldPreference = string;
 
 const STORAGE_KEY = 'alchemy:preferences';
 const DEFAULT_UI_SCALE = 1;

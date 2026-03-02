@@ -1,6 +1,6 @@
 import { usePreferencesStore } from '@game/preferencesStore';
-import type { BattlefieldPreference } from '@game/preferencesStore';
 import { useAudioStore } from '@audio/audioStore';
+import { BATTLEFIELDS } from '@components/board/battlefields';
 
 interface SettingsSliderProps {
   id: string;
@@ -59,13 +59,9 @@ function SettingsSlider({
   );
 }
 
-const BATTLEFIELD_OPTIONS: { value: BattlefieldPreference; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'fire', label: 'Molten' },
-  { value: 'water', label: 'Ocean' },
-  { value: 'earth', label: 'Jungle' },
-  { value: 'air', label: 'Sky' },
-  { value: 'shadow', label: 'Shadow' },
+const BATTLEFIELD_OPTIONS = [
+  { value: 'auto', label: 'Auto (match deck)' },
+  ...BATTLEFIELDS.map((b) => ({ value: b.id, label: b.label })),
 ];
 
 interface SettingsToggleProps {
@@ -174,7 +170,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         label="Battlefield"
         value={battlefield}
         options={BATTLEFIELD_OPTIONS}
-        onChange={(v) => setBattlefield(v as BattlefieldPreference)}
+        onChange={(v) => setBattlefield(v)}
       />
       <SettingsToggle
         id="battlefield-ambience"

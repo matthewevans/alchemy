@@ -70,26 +70,6 @@ export function getElementFrameGradient(element: Element): string {
   return ELEMENT_FRAME_GRADIENTS[element];
 }
 
-/** Battlefield background images keyed by element. */
-const BATTLEFIELD_BACKGROUNDS: Partial<Record<Element, string>> = {
-  fire: `${ASSET_BASE}battlefield/landscape/fire_molten.webp`,
-  water: `${ASSET_BASE}battlefield/landscape/water_moonlit_ocean_temple.webp`,
-  earth: `${ASSET_BASE}battlefield/landscape/earth_jurassic.webp`,
-  air: `${ASSET_BASE}battlefield/landscape/air_angelic_sky.webp`,
-};
-
-const ALL_BATTLEFIELD_BACKGROUNDS = Object.values(BATTLEFIELD_BACKGROUNDS) as string[];
-
-/** Returns the battlefield background for an element; falls back deterministically. */
-export function getBattlefieldBackground(element: Element): string {
-  const bg = BATTLEFIELD_BACKGROUNDS[element];
-  if (bg) return bg;
-  // Deterministic pick based on element name so it's stable across re-renders
-  let hash = 0;
-  for (const ch of element) hash = (hash + ch.charCodeAt(0)) | 0;
-  return ALL_BATTLEFIELD_BACKGROUNDS[Math.abs(hash) % ALL_BATTLEFIELD_BACKGROUNDS.length];
-}
-
 /** Player avatar images keyed by element. */
 const AVATAR_PATHS: Record<Element, string> = {
   fire: `${ASSET_BASE}avatar/fire_mage.webp`,
