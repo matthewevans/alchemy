@@ -33,9 +33,9 @@ export function HeroPortrait({ avatarSrc, isOpponent, isValidTarget = false, onH
                   'rgba(6, 182, 212, 0.4)',
                 ],
                 boxShadow: [
-                  '0 0 10px rgba(6, 182, 212, 0.3)',
-                  '0 0 24px rgba(6, 182, 212, 0.7)',
-                  '0 0 10px rgba(6, 182, 212, 0.3)',
+                  '0 0 12px rgba(6, 182, 212, 0.4)',
+                  '0 0 28px rgba(6, 182, 212, 0.8)',
+                  '0 0 12px rgba(6, 182, 212, 0.4)',
                 ],
                 scale: [1, 1.08, 1],
               }

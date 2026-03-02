@@ -170,7 +170,7 @@ export function BoardCard({
           }}
           animate={{
             backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-            opacity: isSelectedForBlock || isAttacking || isBlocking ? [0.7, 1, 0.7] : [0.4, 0.7, 0.4],
+            opacity: isSelectedForBlock || isAttacking || isBlocking || isValidTarget ? [0.7, 1, 0.7] : [0.4, 0.7, 0.4],
           }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
         />
