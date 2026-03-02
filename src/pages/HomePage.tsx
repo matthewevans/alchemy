@@ -159,7 +159,7 @@ export function HomePage() {
     case 'deck_builder':
       return (
         <Suspense fallback={<HomeLoading label="Loading deck builder..." />}>
-          <DeckBuilderScreen onSelectDeck={handleSelectDeck} onBack={handleBack} tier={selectedTier} />
+          <DeckBuilderScreen onSelectDeck={handleSelectDeck} onBack={handleBack} tier={selectedTier} onTierChange={setSelectedTier} />
         </Suspense>
       );
     case 'multiplayer_lobby':

@@ -13,15 +13,22 @@ import { encodeDeck, decodeDeck } from '@storage/shareCode';
 import type { SavedDeck } from '@storage/deckStorage';
 import { gameButtonClass } from './buttonStyles';
 
+const TIER_LABELS: Record<Tier, string> = {
+  apprentice: 'Apprentice',
+  alchemist: 'Alchemist',
+  archmage: 'Archmage',
+};
+
 interface DeckBuilderProps {
   onSelectDeck: (deckCardIds: string[]) => void;
   onBack: () => void;
   tier?: Tier;
+  onTierChange?: (tier: Tier) => void;
 }
 
 type ElementFilter = Element | 'all';
 
-export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice' }: DeckBuilderProps) {
+export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice', onTierChange }: DeckBuilderProps) {
   const RULESET = TIER_CONFIGS[tier];
   const tierIndex = TIER_ORDER.indexOf(tier);
   const [elementFilter, setElementFilter] = useState<ElementFilter>('all');
@@ -352,6 +359,32 @@ export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice' }: DeckB
         >
           Back
         </motion.button>
+
+        {/* Tier selector */}
+        {onTierChange && (
+          <>
+            <div className="hidden md:block w-px h-6 bg-white/10 mx-1" />
+            {TIER_ORDER.map((t) => {
+              const isActive = t === tier;
+              return (
+                <button
+                  key={t}
+                  className={gameButtonClass({
+                    tone: isActive ? 'amber' : 'neutral',
+                    size: 'xs',
+                    className: `text-xs font-semibold ${isActive ? '' : 'opacity-60'}`,
+                  })}
+                  onClick={() => {
+                    onTierChange(t);
+                    setDeckCounts({});
+                  }}
+                >
+                  {TIER_LABELS[t]}
+                </button>
+              );
+            })}
+          </>
+        )}
 
         <div className="hidden md:block w-px h-6 bg-white/10 mx-1" />
 
