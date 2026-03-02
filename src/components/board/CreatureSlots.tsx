@@ -4,6 +4,7 @@ import type { GameAction, Permanent, Phase, PlayerId } from '@engine/types';
 import { getOpponent } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
 import { useAnimationStore } from '@game/animationStore';
+import { usePreferencesStore } from '@game/preferencesStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useUIStore } from '@game/uiStore';
 import { BoardCard } from '@components/card';
@@ -68,7 +69,8 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   const selectedAttackerId = useUIStore((s) => s.selectedAttackerId);
   const selectAttacker = useUIStore((s) => s.selectAttacker);
   const inspectCard = useUIStore((s) => s.inspectCard);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const layoutRef = useRef<HTMLDivElement | null>(null);
+  const boardScale = usePreferencesStore((s) => s.boardScale);
   const [cardSize, setCardSize] = useState<{ width: number; height: number } | null>(null);
 
   const isPlayerBoard = playerId === humanPlayer;
@@ -250,11 +252,10 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   }, [phase, selectedBlockerId, selectedAttackerId, selectBlocker, selectAttacker]);
 
   useLayoutEffect(() => {
-    const container = containerRef.current;
+    const container = layoutRef.current;
     if (!container || visualSlotCount === 0) return;
 
     const rootStyles = getComputedStyle(document.documentElement);
-    const boardScale = Number.parseFloat(rootStyles.getPropertyValue('--board-scale')) || 1;
     const baseWidth = (Number.parseFloat(rootStyles.getPropertyValue('--_board-w')) || 82) * boardScale;
     const baseHeight = (Number.parseFloat(rootStyles.getPropertyValue('--_board-h')) || 115) * boardScale;
 
@@ -276,7 +277,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [visualSlotCount]);
+  }, [visualSlotCount, boardScale]);
 
   const cardWidth = cardSize?.width;
   const cardHeight = cardSize?.height;
@@ -312,32 +313,15 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
 
   return (
     <div
-      ref={containerRef}
-      className="w-full h-full min-w-0 overflow-x-auto scrollbar-hide"
+      ref={layoutRef}
+      className="w-full h-full min-w-0 relative"
       data-board-player={playerId}
     >
-      <div className="flex items-center gap-2 px-3 py-1 h-full w-fit mx-auto">
-        <AnimatePresence mode="popLayout">
-          {fanned || !stacks ? (
-            creatures.map((permanent) => {
-              const props = getCardProps(permanent);
-              return (
-                <BoardCard
-                  key={permanent.permanentId}
-                  permanent={permanent}
-                  isOpponentCard={isOpponent}
-                  cardWidth={cardWidth}
-                  cardHeight={cardHeight}
-                  {...props}
-                />
-              );
-            })
-          ) : (
-            stacks.map((entry) => {
-              if (!entry) return null;
-
-              if (entry.permanents.length === 1) {
-                const permanent = entry.permanents[0];
+      <div className="absolute inset-x-0 -top-8 -bottom-8 overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-2 px-3 py-8 h-full w-fit mx-auto">
+          <AnimatePresence mode="popLayout">
+            {fanned || !stacks ? (
+              creatures.map((permanent) => {
                 const props = getCardProps(permanent);
                 return (
                   <BoardCard
@@ -349,21 +333,40 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
                     {...props}
                   />
                 );
-              }
+              })
+            ) : (
+              stacks.map((entry) => {
+                if (!entry) return null;
 
-              return (
-                <CardStackGroup
-                  key={`stack-${entry.stateKey}`}
-                  permanents={entry.permanents}
-                  cardWidth={cardWidth}
-                  cardHeight={cardHeight}
-                  isOpponent={isOpponent}
-                  getCardProps={getCardProps}
-                />
-              );
-            })
-          )}
-        </AnimatePresence>
+                if (entry.permanents.length === 1) {
+                  const permanent = entry.permanents[0];
+                  const props = getCardProps(permanent);
+                  return (
+                    <BoardCard
+                      key={permanent.permanentId}
+                      permanent={permanent}
+                      isOpponentCard={isOpponent}
+                      cardWidth={cardWidth}
+                      cardHeight={cardHeight}
+                      {...props}
+                    />
+                  );
+                }
+
+                return (
+                  <CardStackGroup
+                    key={`stack-${entry.stateKey}`}
+                    permanents={entry.permanents}
+                    cardWidth={cardWidth}
+                    cardHeight={cardHeight}
+                    isOpponent={isOpponent}
+                    getCardProps={getCardProps}
+                  />
+                );
+              })
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
