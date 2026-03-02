@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useUIStore } from '@game/uiStore';
@@ -56,12 +56,13 @@ export function GameBoard() {
   const battlefieldPref = usePreferencesStore((s) => s.battlefield);
   const showAmbience = usePreferencesStore((s) => s.battlefieldAmbience);
   const deckElement = useMemo(() => getDeckPrimaryElement(humanDeckIds), [humanDeckIds]);
-  const [autoBattlefield] = useState(() =>
-    deckElement ? getRandomBattlefield(deckElement) : null,
-  );
+  const autoBattlefieldRef = useRef<ReturnType<typeof getRandomBattlefield> | null>(null);
+  if (deckElement && !autoBattlefieldRef.current) {
+    autoBattlefieldRef.current = getRandomBattlefield(deckElement);
+  }
   const battlefield = battlefieldPref !== 'auto'
     ? BATTLEFIELD_MAP[battlefieldPref] ?? null
-    : autoBattlefield;
+    : autoBattlefieldRef.current;
   const battlefieldBg = battlefield?.image;
   const humanAvatar = useMemo(() => getDeckAvatarPath(humanDeckIds), [humanDeckIds]);
   const opponentAvatar = useMemo(() => getDeckAvatarPath(opponentDeckIds), [opponentDeckIds]);
