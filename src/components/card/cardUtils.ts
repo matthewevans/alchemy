@@ -69,3 +69,46 @@ export function getElementIconPath(element: Element): string {
 export function getElementFrameGradient(element: Element): string {
   return ELEMENT_FRAME_GRADIENTS[element];
 }
+
+/** Battlefield background images keyed by element. Not all elements have one yet. */
+const BATTLEFIELD_BACKGROUNDS: Partial<Record<Element, string>> = {
+  fire: `${ASSET_BASE}battlefield/landscape/fire_molten.webp`,
+  water: `${ASSET_BASE}battlefield/landscape/water_moonlit_ocean_temple.webp`,
+  earth: `${ASSET_BASE}battlefield/landscape/earth_jurassic.webp`,
+  air: `${ASSET_BASE}battlefield/landscape/air_angelic_sky.webp`,
+};
+
+export function getBattlefieldBackground(element: Element): string | null {
+  return BATTLEFIELD_BACKGROUNDS[element] ?? null;
+}
+
+/** Player avatar images keyed by element. */
+const AVATAR_PATHS: Record<Element, string> = {
+  fire: `${ASSET_BASE}avatar/fire_mage.webp`,
+  water: `${ASSET_BASE}avatar/water_sorcerer.webp`,
+  earth: `${ASSET_BASE}avatar/earth_druid.webp`,
+  air: `${ASSET_BASE}avatar/air_windcaller.webp`,
+  shadow: `${ASSET_BASE}avatar/shadow_trickster.webp`,
+};
+
+export function getAvatarPath(element: Element): string {
+  return AVATAR_PATHS[element];
+}
+
+/** Determine the most common element in a list of card IDs (by ID prefix convention). */
+export function getDeckPrimaryElement(cardIds: string[]): Element | null {
+  const counts: Partial<Record<string, number>> = {};
+  for (const id of cardIds) {
+    const el = id.split('_')[0];
+    counts[el] = (counts[el] ?? 0) + 1;
+  }
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const [el, count] of Object.entries(counts)) {
+    if (count! > bestCount) {
+      best = el;
+      bestCount = count!;
+    }
+  }
+  return best as Element | null;
+}

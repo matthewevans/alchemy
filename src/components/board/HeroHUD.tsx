@@ -5,6 +5,7 @@ import { HeroPortrait, HealthBadge, EnergyCrystals, PhaseDiamonds } from '@compo
 interface HeroHUDProps {
   playerId: PlayerId;
   isOpponent: boolean;
+  avatarSrc?: string;
   isValidTarget?: boolean;
   onHeroClick?: () => void;
 }
@@ -13,7 +14,7 @@ interface HeroHUDProps {
  * MTGA-style compact HUD strip — avatar centered in phase strip,
  * health badge overlapping avatar bottom, energy pips below.
  */
-export function HeroHUD({ playerId, isOpponent, isValidTarget, onHeroClick }: HeroHUDProps) {
+export function HeroHUD({ playerId, isOpponent, avatarSrc, isValidTarget, onHeroClick }: HeroHUDProps) {
   const phaseInfo = usePhaseInfo();
 
   return (
@@ -27,7 +28,7 @@ export function HeroHUD({ playerId, isOpponent, isValidTarget, onHeroClick }: He
         <PhaseDiamonds side="left" />
         {/* Portrait + health badge overlay */}
         <div className="relative pb-2">
-          <HeroPortrait isOpponent={isOpponent} isValidTarget={isValidTarget} onHeroClick={onHeroClick} />
+          <HeroPortrait avatarSrc={avatarSrc} isOpponent={isOpponent} isValidTarget={isValidTarget} onHeroClick={onHeroClick} />
           <HealthBadge playerId={playerId} />
         </div>
         <PhaseDiamonds side="right" />

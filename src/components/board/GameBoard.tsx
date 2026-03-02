@@ -8,6 +8,7 @@ import { CARD_REGISTRY } from '@engine/cards';
 import { EFFECT_REGISTRY } from '@engine/effects';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useScreenShake } from '@hooks/useScreenShake';
+import { getDeckPrimaryElement, getBattlefieldBackground, getAvatarPath } from '@components/card/cardUtils';
 import { PlayerInfo } from './PlayerInfo';
 import { HeroHUD } from './HeroHUD';
 import { ActionButton } from './ActionButton';
@@ -35,6 +36,12 @@ export function GameBoard() {
   const state = useGameStore((s) => s.state);
   const legalActions = useGameStore((s) => s.legalActions);
   const shakeClass = useScreenShake();
+  const humanDeckIds = useGameStore((s) =>
+    s.humanPlayer === 'player1' ? s.player1DeckIds : s.player2DeckIds,
+  );
+  const opponentDeckIds = useGameStore((s) =>
+    s.humanPlayer === 'player1' ? s.player2DeckIds : s.player1DeckIds,
+  );
   const opponentPlayer = getOpponent(humanPlayer);
   const inspectedCardId = useUIStore((s) => s.inspectedCardId);
   const inspectCard = useUIStore((s) => s.inspectCard);
@@ -42,6 +49,12 @@ export function GameBoard() {
   const dispatch = useGameDispatch();
   const [showHints, setShowHints] = useState(() => !loadHintsDismissed());
   const [discardViewerPlayerId, setDiscardViewerPlayerId] = useState<PlayerId | null>(null);
+
+  const primaryElement = useMemo(() => getDeckPrimaryElement(humanDeckIds), [humanDeckIds]);
+  const opponentElement = useMemo(() => getDeckPrimaryElement(opponentDeckIds), [opponentDeckIds]);
+  const battlefieldBg = primaryElement ? getBattlefieldBackground(primaryElement) : null;
+  const humanAvatar = primaryElement ? getAvatarPath(primaryElement) : undefined;
+  const opponentAvatar = opponentElement ? getAvatarPath(opponentElement) : undefined;
 
   const phase = state?.phase;
   const validTargetPlayerIds = new Set(
@@ -91,8 +104,13 @@ export function GameBoard() {
 
   return (
     <div
-      className={`game-surface h-screen flex flex-col select-none bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${shakeClass}`}
-      style={{ paddingRight: 'calc(6rem + env(safe-area-inset-right))' }}
+      className={`game-surface h-screen flex flex-col select-none bg-slate-950 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${shakeClass}`}
+      style={{
+        paddingRight: 'calc(6rem + env(safe-area-inset-right))',
+        ...(battlefieldBg
+          ? { backgroundImage: `linear-gradient(to bottom, rgba(2,6,23,0.6), rgba(15,23,42,0.5), rgba(2,6,23,0.6)), url(${battlefieldBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+          : { backgroundImage: 'linear-gradient(to bottom, #020617, #0f172a, #020617)' }),
+      }}
       onContextMenu={(e) => e.preventDefault()}
       onClick={(e) => {
         if (!(e.target as HTMLElement).closest('[data-hand-card]')) {
@@ -110,6 +128,7 @@ export function GameBoard() {
         <HeroHUD
           playerId={opponentPlayer}
           isOpponent
+          avatarSrc={opponentAvatar}
           isValidTarget={validTargetPlayerIds.has(opponentPlayer)}
           onHeroClick={
             validTargetPlayerIds.has(opponentPlayer)
@@ -152,6 +171,7 @@ export function GameBoard() {
         <HeroHUD
           playerId={humanPlayer}
           isOpponent={false}
+          avatarSrc={humanAvatar}
           isValidTarget={validTargetPlayerIds.has(humanPlayer)}
           onHeroClick={
             validTargetPlayerIds.has(humanPlayer)
