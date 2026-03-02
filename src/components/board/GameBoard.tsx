@@ -126,7 +126,7 @@ export function GameBoard() {
       }}
     >
       {/* ═══ Opponent hand — top edge ═══ */}
-      <div className="shrink-0 pt-1 z-10">
+      <div className="shrink-0 -mt-10 mb-12 z-10">
         <OpponentHand />
       </div>
 
