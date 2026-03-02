@@ -135,7 +135,7 @@ describe('AI Difficulty System', () => {
 
       const winRate = strongerWins / games;
       console.log(`${stronger} vs ${weaker}: ${strongerWins}-${weakerWins} (${(winRate * 100).toFixed(0)}%)`);
-      // The stronger difficulty should win at least 40% (accounting for deck/draw variance)
+      // The stronger difficulty should win more than the weaker one
       expect(strongerWins, `${stronger} should beat ${weaker}`).toBeGreaterThanOrEqual(
         weakerWins,
       );

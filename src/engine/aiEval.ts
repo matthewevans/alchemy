@@ -71,6 +71,7 @@ export function softmaxSelect(scores: number[], temperature: number, rand: numbe
   // Compute softmax probabilities with numerical stability
   const scaled = scores.map((s) => s / temperature);
   const max = Math.max(...scaled);
+  if (!isFinite(max)) return 0; // degenerate: all scores are -Infinity or NaN
   const exps = scaled.map((s) => Math.exp(s - max));
   const sum = exps.reduce((a, b) => a + b, 0);
 

@@ -306,10 +306,15 @@ function scoreEnemyTarget(
         ? -getCurrentHealth(creature)
         : getEffectiveAttack(creature);
     }
+    // Own creature — bad for offensive spells but valid for "any" targeting
+    const ownCreature = state.players[aiPlayer].board.find(
+      (p) => p !== null && p.permanentId === targetRef.permanentId,
+    );
+    if (ownCreature) return -100;
   } else if (targetRef.type === 'player' && targetRef.playerId === opponent) {
     return -1; // Prefer creatures over face, but face over nothing
   }
-  return -Infinity;
+  return -100;
 }
 
 function scoreFriendlyTarget(
@@ -416,8 +421,8 @@ function chooseAttackerAction(
   return selectByScore(
     candidates,
     (action) => {
-      if (action.type === 'CONFIRM_ATTACKERS') return 0;
-      if (action.type !== 'DECLARE_ATTACKER') return 0;
+      if (action.type === 'CONFIRM_ATTACKERS') return -2;
+      if (action.type !== 'DECLARE_ATTACKER') return -2;
       const creature = myBoard.find(
         (p) => p !== null && p.permanentId === action.permanentId,
       );
