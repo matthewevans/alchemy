@@ -1,13 +1,13 @@
 import { useState, useCallback, lazy, Suspense } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import type { PlayerId, Tier } from '@engine/types';
+import type { PlayerId } from '@engine/types';
 import { createRNG } from '@engine/prng';
 import { TIER_CONFIGS } from '@engine/ruleset';
-import type { AIDifficulty } from '@engine/aiConfig';
 import { createAIConfig } from '@engine/aiConfig';
 import { ELEMENTS } from '@engine/elements';
 import { STARTER_DECKS, buildStarterDeck } from '@engine/starterDecks';
 import { useGameStore } from '@game/gameStore';
+import { usePreferencesStore } from '@game/preferencesStore';
 import { clearSavedGame, loadActiveGameId, loadGame } from '@storage/persistence';
 import type { PeerSession } from '@network/peer';
 import { setPendingSession } from '@network/sessionTransfer';
@@ -46,8 +46,10 @@ export function HomePage() {
   const location = useLocation();
   const locationState = location.state as HomeLocationState | null;
   const [subScreen, setSubScreen] = useState<SubScreen>(locationState?.initialScreen ?? 'title');
-  const [selectedTier, setSelectedTier] = useState<Tier>('apprentice');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<AIDifficulty>('medium');
+  const selectedTier = usePreferencesStore((s) => s.tier);
+  const setSelectedTier = usePreferencesStore((s) => s.setTier);
+  const selectedDifficulty = usePreferencesStore((s) => s.difficulty);
+  const setSelectedDifficulty = usePreferencesStore((s) => s.setDifficulty);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initGame = useGameStore((s) => s.initGame);

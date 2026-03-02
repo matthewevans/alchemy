@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { gameButtonClass } from './buttonStyles';
+import { SettingsPanel } from './SettingsPanel';
+import { FallingAshes } from './FallingAshes';
+import { useDialogA11y } from '@hooks/useDialogA11y';
 
 interface TitleScreenProps {
   onPlay: () => void;
@@ -61,12 +64,17 @@ function MultiPlayerIcon() {
 }
 
 export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: TitleScreenProps) {
+  const [showSettings, setShowSettings] = useState(false);
   const shouldReduceMotion = useReducedMotion();
   const particles = useSparkles(shouldReduceMotion ? 0 : 30);
   const logoWordmarkSrc = `${import.meta.env.BASE_URL}logo_wordmark.webp`;
+  const settingsDialogRef = useDialogA11y({ open: showSettings, onClose: () => setShowSettings(false) });
 
   return (
     <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 overflow-hidden relative pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      {/* Falling ash particles */}
+      {!shouldReduceMotion && <FallingAshes count={15} />}
+
       {/* Sparkle particles */}
       {particles.map((p) => (
           <motion.div
@@ -202,6 +210,56 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
       >
         A card game for wizards-in-training
       </motion.p>
+
+      {/* Settings gear button */}
+      <button
+        className={gameButtonClass({
+          tone: 'slate',
+          size: 'sm',
+          className:
+            'fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-30 w-11 h-11 p-0 rounded-full flex items-center justify-center text-white/40 hover:text-white/70',
+        })}
+        onClick={() => setShowSettings(true)}
+        aria-label="Settings"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+          <path fillRule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clipRule="evenodd" />
+        </svg>
+      </button>
+
+      {/* Settings modal */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setShowSettings(false)}
+          >
+            <motion.div
+              ref={settingsDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Settings"
+              tabIndex={-1}
+              className="bg-slate-800/95 rounded-2xl p-8 flex flex-col items-center gap-4 min-w-[260px] shadow-2xl border border-slate-600/40"
+              style={{
+                boxShadow: '0 0 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(0, 0, 0, 0.3)',
+              }}
+              initial={{ scale: 0.85, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.85, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-xl font-bold text-white mb-2">Settings</h2>
+              <SettingsPanel onClose={() => setShowSettings(false)} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

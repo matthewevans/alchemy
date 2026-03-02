@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useUIStore } from '@game/uiStore';
+import { usePreferencesStore } from '@game/preferencesStore';
 import type { CardInstance, PlayerId } from '@engine/types';
 import { getOpponent } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
@@ -14,6 +15,7 @@ import { ActionButton } from './ActionButton';
 import { CreatureSlots } from './CreatureSlots';
 import { BattleLine } from './BattleLine';
 import { BlockAssignmentLines } from './BlockAssignmentLines';
+import { BattlefieldAmbience } from './BattlefieldAmbience';
 import { PlayerHand, OpponentHand } from '@components/hand';
 import { TurnBanner } from '@components/phase';
 import { AnimationOverlay } from '@components/animation';
@@ -50,7 +52,10 @@ export function GameBoard() {
   const [showHints, setShowHints] = useState(() => !loadHintsDismissed());
   const [discardViewerPlayerId, setDiscardViewerPlayerId] = useState<PlayerId | null>(null);
 
-  const primaryElement = useMemo(() => getDeckPrimaryElement(humanDeckIds), [humanDeckIds]);
+  const battlefieldPref = usePreferencesStore((s) => s.battlefield);
+  const showAmbience = usePreferencesStore((s) => s.battlefieldAmbience);
+  const deckElement = useMemo(() => getDeckPrimaryElement(humanDeckIds), [humanDeckIds]);
+  const primaryElement = battlefieldPref === 'auto' ? deckElement : battlefieldPref;
   const battlefieldBg = primaryElement ? getBattlefieldBackground(primaryElement) : undefined;
   const humanAvatar = useMemo(() => getDeckAvatarPath(humanDeckIds), [humanDeckIds]);
   const opponentAvatar = useMemo(() => getDeckAvatarPath(opponentDeckIds), [opponentDeckIds]);
@@ -125,6 +130,9 @@ export function GameBoard() {
         }
       }}
     >
+      {/* ═══ Ambient element particles ═══ */}
+      {showAmbience && primaryElement && <BattlefieldAmbience element={primaryElement} />}
+
       {/* ═══ Opponent hand — top edge ═══ */}
       <div className="shrink-0 -mt-10 mb-12 z-10">
         <OpponentHand />
