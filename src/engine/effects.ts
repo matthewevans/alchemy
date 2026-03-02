@@ -172,4 +172,90 @@ export const EFFECT_REGISTRY: Record<string, EffectDefinition> = {
     description: 'Deal 3 damage to all enemy creatures',
     steps: [{ type: 'damage', amount: 3, target: 'all_enemy_creatures' }],
   },
+
+  // ─── Fire Forge Effects ───
+  forge_hammer: {
+    id: 'forge_hammer',
+    name: 'Forge Hammer',
+    description: 'Give a creature +2/+0 until end of turn',
+    steps: [{ type: 'buff', attack: 2, health: 0, target: 'selected', duration: 'end_of_turn' }],
+    targetingType: { kind: 'creature', controller: 'own' },
+  },
+  furnace_blast: {
+    id: 'furnace_blast',
+    name: 'Furnace Blast',
+    description: 'Deal 4 damage to target enemy creature',
+    steps: [{ type: 'damage', amount: 4, target: 'selected' }],
+    targetingType: { kind: 'creature', controller: 'opponent' },
+  },
+  flame_wave: {
+    id: 'flame_wave',
+    name: 'Flame Wave',
+    description: 'Deal 3 damage to all enemy creatures and 2 damage to enemy hero',
+    steps: [
+      { type: 'damage', amount: 3, target: 'all_enemy_creatures' },
+      { type: 'damage', amount: 2, target: 'opponent' },
+    ],
+  },
+
+  // ─── Water Depths Effects ───
+  riptide: {
+    id: 'riptide',
+    name: 'Riptide',
+    description: 'Deal 1 damage to all enemy creatures and draw 1 card',
+    steps: [
+      { type: 'damage', amount: 1, target: 'all_enemy_creatures' },
+      { type: 'draw', amount: 1 },
+    ],
+  },
+  tidal_surge: {
+    id: 'tidal_surge',
+    name: 'Tidal Surge',
+    description: "Return target creature to its owner's hand and draw 2 cards",
+    steps: [
+      { type: 'bounce', target: 'selected' },
+      { type: 'draw', amount: 2 },
+    ],
+    targetingType: { kind: 'creature', controller: 'any' },
+  },
+  maelstrom: {
+    id: 'maelstrom',
+    name: 'Maelstrom',
+    description: 'Deal 2 damage to ALL creatures and draw 1 card',
+    steps: [
+      { type: 'damage', amount: 2, target: 'all_creatures' },
+      { type: 'draw', amount: 1 },
+    ],
+  },
+
+  // ─── Shadow Dread Effects ───
+  shadow_strike: {
+    id: 'shadow_strike',
+    name: 'Shadow Strike',
+    description: 'Deal 3 damage to enemy creature, take 1 damage yourself',
+    steps: [
+      { type: 'damage', amount: 3, target: 'selected' },
+      { type: 'damage', amount: 1, target: 'self' },
+    ],
+    targetingType: { kind: 'creature', controller: 'opponent' },
+  },
+  soul_siphon: {
+    id: 'soul_siphon',
+    name: 'Soul Siphon',
+    description: 'Deal 2 damage to enemy creature, heal 2 to your hero',
+    steps: [
+      { type: 'damage', amount: 2, target: 'selected' },
+      { type: 'heal', amount: 2, target: 'self' },
+    ],
+    targetingType: { kind: 'creature', controller: 'opponent' },
+  },
+  void_storm: {
+    id: 'void_storm',
+    name: 'Void Storm',
+    description: 'Deal 2 damage to all creatures and 3 damage to opponent hero',
+    steps: [
+      { type: 'damage', amount: 2, target: 'all_creatures' },
+      { type: 'damage', amount: 3, target: 'opponent' },
+    ],
+  },
 };

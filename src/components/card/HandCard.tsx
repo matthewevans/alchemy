@@ -60,6 +60,7 @@ export function HandCard({
       whileTap={{ scale: 0.97 }}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       onClick={() => { if (!longPress.firedRef.current) onClick(); }}
+      onContextMenu={(e) => { e.preventDefault(); onLongPressProp?.(); }}
       onPointerDown={(e) => { longPress.onPointerDown(e); onPointerDownProp?.(e); }}
       onPointerMove={longPress.onPointerMove}
       onPointerUp={longPress.onPointerUp}

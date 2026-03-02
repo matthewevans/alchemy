@@ -162,6 +162,16 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
             background: artGradient,
           }}
         >
+          {/* Element icon placeholder — visible when art is missing */}
+          <img
+            src={elementIconPath}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 m-auto select-none"
+            draggable={false}
+            style={{ width: '40%', opacity: 0.35 }}
+          />
+
           <div
             aria-hidden="true"
             className="absolute inset-0 bg-cover bg-center"

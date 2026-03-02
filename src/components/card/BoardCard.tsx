@@ -153,6 +153,7 @@ export function BoardCard({
       whileTap={{ scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       onClick={() => { if (!longPress.firedRef.current) onClick(); }}
+      onContextMenu={(e) => { e.preventDefault(); onLongPressProp?.(); }}
       onPointerDown={longPress.onPointerDown}
       onPointerMove={longPress.onPointerMove}
       onPointerUp={longPress.onPointerUp}

@@ -38,8 +38,8 @@ describe('shareCode', () => {
   it('produces a compact string (~26 chars)', () => {
     const cardIds = ALL_CARDS.slice(0, 10).map((c) => c.id);
     const code = encodeDeck(cardIds, 'apprentice');
-    // 70 cards × 2 bits = 18 data bytes + 1 header = 19 bytes → ~26 base64 chars
-    expect(code.length).toBeLessThanOrEqual(30);
+    // 100 cards × 2 bits = 25 data bytes + 1 header = 26 bytes → ~35 base64 chars
+    expect(code.length).toBeLessThanOrEqual(40);
   });
 
   it('returns null for invalid codes', () => {

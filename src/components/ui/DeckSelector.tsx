@@ -1,8 +1,8 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import type { Element, Tier } from '@engine/types';
 import { ELEMENT_META } from '@engine/elements';
-import { getCardsByElement } from '@engine/cards';
 import { TIER_ORDER } from '@engine/ruleset';
+import { STARTER_DECKS, buildStarterDeck } from '@engine/starterDecks';
 import type { AIDifficulty } from '@engine/aiConfig';
 import { DIFFICULTY_ORDER, DIFFICULTY_LABELS } from '@engine/aiConfig';
 import { getElementColor, getElementIconPath } from '@components/card/cardUtils';
@@ -21,71 +21,6 @@ export interface DeckSelectorProps {
   onTierChange?: (tier: Tier) => void;
   difficulty?: AIDifficulty;
   onDifficultyChange?: (difficulty: AIDifficulty) => void;
-}
-
-interface DeckOption {
-  name: string;
-  elements: Element[];
-  playstyle: string;
-  type: 'mono' | 'allied';
-  /** Explicit card IDs for themed decks (10 unique cards → 2 copies each = 20). */
-  cardIds?: string[];
-}
-
-// Original card sets for elements with multiple archetypes
-const ORIGINAL_AIR_IDS = [
-  'air_breeze_fairy', 'air_cloud_kitten', 'air_wind_hawk', 'air_storm_sprite',
-  'air_thunder_ram', 'air_sky_drake', 'air_tempest_eagle',
-  'air_gust', 'air_lightning_bolt', 'air_tailwind',
-];
-const ANGEL_IDS = [
-  'air_acolyte', 'air_temple_dove', 'air_priestess_of_light', 'air_angelic_scribe',
-  'air_celestial_monk', 'air_archangel', 'air_seraph',
-  'air_soothe', 'air_blessing', 'air_radiance',
-];
-const ORIGINAL_EARTH_IDS = [
-  'earth_pebble_pup', 'earth_vine_crawler', 'earth_mushroom_guard', 'earth_boulder_bear',
-  'earth_treant_sapling', 'earth_crystal_stag', 'earth_mountain_giant',
-  'earth_entangle', 'earth_earthquake', 'earth_growth',
-];
-const DINOSAUR_IDS = [
-  'earth_dino_hatchling', 'earth_raptor', 'earth_spike_tail', 'earth_triceratops_calf',
-  'earth_pteranodon', 'earth_stegosaurus', 'earth_tyrant_rex',
-  'earth_primal_roar', 'earth_tar_pit', 'earth_meteor_strike',
-];
-
-const STARTER_DECKS: DeckOption[] = [
-  // Mono decks
-  { name: 'Inferno', elements: ['fire'], playstyle: 'Aggressive burns and swift attackers', type: 'mono' },
-  { name: 'Tidepool', elements: ['water'], playstyle: 'Healing, card draw, and tough defenders', type: 'mono' },
-  { name: 'Deepwood', elements: ['earth'], playstyle: 'Sturdy creatures and steady growth', type: 'mono', cardIds: ORIGINAL_EARTH_IDS },
-  { name: 'Stormfront', elements: ['air'], playstyle: 'Fast strikers and tricky spells', type: 'mono', cardIds: ORIGINAL_AIR_IDS },
-  { name: 'Nightfall', elements: ['shadow'], playstyle: 'Ruthless removal and power plays', type: 'mono' },
-  // Themed archetype decks
-  { name: 'Divine Light', elements: ['air'], playstyle: 'Healing angels and protective blessings', type: 'mono', cardIds: ANGEL_IDS },
-  { name: 'Jurassic', elements: ['earth'], playstyle: 'Massive dinosaurs and primal power', type: 'mono', cardIds: DINOSAUR_IDS },
-  // Allied pair decks
-  { name: 'Tsunami', elements: ['water', 'air'], playstyle: 'Evasive tempo with card advantage', type: 'allied', cardIds: [...getCardsByElement('water').map((c) => c.id), ...ORIGINAL_AIR_IDS] },
-  { name: 'Ancient Grove', elements: ['air', 'earth'], playstyle: 'Swift creatures backed by sturdy walls', type: 'allied', cardIds: [...ORIGINAL_AIR_IDS, ...ORIGINAL_EARTH_IDS] },
-  { name: 'Wildfire', elements: ['earth', 'fire'], playstyle: 'Big creatures with burn backup', type: 'allied', cardIds: [...ORIGINAL_EARTH_IDS, ...getCardsByElement('fire').map((c) => c.id)] },
-  { name: 'Hellfire', elements: ['fire', 'shadow'], playstyle: 'Aggressive damage and removal', type: 'allied' },
-  { name: 'Deep Dark', elements: ['shadow', 'water'], playstyle: 'Draining life while drawing cards', type: 'allied' },
-];
-
-function buildDeckCardIds(deck: DeckOption): string[] {
-  if (deck.cardIds) {
-    // Themed deck: 2 copies of each specified card
-    if (deck.type === 'mono') return deck.cardIds.flatMap((id) => [id, id]);
-    // Allied with explicit cards: 1 copy each
-    return [...deck.cardIds];
-  }
-  if (deck.type === 'mono') {
-    const cards = getCardsByElement(deck.elements[0]);
-    return cards.flatMap((c) => [c.id, c.id]);
-  }
-  const cards0 = getCardsByElement(deck.elements[0]);
-  const cards1 = getCardsByElement(deck.elements[1]);
-  return [...cards0.map((c) => c.id), ...cards1.map((c) => c.id)];
 }
 
 function ElementIcon({ element }: { element: Element }) {
@@ -196,7 +131,7 @@ export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTier
         {/* Deck grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {STARTER_DECKS.map((deck, i) => {
-            const cardCount = buildDeckCardIds(deck).length;
+            const cardCount = buildStarterDeck(deck, tier).length;
 
             const primaryColor = getElementColor(deck.elements[0]);
 
@@ -222,7 +157,7 @@ export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTier
                   boxShadow: `0 0 20px ${primaryColor}22, 0 4px 16px rgba(0,0,0,0.3)`,
                 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => onSelectDeck(buildDeckCardIds(deck))}
+                onClick={() => onSelectDeck(buildStarterDeck(deck, tier))}
               >
                 {/* Element icon watermark */}
                 <motion.img
@@ -251,5 +186,6 @@ export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTier
   );
 }
 
-/** Exported for use in App.tsx to determine the deck's primary element. */
-export { STARTER_DECKS };
+/** Re-exported for use in App.tsx to determine the deck's primary element. */
+export { STARTER_DECKS } from '@engine/starterDecks';
+export type { StarterDeck } from '@engine/starterDecks';

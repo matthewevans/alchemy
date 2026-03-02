@@ -6,7 +6,7 @@ import { TIER_CONFIGS } from '@engine/ruleset';
 import type { AIDifficulty } from '@engine/aiConfig';
 import { createAIConfig } from '@engine/aiConfig';
 import { ELEMENTS } from '@engine/elements';
-import { getCardsByElement } from '@engine/cards';
+import { STARTER_DECKS, buildStarterDeck } from '@engine/starterDecks';
 import { useGameStore } from '@game/gameStore';
 import { clearSavedGame, loadActiveGameId, loadGame } from '@storage/persistence';
 import type { PeerSession } from '@network/peer';
@@ -98,8 +98,9 @@ export function HomePage() {
 
       const availableElements = ELEMENTS.filter((el) => !humanElements.has(el));
       const aiElement = availableElements[Math.floor(rng() * availableElements.length)];
-      const aiCards = getCardsByElement(aiElement);
-      const aiDeck = aiCards.flatMap((c) => [c.id, c.id]);
+      const aiMonoDecks = STARTER_DECKS.filter((d) => d.type === 'mono' && d.elements[0] === aiElement);
+      const aiStarterDeck = aiMonoDecks[Math.floor(rng() * aiMonoDecks.length)];
+      const aiDeck = buildStarterDeck(aiStarterDeck, selectedTier);
 
       const gameId = initGame(
         {
@@ -156,7 +157,7 @@ export function HomePage() {
     case 'deck_builder':
       return (
         <Suspense fallback={<HomeLoading label="Loading deck builder..." />}>
-          <DeckBuilderScreen onSelectDeck={handleSelectDeck} onBack={handleBack} />
+          <DeckBuilderScreen onSelectDeck={handleSelectDeck} onBack={handleBack} tier={selectedTier} />
         </Suspense>
       );
     case 'multiplayer_lobby':

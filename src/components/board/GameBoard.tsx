@@ -7,7 +7,7 @@ import { getOpponent } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useScreenShake } from '@hooks/useScreenShake';
-import { getDeckPrimaryElement, getBattlefieldBackground, getAvatarPath } from '@components/card/cardUtils';
+import { getDeckPrimaryElement, getBattlefieldBackground, getDeckAvatarPath } from '@components/card/cardUtils';
 import { PlayerInfo } from './PlayerInfo';
 import { HeroHUD } from './HeroHUD';
 import { ActionButton } from './ActionButton';
@@ -51,10 +51,9 @@ export function GameBoard() {
   const [discardViewerPlayerId, setDiscardViewerPlayerId] = useState<PlayerId | null>(null);
 
   const primaryElement = useMemo(() => getDeckPrimaryElement(humanDeckIds), [humanDeckIds]);
-  const opponentElement = useMemo(() => getDeckPrimaryElement(opponentDeckIds), [opponentDeckIds]);
   const battlefieldBg = primaryElement ? getBattlefieldBackground(primaryElement) : undefined;
-  const humanAvatar = primaryElement ? getAvatarPath(primaryElement) : undefined;
-  const opponentAvatar = opponentElement ? getAvatarPath(opponentElement) : undefined;
+  const humanAvatar = useMemo(() => getDeckAvatarPath(humanDeckIds), [humanDeckIds]);
+  const opponentAvatar = useMemo(() => getDeckAvatarPath(opponentDeckIds), [opponentDeckIds]);
 
   const phase = state?.phase;
   const validTargetPlayerIds = new Set(
@@ -251,7 +250,6 @@ export function GameBoard() {
         {isLocalPlayerTargeting && phase?.type === 'targeting' && (
           <TargetingPanel
             cardId={phase.sourceCardId}
-            effectId={phase.effectId}
             onCancel={canCancelTargeting ? () => dispatch({ type: 'CANCEL_TARGETING' }, humanPlayer) : undefined}
           />
         )}

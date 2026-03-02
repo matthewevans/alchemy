@@ -94,13 +94,41 @@ export function getBattlefieldBackground(element: Element): string {
 const AVATAR_PATHS: Record<Element, string> = {
   fire: `${ASSET_BASE}avatar/fire_mage.webp`,
   water: `${ASSET_BASE}avatar/water_sorcerer.webp`,
-  earth: `${ASSET_BASE}avatar/earth_druid.webp`,
-  air: `${ASSET_BASE}avatar/air_windcaller.webp`,
+  earth: `${ASSET_BASE}avatar/earth_dino.webp`,
+  air: `${ASSET_BASE}avatar/air_alchemist.webp`,
   shadow: `${ASSET_BASE}avatar/shadow_trickster.webp`,
 };
 
+const ELEMENTAL_CHAMPION_AVATAR_PATH = `${ASSET_BASE}avatar/elemental_champion.webp`;
+
 export function getAvatarPath(element: Element): string {
   return AVATAR_PATHS[element];
+}
+
+/** Resolve avatar by deck composition; mixed decks use a neutral champion portrait. */
+export function getDeckAvatarPath(cardIds: string[]): string {
+  const counts: Partial<Record<Element, number>> = {};
+  for (const id of cardIds) {
+    const element = id.split('_')[0] as Element;
+    if (element in AVATAR_PATHS) {
+      counts[element] = (counts[element] ?? 0) + 1;
+    }
+  }
+
+  let bestCount = 0;
+  const leaders: Element[] = [];
+  for (const [element, count] of Object.entries(counts) as [Element, number][]) {
+    if (count > bestCount) {
+      bestCount = count;
+      leaders.length = 0;
+      leaders.push(element);
+    } else if (count === bestCount) {
+      leaders.push(element);
+    }
+  }
+
+  if (leaders.length !== 1) return ELEMENTAL_CHAMPION_AVATAR_PATH;
+  return getAvatarPath(leaders[0]);
 }
 
 /** Determine the most common element in a list of card IDs (by ID prefix convention). */

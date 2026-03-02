@@ -5,7 +5,7 @@ import { ALL_CARDS, CARD_REGISTRY } from '@engine/cards';
 import { ELEMENTS, ELEMENT_META } from '@engine/elements';
 import { KEYWORD_REGISTRY } from '@engine/keywords';
 import { EFFECT_REGISTRY } from '@engine/effects';
-import { TIER_CONFIGS } from '@engine/ruleset';
+import { TIER_CONFIGS, TIER_ORDER } from '@engine/ruleset';
 import { validateDeck } from '@engine/deck';
 import { getElementColor, getElementIconPath } from '@components/card/cardUtils';
 import { loadSavedDecks, saveDeck, deleteDeck } from '@storage/deckStorage';
@@ -16,14 +16,14 @@ import { gameButtonClass } from './buttonStyles';
 interface DeckBuilderProps {
   onSelectDeck: (deckCardIds: string[]) => void;
   onBack: () => void;
+  tier?: Tier;
 }
 
 type ElementFilter = Element | 'all';
 
-const TIER: Tier = 'apprentice';
-const RULESET = TIER_CONFIGS[TIER];
-
-export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
+export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice' }: DeckBuilderProps) {
+  const RULESET = TIER_CONFIGS[tier];
+  const tierIndex = TIER_ORDER.indexOf(tier);
   const [elementFilter, setElementFilter] = useState<ElementFilter>('all');
   const [deckCounts, setDeckCounts] = useState<Record<string, number>>({});
   const [deckName, setDeckName] = useState('My Deck');
@@ -36,10 +36,12 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
 
   const filteredCards = useMemo(
     () =>
-      elementFilter === 'all'
-        ? ALL_CARDS
-        : ALL_CARDS.filter((c) => c.element === elementFilter),
-    [elementFilter],
+      ALL_CARDS.filter((c) => {
+        if (TIER_ORDER.indexOf(c.tier) > tierIndex) return false;
+        if (elementFilter !== 'all' && c.element !== elementFilter) return false;
+        return true;
+      }),
+    [elementFilter, tierIndex],
   );
 
   // Group filtered cards by cost for MTGA-style display
@@ -122,7 +124,7 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
     const deck: SavedDeck = {
       id: crypto.randomUUID(),
       name: deckName,
-      tier: TIER,
+      tier,
       cardIds: deckCardIds,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -153,7 +155,7 @@ export function DeckBuilder({ onSelectDeck, onBack }: DeckBuilderProps) {
   );
 
   const handleExport = useCallback(() => {
-    const code = encodeDeck(deckCardIds, TIER);
+    const code = encodeDeck(deckCardIds, tier);
     setShareCode(code);
     navigator.clipboard.writeText(code).then(
       () => showToast('Share code copied!'),
