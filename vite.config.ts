@@ -22,18 +22,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: [
-        'logo.webp',
-        'logo_wordmark.webp',
-        'wordmark.webp',
-        'pwa-192x192.webp',
-        'pwa-512x512.webp',
-        'cardback.webp',
-        'elements/*.webp',
-        'cards/**/*.webp',
-        'avatar/*.webp',
-        'battlefield/**/*.webp',
-      ],
+      includeAssets: ['**/*.webp'],
       workbox: {
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
