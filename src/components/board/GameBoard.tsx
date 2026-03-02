@@ -9,7 +9,7 @@ import { CARD_REGISTRY } from '@engine/cards';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useScreenShake } from '@hooks/useScreenShake';
 import { getDeckPrimaryElement, getDeckAvatarPath } from '@components/card/cardUtils';
-import { BATTLEFIELD_MAP, getDefaultBattlefield } from './battlefields';
+import { BATTLEFIELD_MAP, getRandomBattlefield } from './battlefields';
 import { PlayerInfo } from './PlayerInfo';
 import { HeroHUD } from './HeroHUD';
 import { ActionButton } from './ActionButton';
@@ -56,10 +56,12 @@ export function GameBoard() {
   const battlefieldPref = usePreferencesStore((s) => s.battlefield);
   const showAmbience = usePreferencesStore((s) => s.battlefieldAmbience);
   const deckElement = useMemo(() => getDeckPrimaryElement(humanDeckIds), [humanDeckIds]);
-  const battlefield = useMemo(() => {
-    if (battlefieldPref !== 'auto') return BATTLEFIELD_MAP[battlefieldPref] ?? null;
-    return deckElement ? getDefaultBattlefield(deckElement) : null;
-  }, [battlefieldPref, deckElement]);
+  const [autoBattlefield] = useState(() =>
+    deckElement ? getRandomBattlefield(deckElement) : null,
+  );
+  const battlefield = battlefieldPref !== 'auto'
+    ? BATTLEFIELD_MAP[battlefieldPref] ?? null
+    : autoBattlefield;
   const battlefieldBg = battlefield?.image;
   const humanAvatar = useMemo(() => getDeckAvatarPath(humanDeckIds), [humanDeckIds]);
   const opponentAvatar = useMemo(() => getDeckAvatarPath(opponentDeckIds), [opponentDeckIds]);
@@ -135,7 +137,7 @@ export function GameBoard() {
       }}
     >
       {/* ═══ Ambient element particles ═══ */}
-      {showAmbience && battlefield && <BattlefieldAmbience config={battlefield.particles} />}
+      {showAmbience && battlefield && <BattlefieldAmbience config={battlefield.particles} count={battlefield.particleCount} />}
 
       {/* ═══ Opponent hand — top edge ═══ */}
       <div className="shrink-0 -mt-10 mb-12 z-10">

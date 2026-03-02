@@ -25,6 +25,8 @@ export interface BattlefieldConfig {
   element: Element;
   image: string;
   particles: ParticleConfig;
+  /** Number of particles to render (default 25). */
+  particleCount?: number;
 }
 
 function img(name: string): string {
@@ -107,9 +109,9 @@ const SHADOW_MOTES: ParticleConfig = {
 };
 
 const SNOWFALL: ParticleConfig = {
-  colors: ['rgba(255,255,255,0.6)', 'rgba(220,230,255,0.5)', 'rgba(200,215,240,0.45)', 'rgba(180,200,230,0.35)'],
-  sizeRange: [1.5, 4],
-  durationRange: [6, 14],
+  colors: ['rgba(255,255,255,0.7)', 'rgba(220,230,255,0.6)', 'rgba(200,215,240,0.5)', 'rgba(240,245,255,0.55)'],
+  sizeRange: [1, 4],
+  durationRange: [4, 10],
   driftRange: 50,
   origin: 'top',
   ease: 'linear',
@@ -137,9 +139,9 @@ const SHADOW_FLAMES: ParticleConfig = {
 };
 
 const ICE_CRYSTALS: ParticleConfig = {
-  colors: ['rgba(103,232,249,0.55)', 'rgba(56,189,248,0.45)', 'rgba(165,243,252,0.5)', 'rgba(255,255,255,0.4)'],
-  sizeRange: [1.5, 3.5],
-  durationRange: [5, 11],
+  colors: ['rgba(103,232,249,0.55)', 'rgba(56,189,248,0.45)', 'rgba(165,243,252,0.5)', 'rgba(255,255,255,0.5)'],
+  sizeRange: [1, 3.5],
+  durationRange: [4, 9],
   driftRange: 35,
   origin: 'top',
   ease: 'linear',
@@ -157,9 +159,9 @@ const ICE_CRYSTALS: ParticleConfig = {
 export const BATTLEFIELDS: BattlefieldConfig[] = [
   { id: 'fire_molten',               label: 'Molten',           element: 'fire',   image: img('fire_molten'),               particles: FIRE_EMBERS },
   { id: 'water_moonlit_ocean_temple', label: 'Ocean Temple',     element: 'water',  image: img('water_moonlit_ocean_temple'), particles: WATER_RAIN },
-  { id: 'water_frozen_aurora',        label: 'Frozen Aurora',    element: 'water',  image: img('water_frozen_aurora'),        particles: ICE_CRYSTALS },
+  { id: 'water_frozen_aurora',        label: 'Frozen Aurora',    element: 'water',  image: img('water_frozen_aurora'),        particles: ICE_CRYSTALS, particleCount: 50 },
   { id: 'earth_jurassic',             label: 'Jurassic',         element: 'earth',  image: img('earth_jurassic'),             particles: EARTH_LEAVES },
-  { id: 'earth_snowy_forest',         label: 'Snowy Forest',     element: 'earth',  image: img('earth_snowy_forest'),         particles: SNOWFALL },
+  { id: 'earth_snowy_forest',         label: 'Snowy Forest',     element: 'earth',  image: img('earth_snowy_forest'),         particles: SNOWFALL, particleCount: 50 },
   { id: 'air_angelic_sky',            label: 'Angelic Sky',      element: 'air',    image: img('air_angelic_sky'),            particles: AIR_WISPS },
   { id: 'shadow_haunted_graveyard',   label: 'Haunted Graveyard', element: 'shadow', image: img('shadow_haunted_graveyard'),  particles: SHADOW_FLAMES },
   { id: 'shadow_ruined_archway',      label: 'Ruined Archway',  element: 'shadow', image: img('shadow_ruined_archway'),      particles: SHADOW_MOTES },
@@ -169,15 +171,14 @@ export const BATTLEFIELD_MAP: Record<string, BattlefieldConfig> = Object.fromEnt
   BATTLEFIELDS.map((b) => [b.id, b]),
 );
 
-/** Default battlefield per element (first match in registry). */
-const DEFAULT_BY_ELEMENT: Record<Element, BattlefieldConfig> = {} as Record<Element, BattlefieldConfig>;
+/** Battlefields grouped by element for random auto-selection. */
+const BY_ELEMENT: Record<Element, BattlefieldConfig[]> = { fire: [], water: [], earth: [], air: [], shadow: [] };
 for (const bf of BATTLEFIELDS) {
-  if (!DEFAULT_BY_ELEMENT[bf.element]) {
-    DEFAULT_BY_ELEMENT[bf.element] = bf;
-  }
+  BY_ELEMENT[bf.element].push(bf);
 }
 
-/** Returns the default battlefield for an element (used in auto mode). */
-export function getDefaultBattlefield(element: Element): BattlefieldConfig {
-  return DEFAULT_BY_ELEMENT[element];
+/** Returns a random battlefield for an element (used in auto mode). */
+export function getRandomBattlefield(element: Element): BattlefieldConfig {
+  const candidates = BY_ELEMENT[element];
+  return candidates[Math.floor(Math.random() * candidates.length)];
 }
