@@ -89,6 +89,15 @@ describe('buildDeck', () => {
     const b = buildDeck(ids, createRNG(123));
     expect(a).toEqual(b);
   });
+
+  it('instanceIds are unique across two players with the same deck', () => {
+    const ids = makeApprenticeDeckIds();
+    const rng = createRNG(42);
+    const deck1 = buildDeck(ids, rng, 'player1');
+    const deck2 = buildDeck(ids, rng, 'player2');
+    const allIds = [...deck1.map((c) => c.instanceId), ...deck2.map((c) => c.instanceId)];
+    expect(new Set(allIds).size).toBe(allIds.length);
+  });
 });
 
 // ─── drawCards ───

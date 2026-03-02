@@ -14,8 +14,10 @@ function createPlayerState(
   deckCardIds: string[],
   ruleset: RulesetConfig,
   rng: RNG,
+  playerId: PlayerId,
 ): PlayerState {
-  const shuffledDeck = buildDeck(deckCardIds, rng);
+  const prefix = playerId === 'player1' ? 'p1' : 'p2';
+  const shuffledDeck = buildDeck(deckCardIds, rng, prefix);
   const { hand, remaining } = drawOpeningHand(
     shuffledDeck,
     ruleset.startingHandSize,
@@ -44,8 +46,8 @@ export function createInitialGameState(config: GameInitConfig): GameState {
     turn: 0,
     activePlayer: startingPlayer,
     players: {
-      player1: createPlayerState(config.player1Deck, config.ruleset, config.rng),
-      player2: createPlayerState(config.player2Deck, config.ruleset, config.rng),
+      player1: createPlayerState(config.player1Deck, config.ruleset, config.rng, 'player1'),
+      player2: createPlayerState(config.player2Deck, config.ruleset, config.rng, 'player2'),
     },
   };
 }

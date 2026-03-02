@@ -52,7 +52,7 @@ export function GameBoard() {
 
   const primaryElement = useMemo(() => getDeckPrimaryElement(humanDeckIds), [humanDeckIds]);
   const opponentElement = useMemo(() => getDeckPrimaryElement(opponentDeckIds), [opponentDeckIds]);
-  const battlefieldBg = primaryElement ? getBattlefieldBackground(primaryElement) : null;
+  const battlefieldBg = primaryElement ? getBattlefieldBackground(primaryElement) : undefined;
   const humanAvatar = primaryElement ? getAvatarPath(primaryElement) : undefined;
   const opponentAvatar = opponentElement ? getAvatarPath(opponentElement) : undefined;
 
@@ -283,6 +283,42 @@ export function GameBoard() {
                   Cancel
                 </button>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Discard prompt overlay */}
+      <AnimatePresence>
+        {phase?.type === 'discard' && phase.player === humanPlayer && (
+          <motion.div
+            className="fixed top-[calc(env(safe-area-inset-top)+0.5rem)] left-1/2 -translate-x-1/2 z-30 pointer-events-none"
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <motion.div
+              className="pointer-events-auto rounded-xl bg-slate-900/90 px-4 py-2 shadow-xl shadow-black/40 backdrop-blur-sm text-center"
+              style={{ border: '1px solid rgba(251, 146, 60, 0.4)' }}
+              animate={{
+                borderColor: [
+                  'rgba(251, 146, 60, 0.3)',
+                  'rgba(251, 146, 60, 0.7)',
+                  'rgba(251, 146, 60, 0.3)',
+                ],
+                boxShadow: [
+                  '0 0 12px rgba(251, 146, 60, 0.1), 0 4px 20px rgba(0, 0, 0, 0.4)',
+                  '0 0 24px rgba(251, 146, 60, 0.3), 0 4px 20px rgba(0, 0, 0, 0.4)',
+                  '0 0 12px rgba(251, 146, 60, 0.1), 0 4px 20px rgba(0, 0, 0, 0.4)',
+                ],
+              }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <p className="text-orange-200 text-sm font-semibold">
+                Discard {phase.mustDiscard} {phase.mustDiscard === 1 ? 'card' : 'cards'}
+              </p>
+              <p className="text-white/70 text-xs mt-0.5">Tap a card in your hand to discard it</p>
             </motion.div>
           </motion.div>
         )}

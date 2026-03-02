@@ -27,7 +27,6 @@ export const TIER_CONFIGS: Record<Tier, RulesetConfig> = {
     deckSize: 20,
     maxCopiesPerCard: 2,
     energyCap: 5,
-    maxHandSize: 7,
     maxBoardSize: 6,
     startingHealth: 20,
     startingHandSize: 4,

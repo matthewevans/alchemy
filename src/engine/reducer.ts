@@ -1444,8 +1444,8 @@ function resolveUnblockedAttack(
 function performEndOfTurnProcessing(state: GameState): ReducerResult {
   const activePs = state.players[state.activePlayer];
 
-  // Check if hand exceeds maxHandSize
-  if (activePs.hand.length > state.ruleset.maxHandSize) {
+  // Check if hand exceeds maxHandSize (when defined)
+  if (state.ruleset.maxHandSize != null && activePs.hand.length > state.ruleset.maxHandSize) {
     const mustDiscard = activePs.hand.length - state.ruleset.maxHandSize;
     return {
       newState: {

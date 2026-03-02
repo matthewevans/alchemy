@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
+import { useAnimationStore } from '@game/animationStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useUIStore } from '@game/uiStore';
 import type { GameAction } from '@engine/types';
@@ -44,15 +45,31 @@ export function PlayerHand() {
     prevHandLengthRef.current = hand.length;
   }, [hand.length]);
 
+  const phase = useGameStore((s) => s.state?.phase);
+  const isDiscardPhase = phase?.type === 'discard';
+
   const playableIndices = new Set(
     legalActions
       .filter((a): a is Extract<GameAction, { type: 'PLAY_CARD' }> => a.type === 'PLAY_CARD')
       .map((a) => a.cardIndex),
   );
 
+  const discardableIndices = new Set(
+    legalActions
+      .filter((a): a is Extract<GameAction, { type: 'DISCARD_CARD' }> => a.type === 'DISCARD_CARD')
+      .map((a) => a.cardIndex),
+  );
+
   const handleCardClick = (index: number) => {
     // Suppress click if we just completed a drag
     if (dragActiveRef.current) return;
+
+    // Discard phase — single tap discards immediately
+    if (isDiscardPhase && discardableIndices.has(index)) {
+      dispatch({ type: 'DISCARD_CARD', cardIndex: index }, humanPlayer);
+      selectHandCard(null);
+      return;
+    }
 
     if (selectedHandIndex === index) {
       // Second tap on same card — auto-play if possible
@@ -160,8 +177,11 @@ export function PlayerHand() {
   // Phantom card for drag
   const draggedCard = draggedIndex !== null ? hand[draggedIndex] : null;
 
-  // Hand expands when hovered (desktop) or a card is selected/dragged (touch)
-  const isExpanded = handHovered || selectedHandIndex !== null || draggedIndex !== null;
+  // Collapse hand during animations (combat strikes, spell effects, etc.)
+  const isAnimating = useAnimationStore((s) => s.isAnimating);
+
+  // Hand expands when hovered (desktop), a card is selected/dragged (touch), or during discard phase
+  const isExpanded = !isAnimating && (handHovered || selectedHandIndex !== null || draggedIndex !== null || isDiscardPhase);
 
   return (
     <div
@@ -183,7 +203,7 @@ export function PlayerHand() {
       >
         {hand.map((cardInstance, index) => {
           const angle = cardCount > 1 ? -maxFanAngle + fanStep * index : 0;
-          const isPlayable = playableIndices.has(index);
+          const isPlayable = playableIndices.has(index) || discardableIndices.has(index);
           const isSelected = selectedHandIndex === index;
           const isDragged = draggedIndex === index;
           const depth = cardCount - Math.abs(index - centerIndex);

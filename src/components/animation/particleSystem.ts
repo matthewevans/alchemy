@@ -60,6 +60,9 @@ const DEFAULT_PARTICLE: Particle = {
   ringWidth: 2,
 };
 
+// Size of pre-rendered glow sprite canvases (px). Large enough for smooth gradients.
+const GLOW_SPRITE_SIZE = 128;
+
 export class ParticleSystem {
   private particles: Particle[] = [];
   private effects: ActiveEffect[] = [];
@@ -69,6 +72,8 @@ export class ParticleSystem {
   private lastTime = 0;
   private dpr = 1;
   private running = false;
+  private glowSprites = new Map<number, HTMLCanvasElement>();
+  private colorStrings = new Map<number, string>();
 
   attach(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -86,6 +91,8 @@ export class ParticleSystem {
     this.effects = [];
     this.canvas = null;
     this.ctx = null;
+    this.glowSprites.clear();
+    this.colorStrings.clear();
   }
 
   resize() {
@@ -121,6 +128,41 @@ export class ParticleSystem {
     }
   }
 
+  private rgbKey(r: number, g: number, b: number): number {
+    return (r << 16) | (g << 8) | b;
+  }
+
+  private getColorString(r: number, g: number, b: number): string {
+    const key = this.rgbKey(r, g, b);
+    let s = this.colorStrings.get(key);
+    if (!s) {
+      s = `rgb(${r}, ${g}, ${b})`;
+      this.colorStrings.set(key, s);
+    }
+    return s;
+  }
+
+  /** Lazily create a 128×128 offscreen canvas with a radial gradient glow for this color. */
+  private getGlowSprite(r: number, g: number, b: number): HTMLCanvasElement {
+    const key = this.rgbKey(r, g, b);
+    let sprite = this.glowSprites.get(key);
+    if (!sprite) {
+      sprite = document.createElement('canvas');
+      sprite.width = GLOW_SPRITE_SIZE;
+      sprite.height = GLOW_SPRITE_SIZE;
+      const sctx = sprite.getContext('2d')!;
+      const half = GLOW_SPRITE_SIZE / 2;
+      const grad = sctx.createRadialGradient(half, half, 0, half, half, half);
+      grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 1)`);
+      grad.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, 0.6)`);
+      grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+      sctx.fillStyle = grad;
+      sctx.fillRect(0, 0, GLOW_SPRITE_SIZE, GLOW_SPRITE_SIZE);
+      this.glowSprites.set(key, sprite);
+    }
+    return sprite;
+  }
+
   /** Draw a filled circle directly (for projectile bodies, flashes). */
   drawGlowCircle(
     ctx: CanvasRenderingContext2D,
@@ -131,17 +173,18 @@ export class ParticleSystem {
     alpha: number,
     glowRadius: number,
   ) {
-    ctx.save();
     ctx.globalAlpha = alpha;
     if (glowRadius > 0) {
-      ctx.shadowBlur = glowRadius;
-      ctx.shadowColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
+      // Draw pre-rendered glow sprite instead of using shadowBlur
+      const sprite = this.getGlowSprite(color.r, color.g, color.b);
+      const spriteSize = (radius + glowRadius) * 2;
+      ctx.drawImage(sprite, x - spriteSize / 2, y - spriteSize / 2, spriteSize, spriteSize);
+    } else {
+      ctx.fillStyle = this.getColorString(color.r, color.g, color.b);
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(radius, 0.5), 0, Math.PI * 2);
+      ctx.fill();
     }
-    ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
-    ctx.beginPath();
-    ctx.arc(x, y, Math.max(radius, 0.5), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
   }
 
   /** Draw a ring directly (for shockwaves). */
@@ -155,18 +198,34 @@ export class ParticleSystem {
     lineWidth: number,
     glowRadius: number,
   ) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
+    const colorStr = this.getColorString(color.r, color.g, color.b);
+    const r = Math.max(radius, 0.5);
     if (glowRadius > 0) {
-      ctx.shadowBlur = glowRadius;
-      ctx.shadowColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
+      // Multi-pass ring: outer glow → mid glow → sharp core
+      // Under additive blending ('lighter'), these blend into a convincing glow
+      ctx.strokeStyle = colorStr;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+
+      ctx.globalAlpha = alpha * 0.15;
+      ctx.lineWidth = lineWidth + glowRadius;
+      ctx.stroke();
+
+      ctx.globalAlpha = alpha * 0.3;
+      ctx.lineWidth = lineWidth + glowRadius * 0.5;
+      ctx.stroke();
+
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+    } else {
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = colorStr;
+      ctx.lineWidth = lineWidth;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.stroke();
     }
-    ctx.strokeStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
-    ctx.lineWidth = lineWidth;
-    ctx.beginPath();
-    ctx.arc(x, y, Math.max(radius, 0.5), 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
   }
 
   private loop = () => {
@@ -250,44 +309,46 @@ export class ParticleSystem {
     }
 
     // Draw particles with additive blending — batched to minimize state changes.
-    // First pass: non-glowing circles (most common), no shadowBlur needed.
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = 'transparent';
+    // First pass: non-glowing circles (most common).
     for (const p of this.particles) {
       if (p.alpha <= 0 || p.size <= 0 || p.glow > 0 || p.style === 'ring') continue;
       ctx.globalAlpha = p.alpha;
-      ctx.fillStyle = `rgb(${p.r}, ${p.g}, ${p.b})`;
+      ctx.fillStyle = this.getColorString(p.r, p.g, p.b);
       ctx.beginPath();
       ctx.arc(p.x, p.y, Math.max(p.size, 0.5), 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Second pass: glowing circles (expensive shadowBlur)
+    // Second pass: glowing circles — pre-rendered sprite instead of shadowBlur.
     for (const p of this.particles) {
       if (p.alpha <= 0 || p.size <= 0 || p.glow <= 0 || p.style === 'ring') continue;
       ctx.globalAlpha = p.alpha;
-      ctx.shadowBlur = p.glow;
-      ctx.shadowColor = `rgb(${p.r}, ${p.g}, ${p.b})`;
-      ctx.fillStyle = `rgb(${p.r}, ${p.g}, ${p.b})`;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, Math.max(p.size, 0.5), 0, Math.PI * 2);
-      ctx.fill();
+      const sprite = this.getGlowSprite(p.r, p.g, p.b);
+      const spriteSize = (p.size + p.glow) * 2;
+      ctx.drawImage(sprite, p.x - spriteSize / 2, p.y - spriteSize / 2, spriteSize, spriteSize);
     }
 
-    // Third pass: rings (rare)
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = 'transparent';
+    // Third pass: rings (rare) — multi-pass glow instead of shadowBlur.
     for (const p of this.particles) {
       if (p.alpha <= 0 || p.size <= 0 || p.style !== 'ring') continue;
-      ctx.globalAlpha = p.alpha;
-      if (p.glow > 0) {
-        ctx.shadowBlur = p.glow;
-        ctx.shadowColor = `rgb(${p.r}, ${p.g}, ${p.b})`;
-      }
-      ctx.strokeStyle = `rgb(${p.r}, ${p.g}, ${p.b})`;
-      ctx.lineWidth = p.ringWidth;
+      const colorStr = this.getColorString(p.r, p.g, p.b);
+      const r = Math.max(p.size, 0.5);
+      ctx.strokeStyle = colorStr;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, Math.max(p.size, 0.5), 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+
+      if (p.glow > 0) {
+        ctx.globalAlpha = p.alpha * 0.15;
+        ctx.lineWidth = p.ringWidth + p.glow;
+        ctx.stroke();
+
+        ctx.globalAlpha = p.alpha * 0.3;
+        ctx.lineWidth = p.ringWidth + p.glow * 0.5;
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = p.alpha;
+      ctx.lineWidth = p.ringWidth;
       ctx.stroke();
     }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useAnimationStore } from '@game/animationStore';
 import type { AnimationEffect, ElementPosition } from '@game/animationStore';
@@ -15,7 +15,14 @@ export function AnimationOverlay() {
   const activeStep = useAnimationStore((s) => s.activeStep);
   const advanceStep = useAnimationStore((s) => s.advanceStep);
   const particleRef = useRef<ParticleCanvasHandle>(null);
-  const [stepCount, setStepCount] = useState(0);
+  // Derive step key from state changes during render — no extra re-render needed
+  const stepKeyRef = useRef(0);
+  const prevStepRef = useRef<typeof activeStep>(null);
+  if (activeStep !== prevStepRef.current) {
+    prevStepRef.current = activeStep;
+    stepKeyRef.current += 1;
+  }
+  const stepCount = stepKeyRef.current;
 
   // Auto-advance after step duration
   useEffect(() => {
@@ -31,7 +38,6 @@ export function AnimationOverlay() {
   // Trigger particle effects when a new step activates
   useEffect(() => {
     if (!activeStep || !particleRef.current) return;
-    setStepCount((c) => c + 1); // eslint-disable-line react-hooks/set-state-in-effect -- remount key for AnimatePresence
     const particles = particleRef.current;
 
     for (const effect of activeStep.effects) {

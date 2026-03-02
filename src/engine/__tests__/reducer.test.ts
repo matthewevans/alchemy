@@ -1412,6 +1412,119 @@ describe('Validation', () => {
   });
 });
 
+// ─── Integration: Dark Bolt with same card on both sides ───
+
+describe('Dark Bolt integration — both players share same creature card', () => {
+  it('damages the opponent creature, not the caster creature with the same cardId', () => {
+    // Both players have fire_lava_hound (4 health) on board — with player-prefixed IDs.
+    const p1Sprite = makePermanent('fire_lava_hound', 'player1', {
+      permanentId: 'p1:fire_lava_hound#0',
+      attack: 2, health: 4,
+    });
+    const p2Sprite = makePermanent('fire_lava_hound', 'player2', {
+      permanentId: 'p2:fire_lava_hound#0',
+      attack: 2, health: 4,
+    });
+
+    // Player1 casts Dark Bolt (costs 1, deals 2 to selected, 1 to self hero)
+    const state = createTestGameState({
+      phase: {
+        type: 'play' as const,
+      },
+      player1: {
+        hand: [{ instanceId: 'p1:shadow_dark_bolt#0', cardId: 'shadow_dark_bolt' }],
+        board: [p1Sprite, null, null, null, null],
+        currentEnergy: 3,
+        maxEnergy: 3,
+      },
+      player2: {
+        board: [p2Sprite, null, null, null, null],
+      },
+    });
+
+    // Play Dark Bolt → enters targeting phase
+    const { newState: s1 } = reduce(state, { type: 'PLAY_CARD', cardIndex: 0 }, 'player1', rng);
+    expect(s1.phase.type).toBe('targeting');
+
+    // Verify valid targets only include opponent's creature
+    const targetPhase = s1.phase as { validTargets: { type: string; permanentId: string }[] };
+    const creatureTargets = targetPhase.validTargets.filter((t) => t.type === 'creature');
+    expect(creatureTargets).toHaveLength(1);
+    expect(creatureTargets[0].permanentId).toBe(p2Sprite.permanentId);
+
+    // Select opponent's sprite as target
+    const { newState: s2 } = reduce(
+      s1,
+      { type: 'SELECT_TARGET', targetRef: { type: 'creature', permanentId: p2Sprite.permanentId } },
+      'player1',
+      rng,
+    );
+
+    // Player2's sprite took 2 damage
+    const p2Perm = s2.players.player2.board.find((s) => s !== null);
+    expect(p2Perm).toBeTruthy();
+    expect(p2Perm!.damage).toBe(2);
+
+    // Player1's sprite is unharmed (only hero takes the self-damage)
+    const p1Perm = s2.players.player1.board.find((s) => s !== null);
+    expect(p1Perm).toBeTruthy();
+    expect(p1Perm!.damage).toBe(0);
+
+    // Player1 hero took 1 self-damage from Dark Bolt's second step
+    expect(s2.players.player1.health).toBe(19);
+  });
+});
+
+// ─── Blocker assignment with shared card IDs ───
+
+describe('Blocker assignment with shared card IDs', () => {
+  it('second blocker remains valid when attackers and defenders share card IDs', () => {
+    // Both players have creatures from the same card — same permanentId pattern
+    const attacker = makePermanent('fire_ember_sprite', 'player1', { attack: 1, health: 2 });
+    const blocker1 = makePermanent('fire_ember_sprite', 'player2', { attack: 1, health: 2 });
+    const blocker2 = makePermanent('fire_flame_fox', 'player2', { attack: 1, health: 1 });
+
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_blockers',
+        confirmedAttackers: [attacker.permanentId],
+        tentativeBlockers: {},
+      },
+      player1: {
+        board: [attacker, null, null, null, null],
+      },
+      player2: {
+        board: [blocker1, blocker2, null, null, null],
+      },
+    });
+
+    // Assign first blocker
+    const { newState: s1 } = reduce(
+      state,
+      {
+        type: 'ASSIGN_BLOCKER',
+        blockerPermanentId: blocker1.permanentId,
+        attackerPermanentId: attacker.permanentId,
+      },
+      'player2',
+      rng,
+    );
+
+    // Blocker2 should still be assignable
+    const legal = enumerateLegalActions(s1, 'player2');
+    const assignActions = legal.filter(
+      (a) => a.type === 'ASSIGN_BLOCKER',
+    );
+    expect(assignActions).toContainEqual({
+      type: 'ASSIGN_BLOCKER',
+      blockerPermanentId: blocker2.permanentId,
+      attackerPermanentId: attacker.permanentId,
+    });
+  });
+});
+
 // ─── Immutability ───
 
 describe('Immutability', () => {

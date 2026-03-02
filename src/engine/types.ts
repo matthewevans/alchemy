@@ -204,7 +204,7 @@ export interface RulesetConfig {
   deckSize: number;
   maxCopiesPerCard: number;
   energyCap: number;
-  maxHandSize: number;
+  maxHandSize?: number;
   maxBoardSize: number;
   startingHealth: number;
   startingHandSize: number;

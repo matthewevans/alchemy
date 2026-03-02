@@ -1,32 +1,48 @@
+import { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useGameStore } from '@game/gameStore';
 import { getPositions } from '@game/animationStore';
 
+interface BlockLink {
+  blockerId: string;
+  attackerId: string;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+}
+
 export function BlockAssignmentLines() {
   const phase = useGameStore((s) => s.state?.phase);
-  // Read the mutable position registry directly — this component only renders
-  // during declare_blockers phase, and re-renders are driven by phase changes.
-  const positions = getPositions();
+  const [links, setLinks] = useState<BlockLink[]>([]);
 
-  if (!phase || phase.type !== 'battle' || phase.step !== 'declare_blockers') {
-    return null;
-  }
+  // Compute links in useLayoutEffect so we read positions AFTER all BoardCard
+  // useLayoutEffect hooks have registered/updated their positions.
+  useLayoutEffect(() => {
+    if (!phase || phase.type !== 'battle' || phase.step !== 'declare_blockers') {
+      setLinks([]);
+      return;
+    }
 
-  const links = Object.entries(phase.tentativeBlockers)
-    .map(([blockerId, attackerId]) => {
-      const blockerPos = positions.get(blockerId);
-      const attackerPos = positions.get(attackerId);
-      if (!blockerPos || !attackerPos) return null;
-      return {
-        blockerId,
-        attackerId,
-        fromX: blockerPos.x + blockerPos.width / 2,
-        fromY: blockerPos.y + blockerPos.height / 2,
-        toX: attackerPos.x + attackerPos.width / 2,
-        toY: attackerPos.y + attackerPos.height / 2,
-      };
-    })
-    .filter((link): link is NonNullable<typeof link> => link !== null);
+    const positions = getPositions();
+    const newLinks = Object.entries(phase.tentativeBlockers)
+      .map(([blockerId, attackerId]) => {
+        const blockerPos = positions.get(blockerId);
+        const attackerPos = positions.get(attackerId);
+        if (!blockerPos || !attackerPos) return null;
+        return {
+          blockerId,
+          attackerId,
+          fromX: blockerPos.x + blockerPos.width / 2,
+          fromY: blockerPos.y + blockerPos.height / 2,
+          toX: attackerPos.x + attackerPos.width / 2,
+          toY: attackerPos.y + attackerPos.height / 2,
+        };
+      })
+      .filter((link): link is BlockLink => link !== null);
+
+    setLinks(newLinks);
+  }, [phase]);
 
   if (links.length === 0) return null;
 

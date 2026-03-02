@@ -3,9 +3,11 @@ import { CARD_REGISTRY } from './cards';
 import { shuffle } from './prng';
 import { TIER_ORDER } from './ruleset';
 
-/** Build a shuffled deck of CardInstances from an array of card IDs. */
-export function buildDeck(cardIds: string[], rng: RNG): CardInstance[] {
+/** Build a shuffled deck of CardInstances from an array of card IDs.
+ *  @param playerPrefix — short prefix (e.g. "p1") to namespace instanceIds across players. */
+export function buildDeck(cardIds: string[], rng: RNG, playerPrefix?: string): CardInstance[] {
   const copyCount = new Map<string, number>();
+  const prefix = playerPrefix ? `${playerPrefix}:` : '';
 
   const instances: CardInstance[] = cardIds.map((cardId) => {
     if (!CARD_REGISTRY[cardId]) {
@@ -13,7 +15,7 @@ export function buildDeck(cardIds: string[], rng: RNG): CardInstance[] {
     }
     const index = copyCount.get(cardId) ?? 0;
     copyCount.set(cardId, index + 1);
-    return { instanceId: `${cardId}#${index}`, cardId };
+    return { instanceId: `${prefix}${cardId}#${index}`, cardId };
   });
 
   return shuffle([...instances], rng);
