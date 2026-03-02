@@ -289,7 +289,7 @@ export function GameBoard() {
         )}
       </AnimatePresence>
 
-      {/* Targeting card reveal — persists while picking a target */}
+      {/* Targeting card reveal — right side, persists during targeting */}
       <AnimatePresence>
         {isLocalPlayerTargeting && phase?.type === 'targeting' && (
           <CardReveal cardId={phase.sourceCardId} />
