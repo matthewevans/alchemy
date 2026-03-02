@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import type { Permanent } from '@engine/types';
-import { getCurrentHealth, getEffectiveAttack } from '@engine/types';
+import { getEffectiveAttack } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
+import { useAnimationStore } from '@game/animationStore';
 import { usePositionRegistry } from '@hooks/usePositionRegistry';
 import { useLongPress } from '@hooks/useLongPress';
 import { getElementColor } from './cardUtils';
@@ -60,9 +61,14 @@ export function BoardCard({
   const longPress = useLongPress(() => onLongPressProp?.());
   const card = CARD_REGISTRY[permanent.cardId];
   const elementColor = getElementColor(card.element);
-  const currentHealth = getCurrentHealth(permanent);
+
+  // During combat animations, use the per-step display damage so health updates
+  // per-exchange rather than jumping to the final value immediately.
+  const displayDamage = useAnimationStore((s) => s.displayCreatureDamage?.[permanent.permanentId]);
+  const activeDamage = displayDamage ?? permanent.damage;
+  const currentHealth = permanent.health + permanent.temporaryHealthBonus - activeDamage;
   const effectiveAttack = getEffectiveAttack(permanent);
-  const isDamaged = permanent.damage > 0;
+  const isDamaged = activeDamage > 0;
   const isBuffed = permanent.temporaryAttackBonus > 0 || permanent.temporaryHealthBonus > 0;
   const hasSwift = card.keywords.includes('swift');
   const isSummoningSick = permanent.summonedThisTurn && !hasSwift;

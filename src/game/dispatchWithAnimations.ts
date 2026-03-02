@@ -77,6 +77,21 @@ export function dispatchWithAnimations(
       });
     }
 
+    // Initialize creature damage overlay so creature health updates per-exchange
+    // during combat animations instead of jumping to the final value immediately.
+    const hasCreatureDamage = steps.some((s) =>
+      s.effects.some((e) => e.type === 'damage' || e.type === 'heal'),
+    );
+    if (hasCreatureDamage && state) {
+      const creatureDamage: Record<string, number> = {};
+      for (const player of Object.values(state.players)) {
+        for (const perm of player.board) {
+          if (perm) creatureDamage[perm.permanentId] = perm.damage;
+        }
+      }
+      useAnimationStore.getState().setDisplayCreatureDamage(creatureDamage);
+    }
+
     useAnimationStore.getState().enqueueSteps(steps);
   }
 

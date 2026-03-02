@@ -5,7 +5,6 @@ import { useUIStore } from '@game/uiStore';
 import type { CardInstance, PlayerId } from '@engine/types';
 import { getOpponent } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
-import { EFFECT_REGISTRY } from '@engine/effects';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useScreenShake } from '@hooks/useScreenShake';
 import { getDeckPrimaryElement, getBattlefieldBackground, getAvatarPath } from '@components/card/cardUtils';
@@ -19,7 +18,7 @@ import { PlayerHand, OpponentHand } from '@components/hand';
 import { TurnBanner } from '@components/phase';
 import { AnimationOverlay } from '@components/animation';
 import { CardPreview } from '@components/card';
-import { CardReveal } from '@components/animation/CardReveal';
+import { TargetingPanel } from '@components/targeting/TargetingPanel';
 import { gameButtonClass } from '@components/ui/buttonStyles';
 
 const HINTS_DISMISSED_KEY = 'alchemy:gameplay-hints-dismissed';
@@ -70,12 +69,6 @@ export function GameBoard() {
   // Gate targeting prompt on legalActions (not phase type) so only the caster sees it
   const isLocalPlayerTargeting = canCancelTargeting || validTargetPlayerIds.size > 0
     || legalActions.some((a) => a.type === 'SELECT_TARGET');
-  const targetingCardName =
-    isLocalPlayerTargeting && phase?.type === 'targeting' ? CARD_REGISTRY[phase.sourceCardId].name : null;
-  const targetingEffectText =
-    isLocalPlayerTargeting && phase?.type === 'targeting' && phase.effectId in EFFECT_REGISTRY
-      ? EFFECT_REGISTRY[phase.effectId].description
-      : null;
   const discardViewerCards = useMemo(() => {
     if (!discardViewerPlayerId || !state) return [];
     return summarizeDiscard(state.players[discardViewerPlayerId].discard);
@@ -83,7 +76,21 @@ export function GameBoard() {
 
   useEffect(() => {
     document.body.classList.add('game-active');
-    return () => document.body.classList.remove('game-active');
+    try {
+      // Screen Orientation API — only available in PWA / fullscreen context
+      (screen.orientation as ScreenOrientation & { lock(o: string): Promise<void> })
+        .lock('landscape').catch(() => {});
+    } catch {
+      // API unavailable — silently ignore
+    }
+    return () => {
+      document.body.classList.remove('game-active');
+      try {
+        screen.orientation.unlock();
+      } catch {
+        // Ignore — unlock may not be available
+      }
+    };
   }, []);
 
   const handleDismissHints = () => {
@@ -239,62 +246,14 @@ export function GameBoard() {
       {/* Block assignment links */}
       <BlockAssignmentLines />
 
-      {/* Targeting prompt overlay */}
-      <AnimatePresence>
-        {isLocalPlayerTargeting && (
-          <motion.div
-            className="fixed top-[calc(env(safe-area-inset-top)+0.5rem)] left-1/2 -translate-x-1/2 z-30 pointer-events-none"
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <motion.div
-              className="pointer-events-auto rounded-xl bg-slate-900/90 px-4 py-2 shadow-xl shadow-black/40 backdrop-blur-sm text-center"
-              style={{
-                border: '1px solid rgba(6, 182, 212, 0.4)',
-              }}
-              animate={{
-                borderColor: [
-                  'rgba(6, 182, 212, 0.3)',
-                  'rgba(6, 182, 212, 0.7)',
-                  'rgba(6, 182, 212, 0.3)',
-                ],
-                boxShadow: [
-                  '0 0 12px rgba(6, 182, 212, 0.1), 0 4px 20px rgba(0, 0, 0, 0.4)',
-                  '0 0 24px rgba(6, 182, 212, 0.3), 0 4px 20px rgba(0, 0, 0, 0.4)',
-                  '0 0 12px rgba(6, 182, 212, 0.1), 0 4px 20px rgba(0, 0, 0, 0.4)',
-                ],
-              }}
-              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <p className="text-cyan-200 text-sm font-semibold">
-                Choose a target for {targetingCardName}
-              </p>
-              {targetingEffectText && (
-                <p className="text-white/70 text-xs mt-0.5">{targetingEffectText}</p>
-              )}
-              {canCancelTargeting && (
-                <button
-                  className={gameButtonClass({
-                    tone: 'neutral',
-                    size: 'sm',
-                    className: 'mt-2 px-4 py-2 text-sm',
-                  })}
-                  onClick={() => dispatch({ type: 'CANCEL_TARGETING' }, humanPlayer)}
-                >
-                  Cancel
-                </button>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Targeting card reveal — right side, persists during targeting */}
+      {/* Combined targeting panel — card reveal + prompt + cancel */}
       <AnimatePresence>
         {isLocalPlayerTargeting && phase?.type === 'targeting' && (
-          <CardReveal cardId={phase.sourceCardId} />
+          <TargetingPanel
+            cardId={phase.sourceCardId}
+            effectId={phase.effectId}
+            onCancel={canCancelTargeting ? () => dispatch({ type: 'CANCEL_TARGETING' }, humanPlayer) : undefined}
+          />
         )}
       </AnimatePresence>
 
@@ -346,7 +305,7 @@ export function GameBoard() {
           >
             <p className="text-white text-sm font-semibold">Quick tips</p>
             <ul className="mt-1 space-y-1 text-white/75 text-xs">
-              <li>Tap a card, then tap an empty slot to play.</li>
+              <li>Double-tap or drag a card to play it.</li>
               <li>Hold any card to inspect details.</li>
               <li>Tap highlighted units or heroes to target spells.</li>
             </ul>

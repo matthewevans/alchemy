@@ -63,8 +63,6 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   const humanPlayer = useGameStore((s) => s.humanPlayer);
   const legalActions = useGameStore((s) => s.legalActions);
   const dispatch = useGameDispatch();
-  const selectedHandIndex = useUIStore((s) => s.selectedHandIndex);
-  const selectHandCard = useUIStore((s) => s.selectHandCard);
   const selectedBlockerId = useUIStore((s) => s.selectedBlockerId);
   const selectBlocker = useUIStore((s) => s.selectBlocker);
   const selectedAttackerId = useUIStore((s) => s.selectedAttackerId);
@@ -231,20 +229,6 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     }
   };
 
-  // Auto-play: clicking the board background plays the selected hand card
-  const handleBoardAutoPlay = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('[data-testid^="board-card-"]')) return;
-    if (!isPlayerBoard || selectedHandIndex === null) return;
-    const playAction = legalActions.find(
-      (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
-        a.type === 'PLAY_CARD' && a.cardIndex === selectedHandIndex,
-    );
-    if (playAction) {
-      dispatch(playAction, humanPlayer);
-      selectHandCard(null);
-    }
-  };
-
   const creatures = useMemo(() => board.filter((p): p is Permanent => p !== null), [board]);
 
   const fanned = shouldFanOut(phase, isPlayerBoard, humanPlayer, activePlayer);
@@ -331,7 +315,6 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
       ref={containerRef}
       className="flex items-center justify-center gap-2 px-3 py-1 w-full h-full min-w-0"
       data-board-player={playerId}
-      onClick={handleBoardAutoPlay}
     >
       <AnimatePresence mode="popLayout">
         {fanned || !stacks ? (

@@ -302,17 +302,18 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
             <div
               className="flex items-center gap-0.5 rounded-md font-black"
               style={{
-                fontSize: 'calc(var(--card-font-scale) * 0.55rem)',
+                fontSize: `calc(var(--card-font-scale) * ${viewLevel === 'compact' ? '0.65' : '0.75'}rem)`,
                 padding: viewLevel === 'compact'
-                  ? 'calc(var(--card-font-scale) * 0.05rem) calc(var(--card-font-scale) * 0.2rem)'
-                  : 'calc(var(--card-font-scale) * 0.1rem) calc(var(--card-font-scale) * 0.25rem)',
+                  ? 'calc(var(--card-font-scale) * 0.08rem) calc(var(--card-font-scale) * 0.25rem)'
+                  : 'calc(var(--card-font-scale) * 0.12rem) calc(var(--card-font-scale) * 0.3rem)',
                 color: isBuffedAttack ? '#bbf7d0' : stats ? '#fecaca' : 'rgb(254 226 226)',
                 background: isBuffedAttack
-                  ? 'rgba(34, 197, 94, 0.2)'
-                  : 'rgba(239, 68, 68, 0.2)',
+                  ? 'rgba(34, 197, 94, 0.25)'
+                  : 'rgba(239, 68, 68, 0.25)',
                 border: isBuffedAttack
-                  ? '1px solid rgba(134, 239, 172, 0.5)'
-                  : '1px solid rgba(252, 165, 165, 0.5)',
+                  ? '1px solid rgba(134, 239, 172, 0.6)'
+                  : '1px solid rgba(252, 165, 165, 0.6)',
+                textShadow: '0 1px 3px rgba(0, 0, 0, 0.6)',
               }}
             >
               <span className="leading-none">⚔</span>
@@ -329,17 +330,18 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
             <div
               className="flex items-center gap-0.5 rounded-md font-black"
               style={{
-                fontSize: 'calc(var(--card-font-scale) * 0.55rem)',
+                fontSize: `calc(var(--card-font-scale) * ${viewLevel === 'compact' ? '0.65' : '0.75'}rem)`,
                 padding: viewLevel === 'compact'
-                  ? 'calc(var(--card-font-scale) * 0.05rem) calc(var(--card-font-scale) * 0.2rem)'
-                  : 'calc(var(--card-font-scale) * 0.1rem) calc(var(--card-font-scale) * 0.25rem)',
+                  ? 'calc(var(--card-font-scale) * 0.08rem) calc(var(--card-font-scale) * 0.25rem)'
+                  : 'calc(var(--card-font-scale) * 0.12rem) calc(var(--card-font-scale) * 0.3rem)',
                 color: isDamaged ? '#fecaca' : stats ? '#bbf7d0' : 'rgb(187 247 208)',
                 background: isDamaged
-                  ? 'rgba(239, 68, 68, 0.2)'
-                  : 'rgba(34, 197, 94, 0.2)',
+                  ? 'rgba(239, 68, 68, 0.25)'
+                  : 'rgba(34, 197, 94, 0.25)',
                 border: isDamaged
-                  ? '1px solid rgba(252, 165, 165, 0.5)'
-                  : '1px solid rgba(134, 239, 172, 0.5)',
+                  ? '1px solid rgba(252, 165, 165, 0.6)'
+                  : '1px solid rgba(134, 239, 172, 0.6)',
+                textShadow: '0 1px 3px rgba(0, 0, 0, 0.6)',
               }}
             >
               <span className="leading-none">♥</span>

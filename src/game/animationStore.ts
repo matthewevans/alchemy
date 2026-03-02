@@ -23,6 +23,7 @@ export type AnimationEffect =
   | {
       type: 'combat_strike';
       sourceId: string;
+      targetId: string;
       from: ElementPosition;
       to: ElementPosition;
       element?: Element;
@@ -87,12 +88,15 @@ interface AnimationStore {
   boardSnapshot: BoardSnapshot | null;
   /** Intermediate health values shown during animations so damage/healing appears per-step, not all at once. */
   displayHealth: Record<PlayerId, number> | null;
+  /** Intermediate creature damage shown during combat animations so health updates per-exchange, not all at once. */
+  displayCreatureDamage: Record<string, number> | null;
 
   setSpeedMultiplier: (m: number) => void;
   enqueueSteps: (steps: AnimationStep[]) => void;
   advanceStep: () => void;
   setBoardSnapshot: (snapshot: BoardSnapshot | null) => void;
   setDisplayHealth: (health: Record<PlayerId, number>) => void;
+  setDisplayCreatureDamage: (damage: Record<string, number>) => void;
   clear: () => void;
 }
 
@@ -104,6 +108,7 @@ export const useAnimationStore = create<AnimationStore>()(
     speedMultiplier: 1,
     boardSnapshot: null,
     displayHealth: null,
+    displayCreatureDamage: null,
 
     setSpeedMultiplier: (m) => set({ speedMultiplier: m }),
 
@@ -120,17 +125,19 @@ export const useAnimationStore = create<AnimationStore>()(
       } else {
         const [first, ...rest] = scaled;
         const dh = get().displayHealth;
+        const dcd = get().displayCreatureDamage;
         set({
           activeStep: first,
           queue: rest,
           isAnimating: true,
           displayHealth: dh ? applyStepHealthDeltas(dh, first) : null,
+          displayCreatureDamage: dcd ? applyStepCreatureDamage(dcd, first) : null,
         });
       }
     },
 
     advanceStep: () => {
-      const { queue, displayHealth } = get();
+      const { queue, displayHealth, displayCreatureDamage } = get();
       if (queue.length > 0) {
         const [next, ...rest] = queue;
         // Clear snapshot when death step begins — AnimatePresence exit runs alongside death particles
@@ -140,9 +147,10 @@ export const useAnimationStore = create<AnimationStore>()(
           queue: rest,
           boardSnapshot: hasDeath ? null : get().boardSnapshot,
           displayHealth: displayHealth ? applyStepHealthDeltas(displayHealth, next) : null,
+          displayCreatureDamage: displayCreatureDamage ? applyStepCreatureDamage(displayCreatureDamage, next) : null,
         });
       } else {
-        set({ activeStep: null, isAnimating: false, boardSnapshot: null, displayHealth: null });
+        set({ activeStep: null, isAnimating: false, boardSnapshot: null, displayHealth: null, displayCreatureDamage: null });
       }
     },
 
@@ -150,8 +158,10 @@ export const useAnimationStore = create<AnimationStore>()(
 
     setDisplayHealth: (health) => set({ displayHealth: health }),
 
+    setDisplayCreatureDamage: (damage) => set({ displayCreatureDamage: damage }),
+
     clear: () => {
-      set({ queue: [], activeStep: null, isAnimating: false, boardSnapshot: null, displayHealth: null });
+      set({ queue: [], activeStep: null, isAnimating: false, boardSnapshot: null, displayHealth: null, displayCreatureDamage: null });
     },
   })),
 );
@@ -175,6 +185,24 @@ function applyStepHealthDeltas(
     }
   }
   return { player1: p1, player2: p2 };
+}
+
+/** Apply creature damage/heal deltas from a step to the running display damage map. */
+function applyStepCreatureDamage(
+  damage: Record<string, number>,
+  step: AnimationStep,
+): Record<string, number> {
+  let updated: Record<string, number> | null = null;
+  for (const effect of step.effects) {
+    if (effect.type === 'damage') {
+      if (!updated) updated = { ...damage };
+      updated[effect.targetId] = (updated[effect.targetId] ?? 0) + effect.amount;
+    } else if (effect.type === 'heal') {
+      if (!updated) updated = { ...damage };
+      updated[effect.targetId] = Math.max(0, (updated[effect.targetId] ?? 0) - effect.amount);
+    }
+  }
+  return updated ?? damage;
 }
 
 // ─── Helpers ───
@@ -337,6 +365,7 @@ function groupCombatEvents(
             effects.push({
               type: 'combat_strike',
               sourceId: e.source,
+              targetId: e.targetId,
               from: sourcePos,
               to: pos,
               element: sourceCardId ? getCardElement(sourceCardId) : undefined,
@@ -354,6 +383,7 @@ function groupCombatEvents(
             effects.push({
               type: 'combat_strike',
               sourceId: e.source,
+              targetId: `player:${e.player}`,
               from: sourcePos,
               to: pos,
               element: sourceCardId ? getCardElement(sourceCardId) : undefined,

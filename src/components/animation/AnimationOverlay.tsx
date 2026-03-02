@@ -69,27 +69,43 @@ export function AnimationOverlay() {
                 return (
                   <BlockLink
                     key={`block-${effect.blockerId}-${effect.attackerId}-${i}`}
-                    from={effect.from}
-                    to={effect.to}
+                    from={getLivePosition(effect.blockerId, effect.from)}
+                    to={getLivePosition(effect.attackerId, effect.to)}
                   />
                 );
               case 'damage':
+                return (
+                  <FloatingNumber
+                    key={`dmg-${i}`}
+                    text={`-${effect.amount}`}
+                    position={getLivePosition(effect.targetId, effect.position)}
+                    color="red"
+                  />
+                );
               case 'player_damage':
                 return (
                   <FloatingNumber
                     key={`dmg-${i}`}
                     text={`-${effect.amount}`}
-                    position={effect.position}
+                    position={getLivePosition(`player:${effect.player}`, effect.position)}
                     color="red"
                   />
                 );
               case 'heal':
+                return (
+                  <FloatingNumber
+                    key={`heal-${i}`}
+                    text={`+${effect.amount}`}
+                    position={getLivePosition(effect.targetId, effect.position)}
+                    color="green"
+                  />
+                );
               case 'player_heal':
                 return (
                   <FloatingNumber
                     key={`heal-${i}`}
                     text={`+${effect.amount}`}
-                    position={effect.position}
+                    position={getLivePosition(`player:${effect.player}`, effect.position)}
                     color="green"
                   />
                 );
@@ -98,7 +114,7 @@ export function AnimationOverlay() {
                   <FloatingNumber
                     key={`kw-${effect.permanentId}-${i}`}
                     text={KEYWORD_REGISTRY[effect.keyword].icon}
-                    position={effect.position}
+                    position={getLivePosition(effect.permanentId, effect.position)}
                     color="amber"
                   />
                 );
@@ -138,11 +154,35 @@ export function AnimationOverlay() {
   );
 }
 
-// ─── Particle Effect Triggers ───
+// ─── Live DOM Position Helpers ───
 
-function effectCenter(pos: ElementPosition): { cx: number; cy: number } {
+/**
+ * Query the DOM for an element's current bounding rect.
+ * Follows the BlockAssignmentLines pattern — reads getBoundingClientRect()
+ * at trigger time so Framer Motion transforms are included.
+ *
+ * @param id - permanentId for creatures, or "player:<playerId>" for heroes
+ * @param fallback - stored ElementPosition to use if the DOM element isn't found
+ */
+function getLivePosition(id: string, fallback: ElementPosition): ElementPosition {
+  let el: globalThis.Element | null = null;
+  if (id.startsWith('player:')) {
+    el = document.querySelector(`[data-testid="health-${id.slice(7)}"]`);
+  } else {
+    el = document.querySelector(`[data-testid="board-card-${id}"]`);
+  }
+  if (el) {
+    const rect = el.getBoundingClientRect();
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+  }
+  return fallback;
+}
+
+function posCenter(pos: ElementPosition): { cx: number; cy: number } {
   return { cx: pos.x + pos.width / 2, cy: pos.y + pos.height / 2 };
 }
+
+// ─── Particle Effect Triggers ───
 
 function triggerParticleEffect(
   particles: ParticleCanvasHandle,
@@ -150,57 +190,59 @@ function triggerParticleEffect(
 ) {
   switch (effect.type) {
     case 'combat_strike': {
-      const fromX = effect.from.x + effect.from.width / 2;
-      const fromY = effect.from.y + effect.from.height / 2;
-      const toX = effect.to.x + effect.to.width / 2;
-      const toY = effect.to.y + effect.to.height / 2;
-      particles.projectile(fromX, fromY, toX, toY, 480, effect.element);
+      const from = posCenter(getLivePosition(effect.sourceId, effect.from));
+      const to = posCenter(getLivePosition(effect.targetId, effect.to));
+      particles.projectile(from.cx, from.cy, to.cx, to.cy, 480, effect.element);
       break;
     }
     case 'block_link': {
-      const midX = (effect.from.x + effect.from.width / 2 + effect.to.x + effect.to.width / 2) / 2;
-      const midY = (effect.from.y + effect.from.height / 2 + effect.to.y + effect.to.height / 2) / 2;
-      particles.blockClash(midX, midY);
+      const from = posCenter(getLivePosition(effect.blockerId, effect.from));
+      const to = posCenter(getLivePosition(effect.attackerId, effect.to));
+      particles.blockClash((from.cx + to.cx) / 2, (from.cy + to.cy) / 2);
       break;
     }
     case 'death': {
-      const { cx, cy } = effectCenter(effect.position);
+      const { cx, cy } = posCenter(getLivePosition(effect.permanentId, effect.position));
       particles.explosion(cx, cy, effect.element);
       break;
     }
     case 'spell_impact': {
-      const { cx, cy } = effectCenter(effect.position);
+      const { cx, cy } = posCenter(effect.position);
       particles.spellImpact(cx, cy, effect.element);
       break;
     }
     case 'damage': {
-      const { cx, cy } = effectCenter(effect.position);
+      const { cx, cy } = posCenter(getLivePosition(effect.targetId, effect.position));
       particles.damageFlash(cx, cy, effect.amount);
       break;
     }
     case 'player_damage': {
-      const { cx, cy } = effectCenter(effect.position);
+      const { cx, cy } = posCenter(getLivePosition(`player:${effect.player}`, effect.position));
       particles.playerDamage(cx, cy, effect.amount);
       break;
     }
-    case 'heal':
+    case 'heal': {
+      const { cx, cy } = posCenter(getLivePosition(effect.targetId, effect.position));
+      particles.healEffect(cx, cy, effect.amount);
+      break;
+    }
     case 'player_heal': {
-      const { cx, cy } = effectCenter(effect.position);
+      const { cx, cy } = posCenter(getLivePosition(`player:${effect.player}`, effect.position));
       particles.healEffect(cx, cy, effect.amount);
       break;
     }
     case 'keyword': {
-      const { cx, cy } = effectCenter(effect.position);
+      const { cx, cy } = posCenter(getLivePosition(effect.permanentId, effect.position));
       particles.keywordFlash(cx, cy, effect.element);
       break;
     }
     case 'bounce': {
-      const { cx, cy } = effectCenter(effect.position);
+      const { cx, cy } = posCenter(getLivePosition(effect.permanentId, effect.position));
       particles.summonBurst(cx, cy, effect.element);
       break;
     }
     case 'summon': {
-      const { cx, cy } = effectCenter(effect.position);
+      const { cx, cy } = posCenter(getLivePosition(effect.permanentId, effect.position));
       particles.summonBurst(cx, cy, effect.element);
       break;
     }
