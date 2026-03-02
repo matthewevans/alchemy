@@ -1290,10 +1290,20 @@ function resolveCombat(
       events.push(...result.events);
     }
 
-    if (currentState.phase.type === 'game_over') break;
   }
 
-  return { newState: currentState, events };
+  // Deduplicate: if multiple attackers dealt lethal damage, only keep the first
+  // GAME_OVER event so the animation system doesn't produce duplicate steps.
+  let seenGameOver = false;
+  const deduped = events.filter((e) => {
+    if (e.type === 'GAME_OVER') {
+      if (seenGameOver) return false;
+      seenGameOver = true;
+    }
+    return true;
+  });
+
+  return { newState: currentState, events: deduped };
 }
 
 /**

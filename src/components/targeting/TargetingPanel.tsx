@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { CARD_REGISTRY } from '@engine/cards';
+import { useUIStore } from '@game/uiStore';
 import { getElementColor } from '@components/card/cardUtils';
 import { HandCard } from '@components/card/HandCard';
 
@@ -16,6 +17,7 @@ interface TargetingPanelProps {
 export function TargetingPanel({ cardId, onCancel }: TargetingPanelProps) {
   const card = CARD_REGISTRY[cardId];
   const elementColor = getElementColor(card.element);
+  const inspectCard = useUIStore((s) => s.inspectCard);
 
   return (
     <motion.div
@@ -39,9 +41,9 @@ export function TargetingPanel({ cardId, onCancel }: TargetingPanelProps) {
         }}
         transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
       >
-        {/* Card preview */}
+        {/* Card preview — long-press / right-click opens full preview */}
         <motion.div
-          className="relative pointer-events-none"
+          className="relative"
           style={{
             '--card-width': '160px',
             '--card-height': '224px',
@@ -60,6 +62,7 @@ export function TargetingPanel({ cardId, onCancel }: TargetingPanelProps) {
             verbose
             onClick={() => {}}
             onHover={() => {}}
+            onLongPress={() => inspectCard(cardId)}
           />
         </motion.div>
 

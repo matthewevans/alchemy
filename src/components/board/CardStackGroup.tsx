@@ -1,7 +1,8 @@
 import type { Permanent } from '@engine/types';
 import { BoardCard } from '@components/card';
 
-const STACK_OFFSET = 8; // px offset between stacked cards
+const STACK_OFFSET_X = 8; // px horizontal offset between stacked cards
+const STACK_OFFSET_Y = 4; // px vertical offset between stacked cards
 
 interface CardStackGroupProps {
   permanents: Permanent[];
@@ -28,14 +29,16 @@ export function CardStackGroup({
   getCardProps,
 }: CardStackGroupProps) {
   const count = permanents.length;
-  const effectiveWidth = (cardWidth ?? 82) + (count - 1) * STACK_OFFSET;
+  const effectiveWidth = (cardWidth ?? 82) + (count - 1) * STACK_OFFSET_X;
 
   return (
     <div
       className="relative"
       style={{
         width: `${effectiveWidth}px`,
-        height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
+        height: cardHeight
+          ? `${cardHeight + (count - 1) * STACK_OFFSET_Y}px`
+          : `calc(var(--board-card-height) + ${(count - 1) * STACK_OFFSET_Y}px)`,
       }}
     >
       {permanents.map((permanent, i) => {
@@ -43,9 +46,10 @@ export function CardStackGroup({
         return (
           <div
             key={permanent.permanentId}
-            className="absolute top-0"
+            className="absolute"
             style={{
-              left: `${i * STACK_OFFSET}px`,
+              left: `${i * STACK_OFFSET_X}px`,
+              top: `${i * STACK_OFFSET_Y}px`,
               zIndex: i,
             }}
           >
@@ -60,14 +64,14 @@ export function CardStackGroup({
             {/* Stack count badge on the front card */}
             {i === count - 1 && count > 1 && (
               <div
-                className="absolute -top-1 -right-1 flex items-center justify-center rounded-full bg-slate-900 border border-slate-500/50 text-white font-bold z-10 pointer-events-none"
+                className="absolute -top-2 -right-2 flex items-center justify-center rounded-full bg-amber-500 border-2 border-amber-300 text-black font-black z-10 pointer-events-none shadow-lg shadow-amber-500/40"
                 style={{
-                  width: 'calc(var(--card-font-scale) * 0.8rem)',
-                  height: 'calc(var(--card-font-scale) * 0.8rem)',
-                  fontSize: 'calc(var(--card-font-scale) * 0.45rem)',
+                  width: 'calc(var(--card-font-scale) * 1.3rem)',
+                  height: 'calc(var(--card-font-scale) * 1.3rem)',
+                  fontSize: 'calc(var(--card-font-scale) * 0.7rem)',
                 }}
               >
-                {count}
+                {count}×
               </div>
             )}
           </div>
