@@ -329,7 +329,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   return (
     <div
       ref={containerRef}
-      className="flex items-center justify-center gap-2 px-3 py-1 w-full h-full min-w-0 overflow-hidden"
+      className="flex items-center justify-center gap-2 px-3 py-1 w-full h-full min-w-0"
       data-board-player={playerId}
       onClick={handleBoardAutoPlay}
     >
