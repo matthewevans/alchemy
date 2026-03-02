@@ -1,7 +1,6 @@
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useGameStore } from '@game/gameStore';
-import { getPositions } from '@game/animationStore';
 
 interface BlockLink {
   blockerId: string;
@@ -12,36 +11,42 @@ interface BlockLink {
   toY: number;
 }
 
+/** Locate a board card's center by querying the DOM directly. */
+function getCardCenter(permanentId: string): { x: number; y: number } | null {
+  // data-testid values are quoted in the selector, so : and # are literal
+  const el = document.querySelector(`[data-testid="board-card-${permanentId}"]`);
+  if (!el) return null;
+  const rect = el.getBoundingClientRect();
+  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+}
+
 export function BlockAssignmentLines() {
   const phase = useGameStore((s) => s.state?.phase);
   const [links, setLinks] = useState<BlockLink[]>([]);
 
-  // Compute links in useLayoutEffect so we read positions AFTER all BoardCard
-  // useLayoutEffect hooks have registered/updated their positions.
-  useLayoutEffect(() => {
+  // Use useEffect (not useLayoutEffect) so board cards have fully rendered and
+  // Framer Motion has applied layout — getBoundingClientRect returns final positions.
+  useEffect(() => {
     if (!phase || phase.type !== 'battle' || phase.step !== 'declare_blockers') {
       setLinks([]);
       return;
     }
 
-    const positions = getPositions();
-    const newLinks = Object.entries(phase.tentativeBlockers)
-      .map(([blockerId, attackerId]) => {
-        const blockerPos = positions.get(blockerId);
-        const attackerPos = positions.get(attackerId);
-        if (!blockerPos || !attackerPos) return null;
-        return {
-          blockerId,
-          attackerId,
-          fromX: blockerPos.x + blockerPos.width / 2,
-          fromY: blockerPos.y + blockerPos.height / 2,
-          toX: attackerPos.x + attackerPos.width / 2,
-          toY: attackerPos.y + attackerPos.height / 2,
-        };
-      })
-      .filter((link): link is BlockLink => link !== null);
+    // Defer one frame to let Framer Motion settle card positions after layout changes
+    const raf = requestAnimationFrame(() => {
+      const newLinks = Object.entries(phase.tentativeBlockers)
+        .map(([blockerId, attackerId]) => {
+          const from = getCardCenter(blockerId);
+          const to = getCardCenter(attackerId);
+          if (!from || !to) return null;
+          return { blockerId, attackerId, fromX: from.x, fromY: from.y, toX: to.x, toY: to.y };
+        })
+        .filter((link): link is BlockLink => link !== null);
 
-    setLinks(newLinks);
+      setLinks(newLinks);
+    });
+
+    return () => cancelAnimationFrame(raf);
   }, [phase]);
 
   if (links.length === 0) return null;
