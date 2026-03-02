@@ -50,8 +50,8 @@ const CONFIGS: Record<Element, ElementParticleConfig> = {
 
   // Drifting leaves with wide sway
   earth: {
-    colors: ['rgba(34,197,94,0.4)', 'rgba(74,222,128,0.35)', 'rgba(163,230,53,0.3)', 'rgba(101,163,13,0.25)'],
-    sizeRange: [2, 5],
+    colors: ['rgba(34,197,94,0.7)', 'rgba(74,222,128,0.65)', 'rgba(163,230,53,0.6)', 'rgba(101,163,13,0.55)'],
+    sizeRange: [3, 6],
     durationRange: [6, 12],
     driftRange: 70,
     origin: 'top',
@@ -59,7 +59,7 @@ const CONFIGS: Record<Element, ElementParticleConfig> = {
     keyframes: (drift, rotation) => ({
       y: ['-5vh', '105vh'],
       x: [0, drift, -drift * 0.7, drift * 0.5, -drift * 0.3],
-      opacity: [0, 0.6, 0.5, 0.4, 0],
+      opacity: [0, 0.85, 0.7, 0.5, 0],
       rotate: [0, rotation, rotation * 1.5, rotation * 2],
     }),
   },
