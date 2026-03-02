@@ -31,6 +31,8 @@ export default defineConfig({
         'cardback.webp',
         'elements/*.webp',
         'cards/**/*.webp',
+        'avatar/*.webp',
+        'battlefield/**/*.webp',
       ],
       workbox: {
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
