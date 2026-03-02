@@ -164,7 +164,7 @@ export function BoardCard({
               : isBlocking
                 ? 'linear-gradient(135deg, #3b82f6, #60a5fa, #3b82f6)'
                 : isValidTarget
-                  ? 'linear-gradient(135deg, #f59e0b, #fbbf24, #f59e0b)'
+                  ? 'linear-gradient(135deg, #06b6d4, #22d3ee, #06b6d4)'
                   : 'linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.5), rgba(255,255,255,0.3))',
             backgroundSize: '200% 200%',
           }}

@@ -28,14 +28,14 @@ export function HeroPortrait({ avatarSrc, isOpponent, isValidTarget = false, onH
           isValidTarget
             ? {
                 borderColor: [
-                  'rgba(251, 191, 36, 0.4)',
-                  'rgba(251, 191, 36, 0.9)',
-                  'rgba(251, 191, 36, 0.4)',
+                  'rgba(6, 182, 212, 0.4)',
+                  'rgba(6, 182, 212, 0.9)',
+                  'rgba(6, 182, 212, 0.4)',
                 ],
                 boxShadow: [
-                  '0 0 10px rgba(251, 191, 36, 0.3)',
-                  '0 0 24px rgba(251, 191, 36, 0.7)',
-                  '0 0 10px rgba(251, 191, 36, 0.3)',
+                  '0 0 10px rgba(6, 182, 212, 0.3)',
+                  '0 0 24px rgba(6, 182, 212, 0.7)',
+                  '0 0 10px rgba(6, 182, 212, 0.3)',
                 ],
                 scale: [1, 1.08, 1],
               }

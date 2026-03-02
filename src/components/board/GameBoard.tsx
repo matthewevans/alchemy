@@ -18,7 +18,7 @@ import { BlockAssignmentLines } from './BlockAssignmentLines';
 import { PlayerHand, OpponentHand } from '@components/hand';
 import { TurnBanner } from '@components/phase';
 import { AnimationOverlay } from '@components/animation';
-import { CardPreview } from '@components/card';
+import { CardPreview, CardFace } from '@components/card';
 import { gameButtonClass } from '@components/ui/buttonStyles';
 
 const HINTS_DISMISSED_KEY = 'alchemy:gameplay-hints-dismissed';
@@ -249,28 +249,47 @@ export function GameBoard() {
             <motion.div
               className="pointer-events-auto rounded-xl bg-slate-900/90 px-4 py-2 shadow-xl shadow-black/40 backdrop-blur-sm text-center"
               style={{
-                border: '1px solid rgba(251, 191, 36, 0.4)',
+                border: '1px solid rgba(6, 182, 212, 0.4)',
               }}
               animate={{
                 borderColor: [
-                  'rgba(251, 191, 36, 0.3)',
-                  'rgba(251, 191, 36, 0.7)',
-                  'rgba(251, 191, 36, 0.3)',
+                  'rgba(6, 182, 212, 0.3)',
+                  'rgba(6, 182, 212, 0.7)',
+                  'rgba(6, 182, 212, 0.3)',
                 ],
                 boxShadow: [
-                  '0 0 12px rgba(251, 191, 36, 0.1), 0 4px 20px rgba(0, 0, 0, 0.4)',
-                  '0 0 24px rgba(251, 191, 36, 0.3), 0 4px 20px rgba(0, 0, 0, 0.4)',
-                  '0 0 12px rgba(251, 191, 36, 0.1), 0 4px 20px rgba(0, 0, 0, 0.4)',
+                  '0 0 12px rgba(6, 182, 212, 0.1), 0 4px 20px rgba(0, 0, 0, 0.4)',
+                  '0 0 24px rgba(6, 182, 212, 0.3), 0 4px 20px rgba(0, 0, 0, 0.4)',
+                  '0 0 12px rgba(6, 182, 212, 0.1), 0 4px 20px rgba(0, 0, 0, 0.4)',
                 ],
               }}
               transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <p className="text-amber-200 text-sm font-semibold">
-                Choose a target for {targetingCardName}
-              </p>
-              {targetingEffectText && (
-                <p className="text-white/70 text-xs mt-0.5">{targetingEffectText}</p>
-              )}
+              <div className="flex items-center gap-3">
+                {/* Inline card thumbnail */}
+                {phase?.type === 'targeting' && (
+                  <div
+                    className="shrink-0 pointer-events-none"
+                    style={{
+                      width: 60,
+                      height: 84,
+                      '--card-width': '60px',
+                      '--card-height': '84px',
+                      '--card-font-scale': '0.45',
+                    } as React.CSSProperties}
+                  >
+                    <CardFace cardId={phase.sourceCardId} viewLevel="compact" />
+                  </div>
+                )}
+                <div>
+                  <p className="text-cyan-200 text-sm font-semibold">
+                    Choose a target for {targetingCardName}
+                  </p>
+                  {targetingEffectText && (
+                    <p className="text-white/70 text-xs mt-0.5">{targetingEffectText}</p>
+                  )}
+                </div>
+              </div>
               {canCancelTargeting && (
                 <button
                   className={gameButtonClass({

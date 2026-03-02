@@ -38,11 +38,17 @@ export function dispatchWithAnimations(
 
   const steps = groupEventsIntoSteps(events, positions, cardIdMap);
 
-  // Prepend a card reveal step when the opponent plays a card,
-  // so the human player can see what was played before effects resolve.
-  if (actingPlayer !== humanPlayer) {
-    const cardPlayedEvent = events.find((e) => e.type === 'CARD_PLAYED');
-    if (cardPlayedEvent && cardPlayedEvent.type === 'CARD_PLAYED') {
+  // Prepend a card reveal step so the player can see what was played before effects resolve.
+  // For opponents: always reveal (creatures + spells).
+  // For the caster: reveal untargeted spells only (targeted spells show a persistent
+  // in-prompt preview instead; creatures appear on the board directly).
+  const cardPlayedEvent = events.find((e) => e.type === 'CARD_PLAYED');
+  if (cardPlayedEvent && cardPlayedEvent.type === 'CARD_PLAYED') {
+    const isOpponentPlay = actingPlayer !== humanPlayer;
+    const isCasterUntargetedSpell =
+      actingPlayer === humanPlayer && events.some((e) => e.type === 'SPELL_RESOLVED');
+
+    if (isOpponentPlay || isCasterUntargetedSpell) {
       const revealStep: AnimationStep = {
         effects: [{ type: 'card_reveal', cardId: cardPlayedEvent.cardId }],
         durationMs: STEP_DURATIONS.cardReveal,
