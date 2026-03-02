@@ -56,15 +56,19 @@ export function HealthBadge({ playerId }: HealthBadgeProps) {
     <div
       ref={healthRef}
       data-testid={`health-${playerId}`}
-      className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center rounded-full px-2 min-w-[32px] h-[24px]"
+      className="absolute left-1/2 -translate-x-1/2 z-10 flex items-center justify-center rounded-full px-1.5"
       style={{
+        bottom: 'var(--health-badge-bottom)',
+        minWidth: 'var(--health-badge-min-w)',
+        height: 'var(--health-badge-h)',
         background: 'linear-gradient(180deg, rgb(127, 29, 29) 0%, rgb(69, 10, 10) 100%)',
         border: '1.5px solid rgba(248, 113, 113, 0.5)',
         boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
       }}
     >
       <motion.span
-        className="text-white font-black text-sm tabular-nums leading-none"
+        className="text-white font-black tabular-nums leading-none"
+        style={{ fontSize: 'var(--health-badge-font)' }}
         animate={healthControls}
       >
         {health}

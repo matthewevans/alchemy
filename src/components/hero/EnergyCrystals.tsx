@@ -40,7 +40,7 @@ export function EnergyCrystals({ playerId }: EnergyCrystalsProps) {
 
   return (
     <motion.div
-      className="flex items-center gap-1 rounded-full px-2 py-0.5"
+      className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5"
       style={{
         background: 'rgba(120, 53, 15, 0.2)',
         border: '1px solid rgba(251, 191, 36, 0.15)',
@@ -54,7 +54,6 @@ export function EnergyCrystals({ playerId }: EnergyCrystalsProps) {
           return (
             <motion.div
               key={i}
-              className="w-3.5 h-3.5"
               initial={{ scale: 0, opacity: 0 }}
               animate={{
                 scale: isFilled ? [1.3, 1] : 1,
@@ -66,6 +65,8 @@ export function EnergyCrystals({ playerId }: EnergyCrystalsProps) {
                   : 'inset 0 1px 2px rgba(0,0,0,0.4)',
               }}
               style={{
+                width: 'var(--hero-pip)',
+                height: 'var(--hero-pip)',
                 borderWidth: 1.5,
                 borderStyle: 'solid',
                 borderRadius: 2,

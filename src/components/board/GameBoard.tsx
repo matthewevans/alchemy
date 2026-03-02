@@ -107,7 +107,7 @@ export function GameBoard() {
     <div
       className={`game-surface h-screen flex flex-col select-none bg-slate-950 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${shakeClass}`}
       style={{
-        paddingRight: 'calc(6rem + env(safe-area-inset-right))',
+        paddingRight: 'calc(var(--sidebar-w) + env(safe-area-inset-right))',
         ...(battlefieldBg
           ? { backgroundImage: `linear-gradient(to bottom, rgba(2,6,23,0.6), rgba(15,23,42,0.5), rgba(2,6,23,0.6)), url(${battlefieldBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }
           : { backgroundImage: 'linear-gradient(to bottom, #020617, #0f172a, #020617)' }),
@@ -143,6 +143,7 @@ export function GameBoard() {
                   )
               : undefined
           }
+          onDiscardClick={() => setDiscardViewerPlayerId(opponentPlayer)}
         />
       </div>
 
@@ -186,11 +187,12 @@ export function GameBoard() {
                   )
               : undefined
           }
+          onDiscardClick={() => setDiscardViewerPlayerId(humanPlayer)}
         />
       </div>
 
       {/* ═══ Player hand spacer — reserves space for the collapsed hand peek ═══ */}
-      <div className="shrink-0" style={{ height: 'calc(var(--card-height) * 0.5)' }} />
+      <div className="shrink-0 hand-spacer" />
 
       {/* ═══ Player hand — fixed overlay at bottom, slides up on interaction.
            pointer-events:none on wrapper so clicks in the "empty" area above
@@ -198,7 +200,7 @@ export function GameBoard() {
       <div
         className="fixed bottom-0 left-0 z-40 pointer-events-none"
         style={{
-          right: 'calc(6rem + env(safe-area-inset-right))',
+          right: 'calc(var(--sidebar-w) + env(safe-area-inset-right))',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
@@ -211,7 +213,7 @@ export function GameBoard() {
       {/* Right sidebar — deck+discard only */}
       <div
         data-testid="right-sidebar"
-        className="fixed inset-y-0 right-0 z-[35] w-24 flex flex-col justify-between bg-gradient-to-b from-slate-950 via-slate-900/90 to-slate-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+        className="sidebar-panel fixed inset-y-0 right-0 z-[35] w-24 flex-col justify-between bg-gradient-to-b from-slate-950 via-slate-900/90 to-slate-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
         style={{
           borderLeft: '1px solid rgba(148, 163, 184, 0.12)',
           boxShadow: 'inset 4px 0 16px rgba(0, 0, 0, 0.3)',

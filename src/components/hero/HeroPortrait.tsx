@@ -19,8 +19,9 @@ export function HeroPortrait({ avatarSrc, isOpponent, isValidTarget = false, onH
     <div className="relative">
       {/* Outer ring glow */}
       <motion.div
-        className="absolute -inset-1.5 rounded-full"
+        className="absolute rounded-full"
         style={{
+          inset: 'var(--hero-ring-inset)',
           background: `radial-gradient(circle, rgba(${accentRgb}, 0.15) 0%, transparent 70%)`,
           border: `2px solid rgba(${accentRgb}, 0.3)`,
         }}
@@ -57,11 +58,12 @@ export function HeroPortrait({ avatarSrc, isOpponent, isValidTarget = false, onH
       />
       {/* Inner portrait */}
       <motion.div
-        className={`relative w-16 h-16 rounded-full overflow-hidden border-2 ${
+        className={`relative rounded-full overflow-hidden border-2 ${
           isOpponent
             ? 'border-red-700/50 shadow-lg shadow-red-950/40'
             : 'border-blue-700/50 shadow-lg shadow-blue-950/40'
         }`}
+        style={{ width: 'var(--hero-portrait)', height: 'var(--hero-portrait)' }}
         animate={isValidTarget ? { scale: [1.02, 1.08, 1.02] } : { scale: 1 }}
         transition={
           isValidTarget

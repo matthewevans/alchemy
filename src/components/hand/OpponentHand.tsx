@@ -32,7 +32,7 @@ export function OpponentHand() {
   return (
     <div className="flex flex-col items-center overflow-hidden -mt-3">
       <div
-        className="relative flex items-start justify-center"
+        className="opponent-hand-fan relative flex items-start justify-center"
         style={{ height: 'calc(var(--card-height) * 0.24)' }}
       >
         <AnimatePresence mode="popLayout">

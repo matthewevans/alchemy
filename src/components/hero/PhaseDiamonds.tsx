@@ -19,7 +19,7 @@ export function PhaseDiamonds({ side }: PhaseDiamondsProps) {
   const { displayKey, currentOrder } = phaseInfo;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1">
       {keys.map((key) => {
         const order = PHASE_ORDER[key];
         const isActive = key === displayKey;
@@ -28,8 +28,9 @@ export function PhaseDiamonds({ side }: PhaseDiamondsProps) {
         return (
           <motion.div
             key={key}
-            className="w-3 h-3"
             style={{
+              width: 'var(--hero-diamond)',
+              height: 'var(--hero-diamond)',
               transform: 'rotate(45deg)',
               borderWidth: 1.5,
               borderStyle: 'solid',

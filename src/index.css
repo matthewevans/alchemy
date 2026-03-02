@@ -10,7 +10,7 @@
   --_board-h: 115px;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 768px) and (min-height: 500px) {
   :root {
     --_card-w: 115px;
     --_card-h: 165px;
@@ -20,13 +20,87 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (min-height: 500px) {
   :root {
     --_card-w: clamp(112px, 17dvh, 140px);
     --_card-h: clamp(160px, 24dvh, 200px);
     --_card-fs: 1.05;
     --_board-w: clamp(96px, 14.5dvh, 120px);
     --_board-h: clamp(134px, 20dvh, 168px);
+  }
+}
+
+/* ─── Sidebar & hand-spacer (responsive) ───
+   Sidebar hidden on portrait phones (narrow) and landscape phones (short).
+   Show only when both width >= 640px AND height >= 500px. */
+:root {
+  --sidebar-w: 0rem;
+}
+@media (min-width: 640px) and (min-height: 500px) {
+  :root {
+    --sidebar-w: 6rem;
+  }
+}
+
+.sidebar-panel {
+  display: none;
+}
+@media (min-width: 640px) and (min-height: 500px) {
+  .sidebar-panel {
+    display: flex;
+  }
+}
+
+.mobile-only {
+  display: flex;
+}
+@media (min-width: 640px) and (min-height: 500px) {
+  .mobile-only {
+    display: none;
+  }
+}
+
+/* Hide opponent card fan on short screens (landscape phones) */
+@media (max-height: 499px) {
+  .opponent-hand-fan {
+    display: none;
+  }
+}
+
+/* ─── Hero HUD sizing (responsive) ─── */
+:root {
+  --hero-portrait: 2.5rem;
+  --hero-ring-inset: -0.25rem;
+  --hero-pip: 0.625rem;
+  --hero-diamond: 0.5rem;
+  --hero-gap: 0.5rem;
+  --hero-portrait-pb: 0.375rem;
+  --health-badge-h: 20px;
+  --health-badge-min-w: 26px;
+  --health-badge-bottom: -0.5rem;
+  --health-badge-font: 0.75rem;
+}
+@media (min-width: 640px) and (min-height: 500px) {
+  :root {
+    --hero-portrait: 4rem;
+    --hero-ring-inset: -0.375rem;
+    --hero-pip: 0.875rem;
+    --hero-diamond: 0.75rem;
+    --hero-gap: 1rem;
+    --hero-portrait-pb: 0.5rem;
+    --health-badge-h: 24px;
+    --health-badge-min-w: 32px;
+    --health-badge-bottom: -0.625rem;
+    --health-badge-font: 0.875rem;
+  }
+}
+
+.hand-spacer {
+  height: calc(var(--card-height) * 0.35);
+}
+@media (min-width: 640px) and (min-height: 500px) {
+  .hand-spacer {
+    height: calc(var(--card-height) * 0.5);
   }
 }
 
