@@ -108,18 +108,6 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
                 Resume
               </button>
 
-              {/* Settings */}
-              <button
-                className={gameButtonClass({
-                  tone: 'slate',
-                  size: 'md',
-                  className: 'w-full font-bold',
-                })}
-                onClick={() => setView('settings')}
-              >
-                Settings
-              </button>
-
               {/* Concede */}
               <AnimatePresence mode="wait">
                 {confirmingConcede ? (
@@ -171,6 +159,18 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
                   </motion.button>
                 )}
               </AnimatePresence>
+
+              {/* Settings */}
+              <button
+                className={gameButtonClass({
+                  tone: 'slate',
+                  size: 'md',
+                  className: 'w-full font-bold',
+                })}
+                onClick={() => setView('settings')}
+              >
+                Settings
+              </button>
 
               {/* Main Menu — hidden during multiplayer */}
               {onMainMenu && (
