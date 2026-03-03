@@ -56,13 +56,22 @@ export function setMusicVolume(volume: number): void {
 
 /**
  * Warm up the AudioContext during a user gesture (required by iOS/iPadOS).
- * Call once on the first touch/click — subsequent calls are no-ops.
+ * Creates the context, resumes it, and plays a silent buffer to fully
+ * unlock audio output on WebKit. Call once on the first touch/click.
  */
 let warmedUp = false;
 export function warmUpAudio(): void {
   if (warmedUp) return;
   warmedUp = true;
-  ensureContext();
+  const c = ensureContext();
+
+  // iOS/iPadOS requires audio to actually flow through the context during a
+  // user gesture to unlock it. A silent buffer source achieves this.
+  const silent = c.createBuffer(1, 1, c.sampleRate);
+  const src = c.createBufferSource();
+  src.buffer = silent;
+  src.connect(c.destination);
+  src.start();
 }
 
 // Auto-attach a one-time listener so the AudioContext is created during a user gesture.
@@ -71,6 +80,8 @@ if (typeof window !== 'undefined') {
   const onFirstInteraction = () => {
     warmUpAudio();
     window.removeEventListener('pointerdown', onFirstInteraction, true);
+    window.removeEventListener('touchstart', onFirstInteraction, true);
   };
   window.addEventListener('pointerdown', onFirstInteraction, true);
+  window.addEventListener('touchstart', onFirstInteraction, true);
 }
