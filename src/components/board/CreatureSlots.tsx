@@ -256,11 +256,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   }, [rawCreatures, isPlayerBoard, phase, playerId, confirmedAttackers, tentativeBlockers]);
 
   const stacks = useMemo(() => fanned ? null : groupIntoStacks(creatures), [fanned, creatures]);
-
-  // Visual slot count for sizing — stacks take fewer visual slots
-  const visualSlotCount = stacks
-    ? stacks.length
-    : creatures.length;
+  const [stackingActive, setStackingActive] = useState(false);
 
   useLayoutEffect(() => {
     if (
@@ -274,19 +270,34 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
 
   useLayoutEffect(() => {
     const container = layoutRef.current;
-    if (!container || visualSlotCount === 0) return;
+    if (!container || creatures.length === 0) return;
 
     const rootStyles = getComputedStyle(document.documentElement);
     const baseWidth = (Number.parseFloat(rootStyles.getPropertyValue('--_board-w')) || 82) * boardScale;
     const baseHeight = (Number.parseFloat(rootStyles.getPropertyValue('--_board-h')) || 115) * boardScale;
+    const minWidth = baseWidth * 0.7;
+    const gap = 8; // gap-2
 
     const updateSize = () => {
       const rect = container.getBoundingClientRect();
+      const availableWidth = Math.max(0, rect.width - 24);
+
+      // Only stack when individual cards would shrink below minimum size
+      const unstackedPerSlot = creatures.length > 0
+        ? (availableWidth - gap * (creatures.length - 1)) / creatures.length
+        : baseWidth;
+      const shouldStack = !fanned && stacks !== null
+        && stacks.length < creatures.length
+        && unstackedPerSlot < minWidth;
+
+      setStackingActive(shouldStack);
+
+      const slotCount = shouldStack && stacks ? stacks.length : creatures.length;
       setCardSize(
         calculateBoardCardSize({
           containerWidth: rect.width,
           containerHeight: rect.height,
-          slotCount: visualSlotCount,
+          slotCount: Math.max(slotCount, 1),
           baseWidth,
           baseHeight,
         }),
@@ -298,7 +309,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [visualSlotCount, boardScale]);
+  }, [creatures.length, stacks, fanned, boardScale]);
 
   const cardWidth = cardSize?.width;
   const cardHeight = cardSize?.height;
@@ -341,7 +352,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
       <div className="absolute inset-x-0 -top-8 -bottom-8 overflow-x-auto scrollbar-hide">
         <div className="flex items-center gap-2 px-3 py-8 h-full w-fit mx-auto">
           <AnimatePresence mode="popLayout">
-            {fanned || !stacks ? (
+            {fanned || !stackingActive || !stacks ? (
               creatures.map((permanent) => {
                 const props = getCardProps(permanent);
                 return (

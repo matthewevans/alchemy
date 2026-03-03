@@ -163,21 +163,32 @@ export function BoardCard({
       {(isAttacking || isBlocking || isValidTarget || isInteractable || isSelectedForBlock) && (
         <motion.div
           className="absolute -inset-[2px] rounded-xl z-0 pointer-events-none"
-          style={{
+          style={isValidTarget ? {
+            border: '2px solid rgba(6, 182, 212, 0.6)',
+          } : {
             backgroundImage: isSelectedForBlock
               ? 'linear-gradient(135deg, #0ea5e9, #22d3ee, #0ea5e9)'
               : isAttacking
               ? 'linear-gradient(135deg, #ef4444, #f97316, #ef4444)'
               : isBlocking
                 ? 'linear-gradient(135deg, #3b82f6, #60a5fa, #3b82f6)'
-                : isValidTarget
-                  ? 'linear-gradient(135deg, #06b6d4, #22d3ee, #06b6d4)'
-                  : 'linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.5), rgba(255,255,255,0.3))',
+                : 'linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.5), rgba(255,255,255,0.3))',
             backgroundSize: '200% 200%',
           }}
-          animate={{
+          animate={isValidTarget ? {
+            borderColor: [
+              'rgba(6, 182, 212, 0.4)',
+              'rgba(6, 182, 212, 0.9)',
+              'rgba(6, 182, 212, 0.4)',
+            ],
+            boxShadow: [
+              '0 0 8px rgba(6, 182, 212, 0.3)',
+              '0 0 16px rgba(6, 182, 212, 0.7)',
+              '0 0 8px rgba(6, 182, 212, 0.3)',
+            ],
+          } : {
             backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-            opacity: isSelectedForBlock || isAttacking || isBlocking || isValidTarget ? [0.7, 1, 0.7] : [0.4, 0.7, 0.4],
+            opacity: isSelectedForBlock || isAttacking || isBlocking ? [0.7, 1, 0.7] : [0.4, 0.7, 0.4],
           }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
         />

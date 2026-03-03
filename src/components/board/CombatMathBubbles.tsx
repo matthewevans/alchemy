@@ -216,7 +216,7 @@ function MathBubble({
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-max max-w-[260px]"
+            className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-max"
             initial={{ opacity: 0, y: 8, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.9 }}
