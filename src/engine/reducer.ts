@@ -3,6 +3,7 @@ import type {
   GameAction,
   GameEvent,
   GameState,
+  GameStats,
   Keyword,
   Permanent,
   Phase,
@@ -33,36 +34,106 @@ export function reduce(
     throw new Error(validation.reason);
   }
 
+  let result: ReducerResult;
+
   switch (action.type) {
     case 'KEEP_HAND':
-      return handleKeepHand(state, actingPlayer);
+      result = handleKeepHand(state, actingPlayer);
+      break;
     case 'MULLIGAN_CARDS':
-      return handleMulliganCards(state, actingPlayer, action.cardIndices, rng);
+      result = handleMulliganCards(state, actingPlayer, action.cardIndices, rng);
+      break;
     case 'ADVANCE_PHASE':
-      return handleAdvancePhase(state);
+      result = handleAdvancePhase(state);
+      break;
     case 'PLAY_CARD':
-      return handlePlayCard(state, actingPlayer, action.cardIndex, action.targetSlot);
+      result = handlePlayCard(state, actingPlayer, action.cardIndex, action.targetSlot);
+      break;
     case 'SELECT_TARGET':
-      return handleSelectTarget(state, action.targetRef);
+      result = handleSelectTarget(state, action.targetRef);
+      break;
     case 'CANCEL_TARGETING':
-      return handleCancelTargeting(state);
+      result = handleCancelTargeting(state);
+      break;
     case 'DECLARE_ATTACKER':
-      return handleDeclareAttacker(state, action.permanentId);
+      result = handleDeclareAttacker(state, action.permanentId);
+      break;
     case 'UNDECLARE_ATTACKER':
-      return handleUndeclareAttacker(state, action.permanentId);
+      result = handleUndeclareAttacker(state, action.permanentId);
+      break;
     case 'CONFIRM_ATTACKERS':
-      return handleConfirmAttackers(state);
+      result = handleConfirmAttackers(state);
+      break;
     case 'ASSIGN_BLOCKER':
-      return handleAssignBlocker(state, action.blockerPermanentId, action.attackerPermanentId);
+      result = handleAssignBlocker(state, action.blockerPermanentId, action.attackerPermanentId);
+      break;
     case 'REMOVE_BLOCKER':
-      return handleRemoveBlocker(state, action.blockerPermanentId);
+      result = handleRemoveBlocker(state, action.blockerPermanentId);
+      break;
     case 'CONFIRM_BLOCKERS':
-      return handleConfirmBlockers(state);
+      result = handleConfirmBlockers(state);
+      break;
     case 'DISCARD_CARD':
-      return handleDiscardCard(state, actingPlayer, action.cardIndex);
+      result = handleDiscardCard(state, actingPlayer, action.cardIndex);
+      break;
     case 'CONCEDE':
-      return handleConcede(state, actingPlayer);
+      result = handleConcede(state, actingPlayer);
+      break;
   }
+
+  // Post-process: derive stats from events (damage, deaths)
+  result.newState = deriveStatsFromEvents(state, result.newState, result.events);
+
+  return result;
+}
+
+/** Derive combat/damage stats from events rather than threading through every function. */
+function deriveStatsFromEvents(
+  preState: GameState,
+  newState: GameState,
+  events: GameEvent[],
+): GameState {
+  let stats = newState.stats;
+  let changed = false;
+
+  for (const e of events) {
+    if (e.type === 'PLAYER_DAMAGED') {
+      // Find who owns the source permanent to credit damageDealt
+      const sourceOwner = findPermanentOwner(preState, e.source);
+      if (sourceOwner) {
+        stats = incrementStat(stats, sourceOwner, 'damageDealt', e.amount);
+        changed = true;
+      }
+      stats = incrementStat(stats, e.player, 'damageReceived', e.amount);
+      changed = true;
+    } else if (e.type === 'DAMAGE_DEALT') {
+      const sourceOwner = findPermanentOwner(preState, e.source);
+      if (sourceOwner) {
+        stats = incrementStat(stats, sourceOwner, 'damageDealt', e.amount);
+        changed = true;
+      }
+    } else if (e.type === 'CREATURE_DIED') {
+      // Credit creaturesDefeated to the opponent of the creature's owner
+      const deadOwner = findPermanentOwner(preState, e.permanentId);
+      if (deadOwner) {
+        const killer = deadOwner === 'player1' ? 'player2' : 'player1';
+        stats = incrementStat(stats, killer, 'creaturesDefeated');
+        changed = true;
+      }
+    }
+  }
+
+  return changed ? { ...newState, stats } : newState;
+}
+
+/** Find which player owns a permanent by ID (checks pre-dispatch state). */
+function findPermanentOwner(state: GameState, permanentId: string): PlayerId | null {
+  for (const playerId of ['player1', 'player2'] as PlayerId[]) {
+    for (const p of state.players[playerId].board) {
+      if (p && p.permanentId === permanentId) return playerId;
+    }
+  }
+  return null;
 }
 
 // ─── Helpers ───
@@ -109,6 +180,18 @@ function findFirstEmptySlot(board: (Permanent | null)[]): number {
 function hasKeyword(permanent: Permanent, keyword: Keyword): boolean {
   const cardDef = CARD_REGISTRY[permanent.cardId];
   return cardDef.keywords.includes(keyword);
+}
+
+function incrementStat(
+  stats: Record<PlayerId, GameStats>,
+  player: PlayerId,
+  key: keyof GameStats,
+  amount = 1,
+): Record<PlayerId, GameStats> {
+  return {
+    ...stats,
+    [player]: { ...stats[player], [key]: stats[player][key] + amount },
+  };
 }
 
 function createPermanent(
@@ -344,10 +427,13 @@ function advanceFromEnd(state: GameState): ReducerResult {
     turn: newTurn,
   });
 
+  const stats = incrementStat(state.stats, newActivePlayer, 'turnsPlayed');
+
   return {
     newState: {
       ...state,
       players,
+      stats,
       activePlayer: newActivePlayer,
       turn: newTurn,
       phase: { type: 'draw' },
@@ -372,6 +458,15 @@ function handlePlayCard(
   // Remove card from hand and deduct energy
   ps.hand = ps.hand.filter((_, i) => i !== cardIndex);
   ps.currentEnergy -= cardDef.cost;
+
+  // Track stats
+  let stats = incrementStat(state.stats, actingPlayer, 'cardsPlayed');
+  stats = incrementStat(stats, actingPlayer, 'energySpent', cardDef.cost);
+  if (cardDef.type === 'creature') {
+    stats = incrementStat(stats, actingPlayer, 'creaturesPlayed');
+  } else {
+    stats = incrementStat(stats, actingPlayer, 'spellsCast');
+  }
 
   const events: GameEvent[] = [];
 
@@ -398,7 +493,7 @@ function handlePlayCard(
     });
 
     // Process ETB keywords
-    let newState: GameState = { ...state, players, phase: state.phase };
+    let newState: GameState = { ...state, players, stats, phase: state.phase };
     const etbResult = processETBKeywords(newState, permanent, actingPlayer);
     newState = etbResult.newState;
     events.push(...etbResult.events);
@@ -430,14 +525,14 @@ function handlePlayCard(
       postCombat: playPhase.postCombat,
     };
     return {
-      newState: { ...state, players, phase: newPhase },
+      newState: { ...state, players, stats, phase: newPhase },
       events,
     };
   }
 
   // Untargeted spell — resolve immediately
   const effect = EFFECT_REGISTRY[cardDef.effectId!];
-  let newState: GameState = { ...state, players };
+  let newState: GameState = { ...state, players, stats };
   const resolveResult = resolveEffectSteps(newState, effect.steps, actingPlayer, null);
   newState = resolveResult.newState;
   events.push(...resolveResult.events);

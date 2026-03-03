@@ -1,0 +1,100 @@
+{
+  "runtime_sound_types": {
+    "combat_strike": [
+      "public/audio/sfx/combat/impactPunch_medium_000.ogg",
+      "public/audio/sfx/combat/impactPunch_medium_001.ogg",
+      "public/audio/sfx/combat/impactPunch_medium_003.ogg",
+      "public/audio/sfx/combat/impactPunch_heavy_001.ogg",
+      "public/audio/sfx/combat/impactMetal_medium_002.ogg"
+    ],
+    "block_link": [
+      "public/audio/sfx/combat/impactMetal_light_001.ogg",
+      "public/audio/sfx/combat/impactMetal_light_003.ogg",
+      "public/audio/sfx/combat/impactMetal_medium_000.ogg",
+      "public/audio/sfx/combat/impactMetal_medium_003.ogg"
+    ],
+    "damage": [
+      "public/audio/sfx/damage/impactSoft_medium_000.ogg",
+      "public/audio/sfx/damage/impactSoft_medium_002.ogg",
+      "public/audio/sfx/damage/impactSoft_heavy_001.ogg",
+      "public/audio/sfx/damage/impactMetal_medium_001.ogg",
+      "public/audio/sfx/damage/impactGeneric_light_002.ogg"
+    ],
+    "player_damage": [
+      "public/audio/sfx/damage/impactSoft_heavy_000.ogg",
+      "public/audio/sfx/damage/impactSoft_heavy_002.ogg",
+      "public/audio/sfx/damage/impactSoft_heavy_004.ogg",
+      "public/audio/sfx/damage/impactMetal_medium_004.ogg"
+    ],
+    "death": [
+      "public/audio/sfx/death/explosionCrunch_001.ogg",
+      "public/audio/sfx/death/explosionCrunch_003.ogg",
+      "public/audio/sfx/death/lowFrequency_explosion_000.ogg",
+      "public/audio/sfx/death/impactMetal_heavy_001.ogg",
+      "public/audio/sfx/death/impactMetal_heavy_003.ogg"
+    ],
+    "heal": [
+      "public/audio/sfx/heal/Healing Spell Impact 2.wav",
+      "public/audio/sfx/heal/Healing Spell Impact 4.wav",
+      "public/audio/sfx/heal/Healing Spell Impact 6.wav",
+      "public/audio/sfx/heal/confirmation_002.ogg"
+    ],
+    "player_heal": [
+      "public/audio/sfx/heal/Healing Spell Impact 3.wav",
+      "public/audio/sfx/heal/Healing Spell Impact 5.wav",
+      "public/audio/sfx/heal/confirmation_003.ogg"
+    ],
+    "summon": [
+      "public/audio/sfx/summon/open_001.ogg",
+      "public/audio/sfx/summon/open_003.ogg",
+      "public/audio/sfx/summon/forceField_001.ogg",
+      "public/audio/sfx/summon/forceField_003.ogg"
+    ],
+    "keyword": [
+      "public/audio/sfx/keyword/confirmation_001.ogg",
+      "public/audio/sfx/keyword/confirmation_002.ogg",
+      "public/audio/sfx/keyword/confirmation_003.ogg"
+    ],
+    "ui": [
+      "public/audio/sfx/ui/click_001.ogg",
+      "public/audio/sfx/ui/select_001.ogg",
+      "public/audio/sfx/ui/error_001.ogg"
+    ],
+    "ambient_optional": [],
+    "spell_impact_by_element": {
+      "fire": [
+        "public/audio/sfx/spell/fire/Fire Spell Impact 1.wav",
+        "public/audio/sfx/spell/fire/Fire Spell Impact 2.wav",
+        "public/audio/sfx/spell/fire/Fire Spell Impact 4.wav"
+      ],
+      "water": [
+        "public/audio/sfx/spell/water/Water Spell Impact 1.wav",
+        "public/audio/sfx/spell/water/Water Spell Impact 3.wav",
+        "public/audio/sfx/spell/water/Water Spell Impact 5.wav"
+      ],
+      "air": [
+        "public/audio/sfx/spell/air/Lightning Spell Impact 1.wav",
+        "public/audio/sfx/spell/air/Lightning Spell Impact 3.wav",
+        "public/audio/sfx/spell/air/Wind Spell Impact 2.wav"
+      ],
+      "earth": [
+        "public/audio/sfx/spell/earth/Earth Spell Impact 1.wav",
+        "public/audio/sfx/spell/earth/Earth Spell Impact 3.wav",
+        "public/audio/sfx/spell/nature/Plant Spell Impact 2.wav"
+      ],
+      "nature": [
+        "public/audio/sfx/spell/nature/Plant Spell Impact 2.wav"
+      ],
+      "shadow": [
+        "public/audio/sfx/spell/shadow/explosionCrunch_001.ogg",
+        "public/audio/sfx/spell/shadow/Ice Spell Impact 2.wav",
+        "public/audio/sfx/spell/shadow/lowFrequency_explosion_001.ogg"
+      ],
+      "heal": [
+        "public/audio/sfx/spell/heal/Healing Spell Impact 1.wav",
+        "public/audio/sfx/spell/heal/Healing Spell Impact 4.wav",
+        "public/audio/sfx/spell/heal/Healing Spell Impact 7.wav"
+      ]
+    }
+  }
+}

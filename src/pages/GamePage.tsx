@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import type { PlayerId } from '@engine/types';
+import type { PlayerId, GameStats } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
 import { GameDispatchProvider, useGameDispatch } from '@game/GameDispatchContext';
 import { dispatchWithAnimations } from '@game/dispatchWithAnimations';
@@ -11,7 +11,8 @@ import { takePendingSession } from '@network/sessionTransfer';
 import { useAnimationStore } from '@game/animationStore';
 import { useGameLoop } from '@hooks/useGameLoop';
 import { useAmbientMusic } from '@hooks/useAmbientMusic';
-import { loadGame, clearSavedGame, saveHistoryEntry } from '@storage/persistence';
+import { useTutorialTriggers } from '@hooks/useTutorialTriggers';
+import { clearSavedGame, saveHistoryEntry } from '@storage/persistence';
 import { AnimatePresence } from 'framer-motion';
 import { GameBoard } from '@components/board';
 import { GameOverScreen, MulliganOverlay } from '@components/ui';
@@ -32,12 +33,12 @@ export function GamePage() {
   const locationState = location.state as LocationState | null;
 
   const storeGameId = useGameStore((s) => s.gameId);
-  const restoreGame = useGameStore((s) => s.restoreGame);
   const resetGame = useGameStore((s) => s.reset);
   const suspendGame = useGameStore((s) => s.suspend);
 
   const [phase, setPhase] = useState<GamePhase>('playing');
   const [gameOverWinner, setGameOverWinner] = useState<PlayerId>('player1');
+  const [gameOverStats, setGameOverStats] = useState<GameStats | null>(null);
   const [controller, setController] = useState<OpponentController | null>(null);
   const [isMultiplayer, setIsMultiplayer] = useState(false);
   const [disconnectReason, setDisconnectReason] = useState<string | null>(null);
@@ -78,23 +79,10 @@ export function GamePage() {
       return;
     }
 
-    // Try restoring from persistence (refresh scenario)
-    if (gameId) {
-      const saved = loadGame(gameId);
-      if (saved) {
-        restoreGame(saved.gameState, saved.rngState, saved.persisted);
-        const ai = createAIController({
-          getState: () => useGameStore.getState(),
-          dispatch: (action, player) => dispatchWithAnimations(action, player),
-        }, saved.persisted.aiConfig);
-        setController(ai);
-        return;
-      }
-    }
-
-    // Game not found — redirect home
+    // Page was refreshed or navigated to directly — redirect home so the user
+    // can tap "Resume" (the user gesture unlocks the Web Audio AudioContext).
     navigate('/', { replace: true });
-  }, [gameId, storeGameId, restoreGame, navigate, locationState]);
+  }, [gameId, storeGameId, navigate, locationState]);
 
   const humanPlayer = useGameStore((s) => s.humanPlayer);
   const player1DeckIds = useGameStore((s) => s.player1DeckIds);
@@ -104,6 +92,8 @@ export function GamePage() {
   const handleGameOver = useCallback(
     (winner: PlayerId) => {
       setGameOverWinner(winner);
+      const currentState = useGameStore.getState().state;
+      setGameOverStats(currentState?.stats[humanPlayer] ?? null);
       setPhase('game_over');
 
       if (!isMultiplayer) {
@@ -158,6 +148,7 @@ export function GamePage() {
           <GameOverScreen
             winner={gameOverWinner}
             humanPlayer={humanPlayer}
+            stats={gameOverStats}
             onPlayAgain={handlePlayAgain}
             onMainMenu={handleMainMenu}
           />
@@ -182,6 +173,7 @@ function PlayingScreenInner({
 }) {
   useGameLoop();
   useAmbientMusic();
+  useTutorialTriggers();
 
   const dispatch = useGameDispatch();
   const humanPlayer = useGameStore((s) => s.humanPlayer);

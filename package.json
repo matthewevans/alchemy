@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "pnpm run assets:verify && tsc -b && vite build",
+    "assets:verify": "node scripts/verify-public-assets.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

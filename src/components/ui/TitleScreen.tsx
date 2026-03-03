@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { gameButtonClass } from './buttonStyles';
-import { SettingsPanel } from './SettingsPanel';
+import { SettingsPanel } from './settings/SettingsPanel';
 import { FallingAshes } from './FallingAshes';
 import { useDialogA11y } from '@hooks/useDialogA11y';
 
@@ -244,7 +244,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
               aria-modal="true"
               aria-label="Settings"
               tabIndex={-1}
-              className="bg-slate-800/95 rounded-2xl p-8 flex flex-col items-center gap-4 min-w-[260px] shadow-2xl border border-slate-600/40"
+              className="bg-slate-800/95 rounded-2xl p-8 flex flex-col items-center gap-4 min-w-[360px] max-w-[90vw] shadow-2xl border border-slate-600/40"
               style={{
                 boxShadow: '0 0 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(0, 0, 0, 0.3)',
               }}

@@ -4,6 +4,364 @@ import { getAudioContext, getSfxGain } from './audioContext';
 // ─── Types ───
 
 type SoundFn = (ctx: AudioContext, dest: AudioNode) => void;
+type SpellImpactKind = 'heal';
+type SamplePlayResult = 'played' | 'pending' | 'unavailable';
+type EffectSoundType =
+  | 'combat_strike'
+  | 'block_link'
+  | 'damage'
+  | 'player_damage'
+  | 'death'
+  | 'spell_impact'
+  | 'heal'
+  | 'player_heal'
+  | 'summon'
+  | 'keyword'
+  | 'ui';
+
+interface SpellImpactSampleMap {
+  fire: string[];
+  water: string[];
+  air: string[];
+  earth: string[];
+  nature: string[];
+  shadow: string[];
+  heal: string[];
+}
+
+interface SampleCatalog {
+  runtime_sound_types: {
+    combat_strike: string[];
+    block_link: string[];
+    damage: string[];
+    player_damage: string[];
+    death: string[];
+    heal: string[];
+    player_heal: string[];
+    summon: string[];
+    keyword: string[];
+    ui: string[];
+    ambient_optional: string[];
+    spell_impact_by_element: SpellImpactSampleMap;
+  };
+}
+
+const SAMPLE_CATALOG_URL = '/audio/sfx/catalog.json';
+const ENABLE_PROCEDURAL_FALLBACK = false;
+const sampleBufferCache = new Map<string, AudioBuffer | null>();
+const sampleBufferLoads = new Map<string, Promise<void>>();
+let sampleCatalog: SampleCatalog | null = null;
+let sampleCatalogLoad: Promise<void> | null = null;
+let sampleCatalogUnavailable = false;
+
+function toAssetUrl(path: string): string {
+  if (path.startsWith('/')) return path;
+  if (path.startsWith('public/')) return `/${path.slice('public/'.length)}`;
+  return `/${path}`;
+}
+
+function randomItem<T>(arr: T[]): T | null {
+  if (arr.length === 0) return null;
+  return arr[Math.floor(Math.random() * arr.length)] ?? null;
+}
+
+const CURATED_POOL_BY_TYPE: Partial<Record<EffectSoundType, readonly string[]>> = {
+  combat_strike: [
+    'public/audio/sfx/combat/impactPunch_medium_000.ogg',
+    'public/audio/sfx/combat/impactPunch_medium_001.ogg',
+    'public/audio/sfx/combat/impactPunch_medium_003.ogg',
+    'public/audio/sfx/combat/impactPunch_heavy_001.ogg',
+    'public/audio/sfx/combat/impactMetal_medium_002.ogg',
+  ],
+  block_link: [
+    'public/audio/sfx/combat/impactMetal_light_001.ogg',
+    'public/audio/sfx/combat/impactMetal_light_003.ogg',
+    'public/audio/sfx/combat/impactMetal_medium_000.ogg',
+    'public/audio/sfx/combat/impactMetal_medium_003.ogg',
+  ],
+  damage: [
+    'public/audio/sfx/damage/impactSoft_medium_000.ogg',
+    'public/audio/sfx/damage/impactSoft_medium_002.ogg',
+    'public/audio/sfx/damage/impactSoft_heavy_001.ogg',
+    'public/audio/sfx/damage/impactMetal_medium_001.ogg',
+    'public/audio/sfx/damage/impactGeneric_light_002.ogg',
+  ],
+  player_damage: [
+    'public/audio/sfx/damage/impactSoft_heavy_000.ogg',
+    'public/audio/sfx/damage/impactSoft_heavy_002.ogg',
+    'public/audio/sfx/damage/impactSoft_heavy_004.ogg',
+    'public/audio/sfx/damage/impactMetal_medium_004.ogg',
+  ],
+  death: [
+    'public/audio/sfx/death/explosionCrunch_001.ogg',
+    'public/audio/sfx/death/explosionCrunch_003.ogg',
+    'public/audio/sfx/death/lowFrequency_explosion_000.ogg',
+    'public/audio/sfx/death/impactMetal_heavy_001.ogg',
+    'public/audio/sfx/death/impactMetal_heavy_003.ogg',
+  ],
+  heal: [
+    'public/audio/sfx/heal/Healing Spell Impact 2.wav',
+    'public/audio/sfx/heal/Healing Spell Impact 4.wav',
+    'public/audio/sfx/heal/Healing Spell Impact 6.wav',
+    'public/audio/sfx/heal/confirmation_002.ogg',
+  ],
+  player_heal: [
+    'public/audio/sfx/heal/Healing Spell Impact 3.wav',
+    'public/audio/sfx/heal/Healing Spell Impact 5.wav',
+    'public/audio/sfx/heal/confirmation_003.ogg',
+  ],
+  summon: [
+    'public/audio/sfx/summon/open_001.ogg',
+    'public/audio/sfx/summon/open_003.ogg',
+    'public/audio/sfx/summon/forceField_001.ogg',
+    'public/audio/sfx/summon/forceField_003.ogg',
+  ],
+  keyword: [
+    'public/audio/sfx/keyword/confirmation_001.ogg',
+    'public/audio/sfx/keyword/confirmation_002.ogg',
+    'public/audio/sfx/keyword/confirmation_003.ogg',
+  ],
+};
+
+const CURATED_SPELL_POOL = {
+  fire: [
+    'public/audio/sfx/spell/fire/Fire Spell Impact 1.wav',
+    'public/audio/sfx/spell/fire/Fire Spell Impact 2.wav',
+    'public/audio/sfx/spell/fire/Fire Spell Impact 4.wav',
+  ],
+  water: [
+    'public/audio/sfx/spell/water/Water Spell Impact 1.wav',
+    'public/audio/sfx/spell/water/Water Spell Impact 3.wav',
+    'public/audio/sfx/spell/water/Water Spell Impact 5.wav',
+  ],
+  air: [
+    'public/audio/sfx/spell/air/Lightning Spell Impact 1.wav',
+    'public/audio/sfx/spell/air/Lightning Spell Impact 3.wav',
+    'public/audio/sfx/spell/air/Wind Spell Impact 2.wav',
+  ],
+  earth: [
+    'public/audio/sfx/spell/earth/Earth Spell Impact 1.wav',
+    'public/audio/sfx/spell/earth/Earth Spell Impact 3.wav',
+    'public/audio/sfx/spell/nature/Plant Spell Impact 2.wav',
+  ],
+  shadow: [
+    'public/audio/sfx/spell/shadow/explosionCrunch_001.ogg',
+    'public/audio/sfx/spell/shadow/Ice Spell Impact 2.wav',
+    'public/audio/sfx/spell/shadow/lowFrequency_explosion_001.ogg',
+  ],
+  heal: [
+    'public/audio/sfx/spell/heal/Healing Spell Impact 1.wav',
+    'public/audio/sfx/spell/heal/Healing Spell Impact 4.wav',
+    'public/audio/sfx/spell/heal/Healing Spell Impact 7.wav',
+  ],
+} as const;
+
+function preferAllowList(candidates: string[], allowList?: readonly string[]): string[] {
+  if (!allowList || allowList.length === 0) return candidates;
+  const included = candidates.filter((path) => allowList.includes(path));
+  return included.length > 0 ? included : candidates;
+}
+
+function curateCandidates(
+  type: EffectSoundType,
+  candidates: string[],
+  opts: { element?: Element; spellImpactKind?: SpellImpactKind },
+): string[] {
+  if (candidates.length === 0) return candidates;
+
+  if (type === 'spell_impact') {
+    if (opts.spellImpactKind === 'heal') return preferAllowList(candidates, CURATED_SPELL_POOL.heal);
+    switch (opts.element) {
+      case 'fire':
+        return preferAllowList(candidates, CURATED_SPELL_POOL.fire);
+      case 'water':
+        return preferAllowList(candidates, CURATED_SPELL_POOL.water);
+      case 'air':
+        return preferAllowList(candidates, CURATED_SPELL_POOL.air);
+      case 'earth':
+        return preferAllowList(candidates, CURATED_SPELL_POOL.earth);
+      case 'shadow':
+        return preferAllowList(candidates, CURATED_SPELL_POOL.shadow);
+      default:
+        return candidates;
+    }
+  }
+
+  const curated = CURATED_POOL_BY_TYPE[type];
+  if (curated) return preferAllowList(candidates, curated);
+
+  switch (type) {
+    case 'ui':
+    default:
+      return candidates;
+  }
+}
+
+function normalizeSampleGain(type: EffectSoundType, amount?: number): number {
+  if (type === 'damage' || type === 'player_damage') {
+    const strength = Math.max(1, amount ?? 1);
+    return Math.min(1.3, 0.75 + strength * 0.08);
+  }
+  if (type === 'death') return 0.95;
+  return 0.85;
+}
+
+function resolveElementSpellCandidates(map: SpellImpactSampleMap, element?: Element): string[] {
+  switch (element) {
+    case 'fire':
+      return map.fire;
+    case 'water':
+      return map.water;
+    case 'air':
+      return map.air;
+    case 'earth':
+      return [...map.earth, ...map.nature];
+    case 'shadow':
+      return map.shadow;
+    default:
+      return map.fire;
+  }
+}
+
+function resolveSpellCandidates(
+  map: SpellImpactSampleMap,
+  opts: { element?: Element; spellImpactKind?: SpellImpactKind },
+): string[] {
+  const byElement = resolveElementSpellCandidates(map, opts.element);
+  if (opts.spellImpactKind === 'heal') return [...map.heal, ...byElement];
+  return byElement;
+}
+
+function resolveCandidates(
+  catalog: SampleCatalog,
+  type: EffectSoundType,
+  opts: { element?: Element; spellImpactKind?: SpellImpactKind },
+): string[] {
+  const runtime = catalog.runtime_sound_types;
+  switch (type) {
+    case 'combat_strike':
+      return runtime.combat_strike;
+    case 'block_link':
+      return runtime.block_link;
+    case 'damage':
+      return runtime.damage;
+    case 'player_damage':
+      return runtime.player_damage;
+    case 'death':
+      return runtime.death;
+    case 'spell_impact':
+      return resolveSpellCandidates(runtime.spell_impact_by_element, opts);
+    case 'heal':
+      return runtime.heal;
+    case 'player_heal':
+      return runtime.player_heal;
+    case 'summon':
+      return runtime.summon;
+    case 'keyword':
+      return runtime.keyword;
+    case 'ui':
+      return runtime.ui;
+    default:
+      return [];
+  }
+}
+
+function loadSampleCatalog(): void {
+  if (sampleCatalog || sampleCatalogLoad || sampleCatalogUnavailable || typeof window === 'undefined') return;
+  sampleCatalogLoad = (async () => {
+    try {
+      const res = await fetch(SAMPLE_CATALOG_URL);
+      if (!res.ok) {
+        sampleCatalogUnavailable = true;
+        return;
+      }
+      const data = await res.json() as SampleCatalog;
+      sampleCatalog = data;
+    } catch {
+      sampleCatalogUnavailable = true;
+    } finally {
+      sampleCatalogLoad = null;
+    }
+  })();
+}
+
+if (typeof window !== 'undefined') loadSampleCatalog();
+
+function warmSampleBuffer(ctx: AudioContext, url: string): void {
+  if (sampleBufferCache.has(url) || sampleBufferLoads.has(url)) return;
+  const load = (async () => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        sampleBufferCache.set(url, null);
+        return;
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+      sampleBufferCache.set(url, buffer);
+    } catch {
+      sampleBufferCache.set(url, null);
+    } finally {
+      sampleBufferLoads.delete(url);
+    }
+  })();
+  sampleBufferLoads.set(url, load);
+}
+
+function playSampleBuffer(
+  ctx: AudioContext,
+  dest: AudioNode,
+  buffer: AudioBuffer,
+  gainValue: number,
+): void {
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  const gain = ctx.createGain();
+  gain.gain.value = gainValue;
+  source.connect(gain).connect(dest);
+  source.start(ctx.currentTime);
+}
+
+function tryPlaySample(
+  ctx: AudioContext,
+  dest: AudioNode,
+  type: EffectSoundType,
+  opts: { element?: Element; amount?: number; spellImpactKind?: SpellImpactKind },
+): SamplePlayResult {
+  if (sampleCatalogUnavailable) return 'unavailable';
+  if (!sampleCatalog) {
+    loadSampleCatalog();
+    return 'pending';
+  }
+  const candidates = curateCandidates(type, resolveCandidates(sampleCatalog, type, opts), opts);
+  if (candidates.length === 0) return 'unavailable';
+
+  const ready: AudioBuffer[] = [];
+  let hasPendingLoad = false;
+  for (const path of candidates) {
+    const url = toAssetUrl(path);
+    const cached = sampleBufferCache.get(url);
+    if (cached === undefined) {
+      warmSampleBuffer(ctx, url);
+      hasPendingLoad = true;
+      continue;
+    }
+    if (sampleBufferLoads.has(url)) {
+      hasPendingLoad = true;
+      continue;
+    }
+    if (cached) ready.push(cached);
+  }
+
+  const selected = randomItem(ready);
+  if (selected) {
+    playSampleBuffer(ctx, dest, selected, normalizeSampleGain(type, opts.amount));
+    return 'played';
+  }
+
+  if (hasPendingLoad) return 'pending';
+  return 'unavailable';
+}
 
 // ─── Element Frequency Map ───
 
@@ -257,7 +615,7 @@ function playKeyword(ctx: AudioContext, dest: AudioNode): void {
   osc.stop(now + 0.21);
 }
 
-// ─── Sound Registry (for per-card custom sounds) ───
+// ─── Public API ───
 
 const SOUND_REGISTRY: Record<string, SoundFn> = {};
 
@@ -265,20 +623,21 @@ export function registerSound(id: string, fn: SoundFn): void {
   SOUND_REGISTRY[id] = fn;
 }
 
-// ─── Public API ───
-
 export function playEffectSound(
-  type: string,
-  opts: { element?: Element; amount?: number; soundId?: string },
+  type: EffectSoundType,
+  opts: { element?: Element; amount?: number; soundId?: string; spellImpactKind?: SpellImpactKind },
 ): void {
   const ctx = getAudioContext();
   const dest = getSfxGain();
 
-  // Per-card custom sound takes priority
   if (opts.soundId && SOUND_REGISTRY[opts.soundId]) {
     SOUND_REGISTRY[opts.soundId](ctx, dest);
     return;
   }
+
+  const sampleResult = tryPlaySample(ctx, dest, type, opts);
+  if (sampleResult === 'played' || sampleResult === 'pending') return;
+  if (!ENABLE_PROCEDURAL_FALLBACK) return;
 
   switch (type) {
     case 'combat_strike':

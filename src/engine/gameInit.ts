@@ -1,4 +1,5 @@
 import type { GameState, PlayerId, PlayerState, RNG, RulesetConfig } from './types';
+import { createEmptyStats } from './types';
 import { buildDeck } from './deck';
 import { drawOpeningHand } from './deck';
 
@@ -48,6 +49,10 @@ export function createInitialGameState(config: GameInitConfig): GameState {
     players: {
       player1: createPlayerState(config.player1Deck, config.ruleset, config.rng, 'player1'),
       player2: createPlayerState(config.player2Deck, config.ruleset, config.rng, 'player2'),
+    },
+    stats: {
+      player1: createEmptyStats(),
+      player2: createEmptyStats(),
     },
   };
 }

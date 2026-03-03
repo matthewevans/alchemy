@@ -1,12 +1,13 @@
 import { useState, useRef } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import type { PlayerId } from '@engine/types';
+import type { PlayerId, GameStats } from '@engine/types';
 import { gameButtonClass } from './buttonStyles';
 import { useDialogA11y } from '@hooks/useDialogA11y';
 
 interface GameOverScreenProps {
   winner: PlayerId;
   humanPlayer: PlayerId;
+  stats: GameStats | null;
   onPlayAgain: () => void;
   onMainMenu: () => void;
 }
@@ -24,6 +25,15 @@ interface FallingPiece {
 const VICTORY_COLORS = ['#fbbf24', '#f59e0b', '#fde68a', '#34d399', '#60a5fa', '#a78bfa', '#f472b6', '#ffffff'];
 const DEFEAT_COLORS = ['#475569', '#64748b', '#334155', '#ef4444', '#991b1b', '#1e293b'];
 
+const STAT_ROWS: { icon: string; label: string; key: keyof GameStats }[] = [
+  { icon: '⚔', label: 'Damage', key: 'damageDealt' },
+  { icon: '🃏', label: 'Cards', key: 'cardsPlayed' },
+  { icon: '🐉', label: 'Creatures', key: 'creaturesPlayed' },
+  { icon: '✨', label: 'Spells', key: 'spellsCast' },
+  { icon: '💀', label: 'Defeated', key: 'creaturesDefeated' },
+  { icon: '⚡', label: 'Energy', key: 'energySpent' },
+];
+
 function useFallingPieces(count: number, colors: string[]): FallingPiece[] {
   // useState lazy initializer is explicitly allowed to be impure (runs once)
   const [pieces] = useState(() =>
@@ -40,7 +50,7 @@ function useFallingPieces(count: number, colors: string[]): FallingPiece[] {
   return pieces;
 }
 
-export function GameOverScreen({ winner, humanPlayer, onPlayAgain, onMainMenu }: GameOverScreenProps) {
+export function GameOverScreen({ winner, humanPlayer, stats, onPlayAgain, onMainMenu }: GameOverScreenProps) {
   const isVictory = winner === humanPlayer;
   const shouldReduceMotion = useReducedMotion();
   const pieces = useFallingPieces(
@@ -181,6 +191,24 @@ export function GameOverScreen({ winner, humanPlayer, onPlayAgain, onMainMenu }:
       >
         {isVictory ? 'The elements bend to your will.' : 'The elements were not in your favor.'}
       </motion.p>
+
+      {/* Stats grid */}
+      {stats && (
+        <motion.div
+          className="grid grid-cols-3 gap-x-6 gap-y-2 mb-6"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.6 }}
+        >
+          {STAT_ROWS.map((row) => (
+            <div key={row.key} className="flex items-center gap-1.5">
+              <span className="text-lg">{row.icon}</span>
+              <span className="text-white/50 text-sm">{row.label}</span>
+              <span className="text-white font-bold text-sm ml-auto">{stats[row.key]}</span>
+            </div>
+          ))}
+        </motion.div>
+      )}
 
       {/* Buttons */}
       <motion.div

@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useDialogA11y } from '@hooks/useDialogA11y';
 import { CARD_REGISTRY } from '@engine/cards';
 import { EFFECT_REGISTRY } from '@engine/effects';
 import { KEYWORD_REGISTRY } from '@engine/keywords';
+import { resolveDescription } from '@engine/descriptions';
+import { usePreferencesStore } from '@game/preferencesStore';
+import { narrateCard, cancelNarration } from '@audio/tts';
 import {
   getElementColor,
   getElementArtGradient,
@@ -28,6 +31,13 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
   const effect = card.effectId ? EFFECT_REGISTRY[card.effectId] : null;
   const isCreature = card.type === 'creature';
   const dialogRef = useDialogA11y({ open: true, onClose: onDismiss });
+  const narrationEnabled = usePreferencesStore((s) => s.narrationEnabled);
+  const easyReadMode = usePreferencesStore((s) => s.easyReadMode);
+
+  useEffect(() => {
+    if (narrationEnabled) narrateCard(cardId, easyReadMode);
+    return () => cancelNarration();
+  }, [cardId, narrationEnabled, easyReadMode]);
 
   return (
     <motion.div
@@ -171,7 +181,7 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
                       <span>{kwDef.icon}</span>
                       <span className="text-white/80">
                         <span className="font-semibold text-amber-300 capitalize">{kwDef.name}</span>
-                        {' \u2014 '}{kwDef.description}
+                        {' \u2014 '}{resolveDescription(kwDef.description, kwDef.easyDescription, easyReadMode)}
                       </span>
                     </div>
                   );
@@ -179,7 +189,9 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
               </div>
             )}
             {effect && (
-              <p className="text-white/80 text-sm leading-tight">{effect.description}</p>
+              <p className="text-white/80 text-sm leading-tight">
+                {resolveDescription(effect.description, effect.easyDescription, easyReadMode)}
+              </p>
             )}
             {card.flavor && (
               <p className="text-white/30 italic text-xs leading-tight mt-1.5">{card.flavor}</p>

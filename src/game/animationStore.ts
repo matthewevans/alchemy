@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { CARD_REGISTRY } from '@engine/cards';
 import type { Element, GameEvent, Keyword, Permanent, PlayerId } from '@engine/types';
+import type { CombatEquation } from './combatMath';
 
 // ─── Types ───
 
@@ -35,10 +36,11 @@ export type AnimationEffect =
   | { type: 'player_heal'; player: PlayerId; amount: number; position: ElementPosition }
   | { type: 'death'; permanentId: string; position: ElementPosition; element?: Element; soundId?: string }
   | { type: 'bounce'; permanentId: string; position: ElementPosition; element?: Element }
-  | { type: 'spell_impact'; position: ElementPosition; element?: Element; soundId?: string }
+  | { type: 'spell_impact'; position: ElementPosition; element?: Element; soundId?: string; isHealing?: boolean }
   | { type: 'keyword'; permanentId: string; keyword: Keyword; position: ElementPosition; element?: Element }
   | { type: 'summon'; permanentId: string; position: ElementPosition; element?: Element; soundId?: string }
-  | { type: 'card_reveal'; cardId: string };
+  | { type: 'card_reveal'; cardId: string }
+  | { type: 'combat_math'; equation: CombatEquation; attackerPos: ElementPosition; targetPos: ElementPosition };
 
 export interface AnimationStep {
   effects: AnimationEffect[];
@@ -231,6 +233,7 @@ function computeShakeIntensity(events: GameEvent[]): number | undefined {
 export const STEP_DURATIONS = {
   blockLink: 600,
   combatExchange: 1200,
+  combatMath: 3000,
   death: 900,
   spell: 1200,
   etb: 900,
@@ -425,6 +428,7 @@ function groupSpellEvents(
   positions: Map<string, ElementPosition>,
 ): AnimationStep[] {
   const effects: AnimationEffect[] = [];
+  const hasHealingEvents = events.some((event) => event.type === 'CREATURE_HEALED' || event.type === 'PLAYER_HEALED');
 
   for (const e of events) {
     if (e.type === 'SPELL_RESOLVED') {
@@ -432,7 +436,15 @@ function groupSpellEvents(
       for (const target of e.targets) {
         const key = target.type === 'creature' ? target.permanentId : `player:${target.playerId}`;
         const pos = positions.get(key);
-        if (pos) effects.push({ type: 'spell_impact', position: pos, element: spellElement, soundId: getCardSoundId(e.cardId) });
+        if (pos) {
+          effects.push({
+            type: 'spell_impact',
+            position: pos,
+            element: spellElement,
+            soundId: getCardSoundId(e.cardId),
+            isHealing: hasHealingEvents,
+          });
+        }
       }
     } else {
       const effect = mapEventToEffect(e, positions);

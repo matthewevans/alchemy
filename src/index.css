@@ -79,6 +79,7 @@
   --health-badge-min-w: 26px;
   --health-badge-bottom: -0.5rem;
   --health-badge-font: 0.75rem;
+  --health-pip-size: 4px;
 }
 @media (min-width: 640px) and (min-height: 500px) {
   :root {
@@ -92,6 +93,7 @@
     --health-badge-min-w: 32px;
     --health-badge-bottom: -0.625rem;
     --health-badge-font: 0.875rem;
+    --health-pip-size: 6px;
   }
 }
 

@@ -5,6 +5,55 @@
 import type { Element } from '@engine/types';
 import type { ParticleSystem, RGB, Particle } from './particleSystem';
 
+type SpriteBucket = 'damage' | 'spell' | 'death' | 'summon' | 'generic';
+
+interface VfxSpriteIndex {
+  curated: Record<SpriteBucket, string[]>;
+}
+
+const VFX_SPRITE_INDEX_URL = '/vfx/sprites/index.json';
+let vfxSpriteIndex: VfxSpriteIndex | null = null;
+let vfxSpriteIndexLoad: Promise<void> | null = null;
+
+function toAssetUrl(path: string): string {
+  if (path.startsWith('/')) return path;
+  if (path.startsWith('public/')) return `/${path.slice('public/'.length)}`;
+  return `/${path}`;
+}
+
+function loadVfxSpriteIndex(): void {
+  if (vfxSpriteIndex || vfxSpriteIndexLoad || typeof window === 'undefined') return;
+  vfxSpriteIndexLoad = (async () => {
+    try {
+      const res = await fetch(VFX_SPRITE_INDEX_URL);
+      if (!res.ok) return;
+      const data = await res.json() as VfxSpriteIndex;
+      vfxSpriteIndex = data;
+    } catch {
+      // Keep procedural-only fallback if index fails to load.
+    } finally {
+      vfxSpriteIndexLoad = null;
+    }
+  })();
+}
+
+function pickVfxSprite(bucket: SpriteBucket): string | undefined {
+  if (!vfxSpriteIndex) {
+    loadVfxSpriteIndex();
+    return undefined;
+  }
+  const list = vfxSpriteIndex.curated[bucket];
+  if (!list || list.length === 0) return undefined;
+  const selected = list[Math.floor(Math.random() * list.length)];
+  return selected ? toAssetUrl(selected) : undefined;
+}
+
+function pickVfxSpriteWithFallback(bucket: SpriteBucket): string | undefined {
+  return pickVfxSprite(bucket) ?? pickVfxSprite('generic');
+}
+
+if (typeof window !== 'undefined') loadVfxSpriteIndex();
+
 // ─── Element Colors ───
 
 const ELEMENT_COLORS: Record<Element, RGB> = {
@@ -129,6 +178,8 @@ function emberDebris(x: number, y: number, color: RGB, count: number): Partial<P
 export function emitExplosion(system: ParticleSystem, x: number, y: number, element?: Element) {
   const color = getElementRGB(element);
   const now = performance.now();
+  const overlaySprite = pickVfxSpriteWithFallback('death');
+  if (overlaySprite) system.warmSprite(overlaySprite);
 
   system.emit([
     ...radialBurst(x, y, color, { count: 28, speedRange: [120, 300], lifeRange: [0.4, 0.75], sizeRange: [3, 8] }),
@@ -147,6 +198,11 @@ export function emitExplosion(system: ParticleSystem, x: number, y: number, elem
       const flashRadius = 15 + easeOutCubic(t) * 70;
       system.drawGlowCircle(ctx, x, y, flashRadius, WHITE, flashAlpha * 0.8, 30);
       system.drawGlowCircle(ctx, x, y, flashRadius * 0.5, color, flashAlpha * 0.6, 20);
+      if (overlaySprite) {
+        const spriteAlpha = (1 - t) * 0.55;
+        const spriteSize = 54 + easeOutQuart(t) * 110;
+        system.drawSprite(ctx, x, y, spriteSize, spriteAlpha, overlaySprite, t * 2.2);
+      }
 
       // Inner shockwave ring — fast, tight
       const ringT = easeOutQuart(t);
@@ -273,6 +329,8 @@ export function emitProjectile(
 
 export function emitImpact(system: ParticleSystem, x: number, y: number, color: RGB) {
   const now = performance.now();
+  const overlaySprite = pickVfxSpriteWithFallback('damage');
+  if (overlaySprite) system.warmSprite(overlaySprite);
 
   system.emit([
     ...radialBurst(x, y, color, { count: 14, speedRange: [80, 180], lifeRange: [0.2, 0.4], sizeRange: [2.5, 5], jitter: 0.4, drag: 4, glow: 10, alpha: 0.9 }),
@@ -289,6 +347,11 @@ export function emitImpact(system: ParticleSystem, x: number, y: number, color: 
       const flashSize = 10 + easeOutCubic(t) * 40;
       system.drawGlowCircle(ctx, x, y, flashSize, WHITE, flashAlpha, 20);
       system.drawGlowCircle(ctx, x, y, flashSize * 0.6, color, flashAlpha * 0.7, 12);
+      if (overlaySprite) {
+        const spriteAlpha = (1 - t) * 0.5;
+        const spriteSize = 36 + easeOutQuart(t) * 48;
+        system.drawSprite(ctx, x, y, spriteSize, spriteAlpha, overlaySprite, t * 1.8);
+      }
 
       const ringAlpha = (1 - t) * 0.8;
       const ringSize = 8 + easeOutQuart(t) * 55;
@@ -302,6 +365,8 @@ export function emitImpact(system: ParticleSystem, x: number, y: number, color: 
 export function emitSpellImpact(system: ParticleSystem, x: number, y: number, element?: Element) {
   const color = getElementRGB(element);
   const now = performance.now();
+  const overlaySprite = pickVfxSpriteWithFallback('spell');
+  if (overlaySprite) system.warmSprite(overlaySprite);
 
   system.emit([
     ...radialBurst(x, y, color, { count: 22, speedRange: [80, 220], lifeRange: [0.35, 0.65], sizeRange: [2.5, 6], glow: 12 }),
@@ -320,6 +385,11 @@ export function emitSpellImpact(system: ParticleSystem, x: number, y: number, el
       const flashSize = 15 + easeOutCubic(t) * 55;
       system.drawGlowCircle(ctx, x, y, flashSize, color, flashAlpha, 25);
       system.drawGlowCircle(ctx, x, y, flashSize * 0.4, WHITE, flashAlpha, 15);
+      if (overlaySprite) {
+        const spriteAlpha = (1 - t) * 0.65;
+        const spriteSize = 70 + easeOutQuart(t) * 90;
+        system.drawSprite(ctx, x, y, spriteSize, spriteAlpha, overlaySprite, t * 2.6);
+      }
 
       // Ring 1 — fast, tight
       const r1t = Math.min(t * 1.4, 1);
@@ -353,6 +423,8 @@ export function emitDamageFlash(system: ParticleSystem, x: number, y: number, am
   const intensity = Math.min(amount / 3, 1);
   const count = 6 + Math.round(intensity * 8);
   const speedScale = 1 + intensity;
+  const overlaySprite = pickVfxSpriteWithFallback('damage');
+  if (overlaySprite) system.warmSprite(overlaySprite);
 
   system.emit([
     ...radialBurst(x, y, DAMAGE_COLOR, {
@@ -372,6 +444,11 @@ export function emitDamageFlash(system: ParticleSystem, x: number, y: number, am
       const size = 12 + easeOutCubic(t) * 30 * (1 + intensity);
       system.drawGlowCircle(ctx, x, y, size, DAMAGE_COLOR, alpha, 15);
       system.drawGlowCircle(ctx, x, y, size * 0.4, WHITE, alpha * 0.5, 8);
+      if (overlaySprite) {
+        const spriteAlpha = (1 - t) * (0.35 + intensity * 0.2);
+        const spriteSize = 28 + easeOutQuart(t) * 36 * (1 + intensity * 0.4);
+        system.drawSprite(ctx, x, y, spriteSize, spriteAlpha, overlaySprite, t * 2.5);
+      }
 
       // Small ring for creature damage
       const ringAlpha = (1 - t) * 0.5 * intensity;
@@ -389,6 +466,8 @@ export function emitPlayerDamage(system: ParticleSystem, x: number, y: number, a
   const intensity = Math.min(amount / 4, 1);
   const count = 12 + Math.round(intensity * 12);
   const speedScale = 1 + intensity * 0.6;
+  const overlaySprite = pickVfxSpriteWithFallback('damage');
+  if (overlaySprite) system.warmSprite(overlaySprite);
 
   system.emit([
     ...radialBurst(x, y, DAMAGE_COLOR, {
@@ -409,6 +488,11 @@ export function emitPlayerDamage(system: ParticleSystem, x: number, y: number, a
       const size = 20 + easeOutCubic(t) * 45 * (1 + intensity);
       system.drawGlowCircle(ctx, x, y, size, DAMAGE_COLOR, alpha, 25);
       system.drawGlowCircle(ctx, x, y, size * 0.4, WHITE, alpha * 0.6, 12);
+      if (overlaySprite) {
+        const spriteAlpha = (1 - t) * 0.55;
+        const spriteSize = 46 + easeOutQuart(t) * 64 * (1 + intensity * 0.4);
+        system.drawSprite(ctx, x, y, spriteSize, spriteAlpha, overlaySprite, t * 2.4);
+      }
 
       const ringAlpha = (1 - t) * 0.7;
       const ringSize = 12 + easeOutQuart(t) * 65;
@@ -422,6 +506,8 @@ export function emitPlayerDamage(system: ParticleSystem, x: number, y: number, a
 export function emitHealEffect(system: ParticleSystem, x: number, y: number, amount: number) {
   const now = performance.now();
   const count = 8 + Math.min(amount, 4) * 3;
+  const overlaySprite = pickVfxSpriteWithFallback('spell');
+  if (overlaySprite) system.warmSprite(overlaySprite);
 
   // Heal uses rising sparkles instead of radial burst
   const particles: Partial<Particle>[] = [];
@@ -455,6 +541,11 @@ export function emitHealEffect(system: ParticleSystem, x: number, y: number, amo
       const size = 18 + easeOutCubic(t) * 28;
       system.drawGlowCircle(ctx, x, y, size, HEAL_COLOR, alpha, 18);
       system.drawGlowCircle(ctx, x, y, size * 0.4, WHITE, alpha * 0.5, 10);
+      if (overlaySprite) {
+        const spriteAlpha = (1 - t) * 0.45;
+        const spriteSize = 34 + easeOutQuart(t) * 52;
+        system.drawSprite(ctx, x, y - 10 * t, spriteSize, spriteAlpha, overlaySprite, 0);
+      }
     },
   });
 }
@@ -464,6 +555,8 @@ export function emitHealEffect(system: ParticleSystem, x: number, y: number, amo
 export function emitKeywordFlash(system: ParticleSystem, x: number, y: number, element?: Element) {
   const color = getElementRGB(element);
   const now = performance.now();
+  const overlaySprite = pickVfxSpriteWithFallback('generic');
+  if (overlaySprite) system.warmSprite(overlaySprite);
 
   system.emit([
     ...radialBurst(x, y, color, { count: 10, speedRange: [40, 100], lifeRange: [0.25, 0.45], sizeRange: [2, 4.5], drag: 3, glow: 10, alpha: 0.85 }),
@@ -479,6 +572,11 @@ export function emitKeywordFlash(system: ParticleSystem, x: number, y: number, e
       const size = 10 + easeOutCubic(t) * 25;
       system.drawGlowCircle(ctx, x, y, size, color, alpha, 14);
       system.drawGlowRing(ctx, x, y, 5 + easeOutQuart(t) * 35, color, alpha * 0.7, 2, 8);
+      if (overlaySprite) {
+        const spriteAlpha = (1 - t) * 0.4;
+        const spriteSize = 26 + easeOutQuart(t) * 22;
+        system.drawSprite(ctx, x, y, spriteSize, spriteAlpha, overlaySprite, t * 1.6);
+      }
     },
   });
 }
@@ -488,6 +586,8 @@ export function emitKeywordFlash(system: ParticleSystem, x: number, y: number, e
 export function emitSummonBurst(system: ParticleSystem, x: number, y: number, element?: Element) {
   const color = getElementRGB(element);
   const now = performance.now();
+  const overlaySprite = pickVfxSpriteWithFallback('summon');
+  if (overlaySprite) system.warmSprite(overlaySprite);
 
   // Ring of outward-then-upward sparkles (unique to summon — directional rise)
   const risingRing: Partial<Particle>[] = [];
@@ -553,6 +653,11 @@ export function emitSummonBurst(system: ParticleSystem, x: number, y: number, el
       const flashSize = 12 + easeOutCubic(t) * 35;
       system.drawGlowCircle(ctx, x, y, flashSize, color, flashAlpha, 18);
       system.drawGlowCircle(ctx, x, y, flashSize * 0.4, WHITE, flashAlpha * 0.7, 10);
+      if (overlaySprite) {
+        const spriteAlpha = (1 - t) * 0.58;
+        const spriteSize = 48 + easeOutQuart(t) * 70;
+        system.drawSprite(ctx, x, y - 16 * t, spriteSize, spriteAlpha, overlaySprite, t * 2.1);
+      }
 
       // Ground ring expanding outward
       const ringAlpha = (1 - t) * 0.7;
@@ -566,6 +671,8 @@ export function emitSummonBurst(system: ParticleSystem, x: number, y: number, el
 export function emitBlockClash(system: ParticleSystem, x: number, y: number) {
   const now = performance.now();
   const blue: RGB = { r: 100, g: 170, b: 255 };
+  const overlaySprite = pickVfxSpriteWithFallback('damage');
+  if (overlaySprite) system.warmSprite(overlaySprite);
 
   system.emit([
     ...radialBurst(x, y, blue, { count: 14, speedRange: [60, 150], lifeRange: [0.2, 0.4], sizeRange: [2, 5], drag: 4, glow: 10, alpha: 0.9 }),
@@ -581,6 +688,11 @@ export function emitBlockClash(system: ParticleSystem, x: number, y: number) {
       system.drawGlowCircle(ctx, x, y, 8 + easeOutCubic(t) * 30, blue, alpha, 16);
       system.drawGlowCircle(ctx, x, y, 4 + easeOutCubic(t) * 12, WHITE, alpha * 0.6, 8);
       system.drawGlowRing(ctx, x, y, 5 + easeOutQuart(t) * 45, blue, alpha * 0.8, 2.5, 10);
+      if (overlaySprite) {
+        const spriteAlpha = (1 - t) * 0.45;
+        const spriteSize = 30 + easeOutQuart(t) * 38;
+        system.drawSprite(ctx, x, y, spriteSize, spriteAlpha, overlaySprite, t * 2);
+      }
     },
   });
 }

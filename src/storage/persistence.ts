@@ -1,4 +1,5 @@
 import type { GameState, PlayerId, Tier } from '@engine/types';
+import { createEmptyStats } from '@engine/types';
 import type { AIConfig } from '@engine/aiConfig';
 import { TIER_CONFIGS } from '@engine/ruleset';
 
@@ -96,6 +97,7 @@ export function loadGame(gameId?: string): { gameState: GameState; rngState: num
     const gameState: GameState = {
       ...persisted.gameState,
       ruleset: { ...persisted.gameState.ruleset, availableKeywords: fullRuleset.availableKeywords },
+      stats: persisted.gameState.stats ?? { player1: createEmptyStats(), player2: createEmptyStats() },
     };
 
     return { gameState, rngState: persisted.rngState, persisted };

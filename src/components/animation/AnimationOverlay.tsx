@@ -7,6 +7,7 @@ import { triggerSoundEffect } from '@audio/triggerSoundEffect';
 import { FloatingNumber } from './FloatingNumber';
 import { BlockLink } from './BlockLink';
 import { CardReveal } from './CardReveal';
+import { CombatMathOverlay } from './CombatMathOverlay';
 import { DamageVignette } from './DamageVignette';
 import { ParticleCanvas } from './ParticleCanvas';
 import type { ParticleCanvasHandle } from './ParticleCanvas';
@@ -123,6 +124,15 @@ export function AnimationOverlay() {
                   <CardReveal
                     key={`reveal-${effect.cardId}-${stepCount}`}
                     cardId={effect.cardId}
+                  />
+                );
+              case 'combat_math':
+                return (
+                  <CombatMathOverlay
+                    key={`math-${i}-${stepCount}`}
+                    equation={effect.equation}
+                    attackerPos={effect.attackerPos}
+                    targetPos={effect.targetPos}
                   />
                 );
               // combat_strike, spell_impact, death, bounce, summon — handled by particle canvas
@@ -247,6 +257,7 @@ function triggerParticleEffect(
       break;
     }
     case 'card_reveal':
+    case 'combat_math':
       // No particle effects — rendered entirely by DOM layer
       break;
     default: {

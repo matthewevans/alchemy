@@ -1,7 +1,9 @@
 import type { GameAction, GameEvent, PlayerId } from '@engine/types';
 import { useGameStore } from './gameStore';
+import { usePreferencesStore } from './preferencesStore';
 import { groupEventsIntoSteps, getPositions, useAnimationStore, STEP_DURATIONS } from './animationStore';
 import type { AnimationStep, BoardSnapshot } from './animationStore';
+import { narrateCard } from '@audio/tts';
 
 type LocalActionHandler = (action: GameAction, actingPlayer: PlayerId) => void;
 
@@ -35,6 +37,13 @@ export function dispatchWithAnimations(
   const events = useGameStore.getState().dispatch(action, actingPlayer);
 
   onLocalAction?.(action, actingPlayer);
+
+  // Narrate played card via TTS
+  const { narrationEnabled, easyReadMode } = usePreferencesStore.getState();
+  if (narrationEnabled) {
+    const played = events.find((e) => e.type === 'CARD_PLAYED');
+    if (played?.type === 'CARD_PLAYED') narrateCard(played.cardId, easyReadMode);
+  }
 
   const steps = groupEventsIntoSteps(events, positions, cardIdMap);
 

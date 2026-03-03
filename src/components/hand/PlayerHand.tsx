@@ -7,6 +7,7 @@ import { useGameDispatch } from '@game/GameDispatchContext';
 import { useUIStore } from '@game/uiStore';
 import type { GameAction } from '@engine/types';
 import { HandCard } from '@components/card';
+import { useActionFeedback } from '@hooks/useActionFeedback';
 
 const DRAG_THRESHOLD = 10;
 
@@ -19,6 +20,8 @@ export function PlayerHand() {
   const selectHandCard = useUIStore((s) => s.selectHandCard);
   const hoverCard = useUIStore((s) => s.hoverCard);
   const inspectCard = useUIStore((s) => s.inspectCard);
+  const tryFeedback = useActionFeedback();
+  const state = useGameStore((s) => s.state);
 
   // Hand tray expand/collapse — MTGA-style peek from bottom
   const [handHovered, setHandHovered] = useState(false);
@@ -83,6 +86,11 @@ export function PlayerHand() {
           selectHandCard(null);
           return;
         }
+      }
+      // Show feedback why this card can't be played
+      if (!playableIndices.has(index) && state) {
+        const el = document.querySelector(`[data-testid="hand-card-${index}"]`) as HTMLElement | null;
+        tryFeedback(state, { type: 'PLAY_CARD', cardIndex: index }, humanPlayer, el);
       }
       selectHandCard(null);
     } else {

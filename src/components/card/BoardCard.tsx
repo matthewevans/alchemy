@@ -120,7 +120,10 @@ export function BoardCard({
     <motion.div
       ref={posRef}
       data-testid={`board-card-${permanent.permanentId}`}
-      className="touch-target relative flex flex-col cursor-pointer select-none"
+      className={`
+        touch-target relative flex flex-col cursor-pointer select-none
+        ${isSummoningSick ? 'saturate-50 brightness-75' : ''}
+      `}
       style={{
         width: cardWidth ? `${cardWidth}px` : 'var(--board-card-width)',
         height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
@@ -219,7 +222,7 @@ export function BoardCard({
             style={{
               fontSize: 'calc(var(--card-font-scale) * 1.5rem)',
               background: 'rgba(0, 0, 0, 0.55)',
-              filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.8))',
+              filter: 'saturate(2) brightness(1.33) drop-shadow(0 2px 6px rgba(0,0,0,0.8))',
             }}
             animate={{ y: [0, -4, 0] }}
             transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -253,23 +256,21 @@ export function BoardCard({
         />
       )}
 
-      <div className={`w-full h-full ${isSummoningSick ? 'saturate-50 brightness-75' : ''}`}>
-        <CardFace
-          cardId={permanent.cardId}
-          viewLevel={cardWidth && cardWidth < 90 ? 'compact' : 'normal'}
-          stats={{
-            attack: effectiveAttack,
-            health: currentHealth,
-            baseAttack: card.attack ?? 0,
-            isDamaged,
-          }}
-          statFlashControls={{
-            attack: attackFlashControls,
-            health: healthFlashControls,
-          }}
-          statusEffects={statusEffects}
-        />
-      </div>
+      <CardFace
+        cardId={permanent.cardId}
+        viewLevel={cardWidth && cardWidth < 90 ? 'compact' : 'normal'}
+        stats={{
+          attack: effectiveAttack,
+          health: currentHealth,
+          baseAttack: card.attack ?? 0,
+          isDamaged,
+        }}
+        statFlashControls={{
+          attack: attackFlashControls,
+          health: healthFlashControls,
+        }}
+        statusEffects={statusEffects}
+      />
     </motion.div>
   );
 }

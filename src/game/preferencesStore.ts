@@ -19,6 +19,11 @@ interface PreferencesState {
   difficulty: AIDifficulty;
   battlefieldAmbience: boolean;
   battlefield: BattlefieldPreference;
+  easyReadMode: boolean;
+  narrationEnabled: boolean;
+  tutorialEnabled: boolean;
+  combatMathEnabled: boolean;
+  autoUpdateEnabled: boolean;
   setUIScale: (scale: number) => void;
   resetUIScale: () => void;
   setBoardScale: (scale: number) => void;
@@ -27,6 +32,11 @@ interface PreferencesState {
   setDifficulty: (difficulty: AIDifficulty) => void;
   setBattlefieldAmbience: (enabled: boolean) => void;
   setBattlefield: (battlefield: BattlefieldPreference) => void;
+  setEasyReadMode: (enabled: boolean) => void;
+  setNarrationEnabled: (enabled: boolean) => void;
+  setTutorialEnabled: (enabled: boolean) => void;
+  setCombatMathEnabled: (enabled: boolean) => void;
+  setAutoUpdateEnabled: (enabled: boolean) => void;
 }
 
 function applyUIScale(scale: number) {
@@ -44,6 +54,11 @@ interface PersistedPreferences {
   difficulty: AIDifficulty;
   battlefieldAmbience: boolean;
   battlefield: BattlefieldPreference;
+  easyReadMode: boolean;
+  narrationEnabled: boolean;
+  tutorialEnabled: boolean;
+  combatMathEnabled: boolean;
+  autoUpdateEnabled: boolean;
 }
 
 function loadPersistedPreferences(): PersistedPreferences {
@@ -58,12 +73,17 @@ function loadPersistedPreferences(): PersistedPreferences {
         difficulty: typeof parsed.difficulty === 'string' ? parsed.difficulty : DEFAULT_DIFFICULTY,
         battlefieldAmbience: typeof parsed.battlefieldAmbience === 'boolean' ? parsed.battlefieldAmbience : true,
         battlefield: typeof parsed.battlefield === 'string' ? parsed.battlefield : 'auto',
+        easyReadMode: typeof parsed.easyReadMode === 'boolean' ? parsed.easyReadMode : true,
+        narrationEnabled: typeof parsed.narrationEnabled === 'boolean' ? parsed.narrationEnabled : true,
+        tutorialEnabled: typeof parsed.tutorialEnabled === 'boolean' ? parsed.tutorialEnabled : true,
+        combatMathEnabled: typeof parsed.combatMathEnabled === 'boolean' ? parsed.combatMathEnabled : true,
+        autoUpdateEnabled: typeof parsed.autoUpdateEnabled === 'boolean' ? parsed.autoUpdateEnabled : true,
       };
     }
   } catch {
     // corrupt data — fall through to defaults
   }
-  return { uiScale: DEFAULT_UI_SCALE, boardScale: DEFAULT_BOARD_SCALE, tier: DEFAULT_TIER, difficulty: DEFAULT_DIFFICULTY, battlefieldAmbience: true, battlefield: 'auto' };
+  return { uiScale: DEFAULT_UI_SCALE, boardScale: DEFAULT_BOARD_SCALE, tier: DEFAULT_TIER, difficulty: DEFAULT_DIFFICULTY, battlefieldAmbience: true, battlefield: 'auto', easyReadMode: true, narrationEnabled: true, tutorialEnabled: true, combatMathEnabled: true, autoUpdateEnabled: true };
 }
 
 function persistPreferences(prefs: PersistedPreferences) {
@@ -82,6 +102,11 @@ export const usePreferencesStore = create<PreferencesState>()(
     difficulty: initial.difficulty,
     battlefieldAmbience: initial.battlefieldAmbience,
     battlefield: initial.battlefield,
+    easyReadMode: initial.easyReadMode,
+    narrationEnabled: initial.narrationEnabled,
+    tutorialEnabled: initial.tutorialEnabled,
+    combatMathEnabled: initial.combatMathEnabled,
+    autoUpdateEnabled: initial.autoUpdateEnabled,
 
     setUIScale: (scale) => {
       const clamped = Math.round(Math.max(0.6, Math.min(1.4, scale)) * 100) / 100;
@@ -127,6 +152,31 @@ export const usePreferencesStore = create<PreferencesState>()(
     setBattlefield: (battlefield) => {
       persistPreferences({ ...get(), battlefield });
       set({ battlefield });
+    },
+
+    setEasyReadMode: (easyReadMode) => {
+      persistPreferences({ ...get(), easyReadMode });
+      set({ easyReadMode });
+    },
+
+    setNarrationEnabled: (narrationEnabled) => {
+      persistPreferences({ ...get(), narrationEnabled });
+      set({ narrationEnabled });
+    },
+
+    setTutorialEnabled: (tutorialEnabled) => {
+      persistPreferences({ ...get(), tutorialEnabled });
+      set({ tutorialEnabled });
+    },
+
+    setCombatMathEnabled: (combatMathEnabled) => {
+      persistPreferences({ ...get(), combatMathEnabled });
+      set({ combatMathEnabled });
+    },
+
+    setAutoUpdateEnabled: (autoUpdateEnabled) => {
+      persistPreferences({ ...get(), autoUpdateEnabled });
+      set({ autoUpdateEnabled });
     },
   })),
 );

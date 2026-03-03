@@ -99,6 +99,28 @@ describe('groupEventsIntoSteps (spells)', () => {
     const steps = groupEventsIntoSteps(events, new Map());
     expect(steps).toHaveLength(0);
   });
+
+  it('marks spell impacts as healing when heal events are present', () => {
+    const targetId = 'perm-target';
+    const positions = new Map([
+      [targetId, pos()],
+      ['player:player2', { x: 380, y: 80, width: 56, height: 56 }],
+    ]);
+
+    const events: GameEvent[] = [
+      { type: 'CARD_PLAYED', player: 'player2', cardId: 'water_healing_rain' },
+      { type: 'SPELL_RESOLVED', cardId: 'water_healing_rain', targets: [{ type: 'player', playerId: 'player2' }] },
+      { type: 'PLAYER_HEALED', player: 'player2', amount: 4 },
+    ];
+
+    const steps = groupEventsIntoSteps(events, positions);
+    const spellImpacts = steps
+      .flatMap((s) => s.effects)
+      .filter((e) => e.type === 'spell_impact');
+
+    expect(spellImpacts).toHaveLength(1);
+    expect(spellImpacts[0]?.type === 'spell_impact' && spellImpacts[0].isHealing).toBe(true);
+  });
 });
 
 describe('groupEventsIntoSteps (summon)', () => {

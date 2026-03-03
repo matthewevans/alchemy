@@ -74,6 +74,9 @@ export class ParticleSystem {
   private running = false;
   private glowSprites = new Map<number, HTMLCanvasElement>();
   private colorStrings = new Map<number, string>();
+  private textureSprites = new Map<string, HTMLImageElement>();
+  private textureSpriteLoading = new Set<string>();
+  private textureSpriteFailed = new Set<string>();
 
   attach(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -93,6 +96,9 @@ export class ParticleSystem {
     this.ctx = null;
     this.glowSprites.clear();
     this.colorStrings.clear();
+    this.textureSprites.clear();
+    this.textureSpriteLoading.clear();
+    this.textureSpriteFailed.clear();
   }
 
   resize() {
@@ -226,6 +232,53 @@ export class ParticleSystem {
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.stroke();
     }
+  }
+
+  private getTextureSprite(url: string): HTMLImageElement | null {
+    if (this.textureSpriteFailed.has(url)) return null;
+    const existing = this.textureSprites.get(url);
+    if (existing) return existing;
+    if (this.textureSpriteLoading.has(url)) return null;
+
+    this.textureSpriteLoading.add(url);
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => {
+      this.textureSpriteLoading.delete(url);
+      this.textureSprites.set(url, img);
+      this.ensureRunning();
+    };
+    img.onerror = () => {
+      this.textureSpriteLoading.delete(url);
+      this.textureSpriteFailed.add(url);
+    };
+    img.src = url;
+    return null;
+  }
+
+  warmSprite(url: string) {
+    this.getTextureSprite(url);
+  }
+
+  drawSprite(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    size: number,
+    alpha: number,
+    url: string,
+    rotationRad = 0,
+  ) {
+    const img = this.getTextureSprite(url);
+    if (!img || size <= 0 || alpha <= 0) return;
+    const width = size;
+    const height = img.width > 0 ? (img.height / img.width) * width : width;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+    if (rotationRad !== 0) ctx.rotate(rotationRad);
+    ctx.drawImage(img, -width / 2, -height / 2, width, height);
+    ctx.restore();
   }
 
   private loop = () => {

@@ -28,11 +28,17 @@ export function triggerSoundEffect(effect: AnimationEffect): void {
       playEffectSound('death', { element: effect.element, soundId: effect.soundId });
       break;
     case 'spell_impact':
-      playEffectSound('spell_impact', { element: effect.element, soundId: effect.soundId });
+      playEffectSound('spell_impact', {
+        element: effect.element,
+        soundId: effect.soundId,
+        spellImpactKind: effect.isHealing ? 'heal' : undefined,
+      });
       break;
     case 'heal':
-    case 'player_heal':
       playEffectSound('heal', { amount: effect.amount });
+      break;
+    case 'player_heal':
+      playEffectSound('player_heal', { amount: effect.amount });
       break;
     case 'bounce':
       playEffectSound('summon', { element: effect.element });
@@ -44,7 +50,8 @@ export function triggerSoundEffect(effect: AnimationEffect): void {
       playEffectSound('keyword', {});
       break;
     case 'card_reveal':
-      // No dedicated sound — the card's effect sound plays on the subsequent step
+    case 'combat_math':
+      // No dedicated sound
       break;
     default: {
       const _exhaustive: never = effect;

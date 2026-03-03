@@ -101,6 +101,32 @@ export type Phase =
   | { type: 'end' }
   | { type: 'game_over'; winner: PlayerId };
 
+// ─── Stats ───
+
+export interface GameStats {
+  damageDealt: number;
+  damageReceived: number;
+  cardsPlayed: number;
+  creaturesPlayed: number;
+  spellsCast: number;
+  creaturesDefeated: number;
+  turnsPlayed: number;
+  energySpent: number;
+}
+
+export function createEmptyStats(): GameStats {
+  return {
+    damageDealt: 0,
+    damageReceived: 0,
+    cardsPlayed: 0,
+    creaturesPlayed: 0,
+    spellsCast: 0,
+    creaturesDefeated: 0,
+    turnsPlayed: 0,
+    energySpent: 0,
+  };
+}
+
 // ─── State ───
 
 export interface GameState {
@@ -109,6 +135,7 @@ export interface GameState {
   turn: number;
   activePlayer: PlayerId;
   players: Record<PlayerId, PlayerState>;
+  stats: Record<PlayerId, GameStats>;
 }
 
 export interface PlayerState {

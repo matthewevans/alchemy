@@ -2,7 +2,7 @@ import type { PlayerId } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
 import { usePhaseInfo } from '@hooks/usePhaseInfo';
 import { getDeckPrimaryElement, getElementColor } from '@components/card/cardUtils';
-import { HeroPortrait, HealthBadge, EnergyCrystals, PhaseDiamonds } from '@components/hero';
+import { HeroPortrait, HealthBadge, HealthBar, EnergyCrystals, PhaseDiamonds } from '@components/hero';
 
 interface HeroHUDProps {
   playerId: PlayerId;
@@ -47,9 +47,12 @@ export function HeroHUD({ playerId, isOpponent, avatarSrc, isValidTarget, onHero
         <EnergyCrystals playerId={playerId} color={pipColor} />
         <PhaseDiamonds side="left" />
         {/* Portrait + health badge overlay */}
-        <div className="relative" style={{ paddingBottom: 'var(--hero-portrait-pb)' }}>
-          <HeroPortrait avatarSrc={avatarSrc} isOpponent={isOpponent} isValidTarget={isValidTarget} onHeroClick={onHeroClick} />
-          <HealthBadge playerId={playerId} />
+        <div className="flex flex-col items-center">
+          <div className="relative" style={{ paddingBottom: 'var(--hero-portrait-pb)' }}>
+            <HeroPortrait avatarSrc={avatarSrc} isOpponent={isOpponent} isValidTarget={isValidTarget} onHeroClick={onHeroClick} />
+            <HealthBadge playerId={playerId} />
+          </div>
+          <HealthBar playerId={playerId} />
         </div>
         <PhaseDiamonds side="right" />
         {/* Discard — mobile only, right side */}

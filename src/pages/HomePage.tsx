@@ -53,15 +53,18 @@ export function HomePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initGame = useGameStore((s) => s.initGame);
+  const restoreGame = useGameStore((s) => s.restoreGame);
 
   const savedGameId = loadActiveGameId();
   const hasSavedGame = savedGameId ? loadGame(savedGameId) !== null : false;
 
   const handleResume = useCallback(() => {
-    if (savedGameId) {
-      navigate(`/game/${savedGameId}`);
-    }
-  }, [savedGameId, navigate]);
+    if (!savedGameId) return;
+    const saved = loadGame(savedGameId);
+    if (!saved) return;
+    restoreGame(saved.gameState, saved.rngState, saved.persisted);
+    navigate(`/game/${savedGameId}`);
+  }, [savedGameId, navigate, restoreGame]);
 
   const handlePlay = useCallback(() => {
     // Clear any suspended game before starting a new one

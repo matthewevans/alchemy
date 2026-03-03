@@ -51,10 +51,14 @@ describe('dispatchWithAnimations', () => {
 
     dispatchWithAnimations({ type: 'CONFIRM_BLOCKERS' }, 'player2');
 
-    const activeStep = useAnimationStore.getState().activeStep;
+    const { activeStep, queue } = useAnimationStore.getState();
     expect(activeStep).not.toBeNull();
-    expect(activeStep?.effects.some((effect) => effect.type === 'combat_strike')).toBe(true);
-    expect(activeStep?.effects.some((effect) => effect.type === 'player_damage')).toBe(true);
+    const allEffects = [
+      ...(activeStep?.effects ?? []),
+      ...queue.flatMap((s) => s.effects),
+    ];
+    expect(allEffects.some((effect) => effect.type === 'combat_strike')).toBe(true);
+    expect(allEffects.some((effect) => effect.type === 'player_damage')).toBe(true);
 
     // Clean up registered positions
     unregisterPosition(attacker.permanentId);

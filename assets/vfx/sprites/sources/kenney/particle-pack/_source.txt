@@ -1,0 +1,4 @@
+source_page=https://kenney.nl/assets/particle-pack
+source_zip=https://kenney.nl/media/pages/assets/particle-pack/1dd3d4cbe2-1677578741/kenney_particle-pack.zip
+license=CC0 (as labeled on source page)
+downloaded_utc=2026-03-03T00:56:13Z

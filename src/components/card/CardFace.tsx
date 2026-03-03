@@ -6,6 +6,8 @@ import type { Keyword } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
 import { EFFECT_REGISTRY } from '@engine/effects';
 import { KEYWORD_REGISTRY } from '@engine/keywords';
+import { resolveDescription } from '@engine/descriptions';
+import { usePreferencesStore } from '@game/preferencesStore';
 import {
   getElementColor,
   getElementArtGradient,
@@ -71,6 +73,7 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
   const artPath = getCardArtPath(card.id, card.element);
   const effect = card.effectId ? EFFECT_REGISTRY[card.effectId] : null;
   const isCreature = card.type === 'creature';
+  const easyReadMode = usePreferencesStore((s) => s.easyReadMode);
 
   // Stat values: use overrides if provided, else base card stats
   const attack = stats?.attack ?? card.attack ?? 0;
@@ -241,7 +244,7 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
                         <span>{kwDef.icon}</span>
                         <span className="text-white/80">
                           <span className="font-semibold text-amber-300 capitalize">{kwDef.name}</span>
-                          {' \u2014 '}{kwDef.description}
+                          {' \u2014 '}{resolveDescription(kwDef.description, kwDef.easyDescription, easyReadMode)}
                         </span>
                       </div>
                     );
@@ -263,7 +266,7 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
                   className="text-white/80 leading-tight"
                   style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
                 >
-                  {effect.description}
+                  {resolveDescription(effect.description, effect.easyDescription, easyReadMode)}
                 </p>
               ) : (
                 <EffectShorthand effect={effect} />
@@ -375,6 +378,7 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
 function CompactKeywordIcon({ keyword }: { keyword: Keyword }) {
   const [hovered, setHovered] = useState(false);
   const kwDef = KEYWORD_REGISTRY[keyword];
+  const easyReadMode = usePreferencesStore((s) => s.easyReadMode);
 
   return (
     <span
@@ -395,7 +399,7 @@ function CompactKeywordIcon({ keyword }: { keyword: Keyword }) {
             transition={{ duration: 0.15 }}
           >
             <span className="text-amber-300 font-bold capitalize">{kwDef.name}</span>
-            <span className="text-white"> — {kwDef.description}</span>
+            <span className="text-white"> — {resolveDescription(kwDef.description, kwDef.easyDescription, easyReadMode)}</span>
           </motion.div>
         )}
       </AnimatePresence>

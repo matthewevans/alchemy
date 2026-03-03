@@ -1,4 +1,5 @@
 import type { CardInstance, GameState, Permanent, Phase, PlayerId, PlayerState, RulesetConfig } from '../../types';
+import { createEmptyStats } from '../../types';
 import { TIER_CONFIGS } from '../../ruleset';
 
 let testInstanceCounter = 0;
@@ -71,6 +72,10 @@ export function createTestGameState(overrides?: {
     players: {
       player1: { ...defaultPlayer1, ...overrides?.player1 },
       player2: { ...defaultPlayer2, ...overrides?.player2 },
+    },
+    stats: {
+      player1: createEmptyStats(),
+      player2: createEmptyStats(),
     },
   };
 }

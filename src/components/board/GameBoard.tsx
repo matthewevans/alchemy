@@ -16,11 +16,14 @@ import { ActionButton } from './ActionButton';
 import { CreatureSlots } from './CreatureSlots';
 import { BattleLine } from './BattleLine';
 import { BlockAssignmentLines } from './BlockAssignmentLines';
+import { CombatMathBubbles } from './CombatMathBubbles';
 import { BattlefieldAmbience } from './BattlefieldAmbience';
 import { PlayerHand, OpponentHand } from '@components/hand';
 import { TurnBanner } from '@components/phase';
 import { AnimationOverlay } from '@components/animation';
 import { CardPreview } from '@components/card';
+import { ActionFeedbackToast } from '@components/ui/ActionFeedbackToast';
+import { CoachOverlay } from '@components/ui/CoachOverlay';
 import { TargetingPanel } from '@components/targeting/TargetingPanel';
 import { gameButtonClass } from '@components/ui/buttonStyles';
 
@@ -259,6 +262,7 @@ export function GameBoard() {
 
       {/* Block assignment links */}
       <BlockAssignmentLines />
+      <CombatMathBubbles />
 
       {/* Combined targeting panel — card reveal + prompt + cancel */}
       <AnimatePresence>
@@ -338,6 +342,12 @@ export function GameBoard() {
 
       {/* Animation overlay */}
       <AnimationOverlay />
+
+      {/* Action feedback toast */}
+      <ActionFeedbackToast />
+
+      {/* Tutorial coach overlay */}
+      <CoachOverlay />
 
       {/* Graveyard / discard viewer */}
       <AnimatePresence>

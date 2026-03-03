@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
+export interface FeedbackState {
+  message: string;
+  x: number;
+  y: number;
+  tone: 'info' | 'warning';
+}
+
 interface UIStore {
   // Card interaction
   selectedHandIndex: number | null;
@@ -18,6 +25,9 @@ interface UIStore {
   showTurnBanner: boolean;
   turnBannerText: string;
 
+  // Action feedback
+  feedback: FeedbackState | null;
+
   // Actions
   selectHandCard: (index: number | null) => void;
   hoverCard: (cardId: string | null) => void;
@@ -26,6 +36,7 @@ interface UIStore {
   selectBlocker: (id: string | null) => void;
   selectAttacker: (id: string | null) => void;
   flashTurnBanner: (text: string) => void;
+  showFeedback: (message: string, x: number, y: number, tone?: 'info' | 'warning') => void;
   clearUI: () => void;
 }
 
@@ -39,6 +50,7 @@ export const useUIStore = create<UIStore>()(
     selectedAttackerId: null,
     showTurnBanner: false,
     turnBannerText: '',
+    feedback: null,
 
     selectHandCard: (index) => set({ selectedHandIndex: index }),
     hoverCard: (cardId) => set({ hoveredCardId: cardId }),
@@ -52,6 +64,11 @@ export const useUIStore = create<UIStore>()(
       setTimeout(() => set({ showTurnBanner: false }), 1500);
     },
 
+    showFeedback: (message, x, y, tone = 'warning') => {
+      set({ feedback: { message, x, y, tone } });
+      setTimeout(() => set({ feedback: null }), 2500);
+    },
+
     clearUI: () =>
       set({
         selectedHandIndex: null,
@@ -62,6 +79,7 @@ export const useUIStore = create<UIStore>()(
         selectedAttackerId: null,
         showTurnBanner: false,
         turnBannerText: '',
+        feedback: null,
       }),
   })),
 );

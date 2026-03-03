@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useAnimationStore } from '@game/animationStore';
 import { gameButtonClass } from './buttonStyles';
-import { SettingsPanel } from './SettingsPanel';
+import { SettingsPanel } from './settings/SettingsPanel';
 import { FallingAshes } from './FallingAshes';
 import { useDialogA11y } from '@hooks/useDialogA11y';
 
@@ -58,7 +58,7 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
         aria-modal="true"
         aria-label="Game menu"
         tabIndex={-1}
-        className="bg-slate-800/95 rounded-2xl p-8 flex flex-col items-center gap-4 min-w-[240px] shadow-2xl border border-slate-600/40"
+        className="bg-slate-800/95 rounded-2xl p-8 flex flex-col items-center gap-4 min-w-[360px] max-w-[90vw] shadow-2xl border border-slate-600/40"
         style={{
           boxShadow: '0 0 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(0, 0, 0, 0.3)',
         }}

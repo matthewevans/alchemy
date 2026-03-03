@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Keyword } from '@engine/types';
 import { KEYWORD_REGISTRY } from '@engine/keywords';
+import { resolveDescription } from '@engine/descriptions';
+import { usePreferencesStore } from '@game/preferencesStore';
 
 interface KeywordBadgeProps {
   keyword: Keyword;
@@ -13,6 +15,7 @@ export function KeywordBadge({ keyword }: KeywordBadgeProps) {
   const badgeRef = useRef<HTMLSpanElement>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const kwDef = KEYWORD_REGISTRY[keyword];
+  const easyReadMode = usePreferencesStore((s) => s.easyReadMode);
 
   useLayoutEffect(() => {
     if (hovered && badgeRef.current) {
@@ -50,7 +53,7 @@ export function KeywordBadge({ keyword }: KeywordBadgeProps) {
               transition={{ duration: 0.15 }}
             >
               <span className="text-amber-300 font-bold capitalize">{kwDef.name}</span>
-              <span className="text-white"> — {kwDef.description}</span>
+              <span className="text-white"> — {resolveDescription(kwDef.description, kwDef.easyDescription, easyReadMode)}</span>
             </motion.div>
           )}
         </AnimatePresence>,
