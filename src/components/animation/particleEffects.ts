@@ -11,7 +11,7 @@ interface VfxSpriteIndex {
   curated: Record<SpriteBucket, string[]>;
 }
 
-const VFX_SPRITE_INDEX_URL = '/vfx/sprites/index.json';
+const VFX_SPRITE_INDEX_URL = `${import.meta.env.BASE_URL}vfx/sprites/index.json`;
 let vfxSpriteIndex: VfxSpriteIndex | null = null;
 let vfxSpriteIndexLoad: Promise<void> | null = null;
 
