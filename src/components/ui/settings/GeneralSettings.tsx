@@ -1,4 +1,5 @@
 import { usePreferencesStore, DEFAULT_UI_SCALE, DEFAULT_BOARD_SCALE } from '@game/preferencesStore';
+import type { StatLayout } from '@game/preferencesStore';
 import { useAudioStore } from '@audio/audioStore';
 import { BATTLEFIELDS } from '@components/board/battlefields';
 import { SettingsSlider, SettingsToggle, SettingsSelect } from './SettingsControls';
@@ -8,8 +9,14 @@ const BATTLEFIELD_OPTIONS = [
   ...BATTLEFIELDS.map((b) => ({ value: b.id, label: b.label })),
 ];
 
+const STAT_LAYOUT_OPTIONS = [
+  { value: 'center', label: 'Centered' },
+  { value: 'right', label: 'Right-aligned' },
+  { value: 'spread', label: 'Split (classic)' },
+];
+
 export function GeneralSettings() {
-  const { uiScale, setUIScale, resetUIScale, boardScale, setBoardScale, resetBoardScale, battlefieldAmbience, setBattlefieldAmbience, battlefield, setBattlefield } = usePreferencesStore();
+  const { uiScale, setUIScale, resetUIScale, boardScale, setBoardScale, resetBoardScale, battlefieldAmbience, setBattlefieldAmbience, battlefield, setBattlefield, statLayout, setStatLayout } = usePreferencesStore();
   const { sfxVolume, setSfxVolume, musicVolume, setMusicVolume } = useAudioStore();
 
   return (
@@ -77,6 +84,13 @@ export function GeneralSettings() {
         label="Particles"
         checked={battlefieldAmbience}
         onChange={setBattlefieldAmbience}
+      />
+      <SettingsSelect
+        id="stat-layout"
+        label="Card Stats"
+        value={statLayout}
+        options={STAT_LAYOUT_OPTIONS}
+        onChange={(v) => setStatLayout(v as StatLayout)}
       />
     </>
   );

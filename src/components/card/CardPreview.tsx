@@ -14,6 +14,7 @@ import {
   getElementFrameGradient,
   getCardArtPath,
 } from './cardUtils';
+import { StatBar } from './StatBar';
 
 interface CardPreviewProps {
   cardId: string;
@@ -200,32 +201,11 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
 
           {/* Stat bar — creatures only, prominent */}
           {isCreature && (
-            <div className="flex justify-between items-center px-3 pb-3">
-              <div
-                className="flex items-center gap-1.5 rounded-lg font-black text-xl px-3 py-1.5"
-                style={{
-                  color: '#fecaca',
-                  background: 'rgba(239, 68, 68, 0.25)',
-                  border: '1px solid rgba(252, 165, 165, 0.6)',
-                  textShadow: '0 1px 3px rgba(0, 0, 0, 0.6)',
-                }}
-              >
-                <span>⚔</span>
-                <span>{card.attack ?? 0}</span>
-              </div>
-              <div
-                className="flex items-center gap-1.5 rounded-lg font-black text-xl px-3 py-1.5"
-                style={{
-                  color: '#bbf7d0',
-                  background: 'rgba(34, 197, 94, 0.25)',
-                  border: '1px solid rgba(134, 239, 172, 0.6)',
-                  textShadow: '0 1px 3px rgba(0, 0, 0, 0.6)',
-                }}
-              >
-                <span>♥</span>
-                <span>{card.health ?? 0}</span>
-              </div>
-            </div>
+            <StatBar
+              attack={card.attack ?? 0}
+              health={card.health ?? 0}
+              size="large"
+            />
           )}
         </div>
       </motion.div>

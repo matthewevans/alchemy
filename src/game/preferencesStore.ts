@@ -6,6 +6,9 @@ import type { AIDifficulty } from '@engine/aiConfig';
 /** Battlefield ID (e.g. 'fire_molten', 'shadow_haunted_graveyard') or 'auto'. */
 export type BattlefieldPreference = string;
 
+/** How attack/health stats are positioned on creature cards. */
+export type StatLayout = 'spread' | 'center' | 'right';
+
 const STORAGE_KEY = 'alchemy:preferences';
 export const DEFAULT_UI_SCALE = 1;
 export const DEFAULT_BOARD_SCALE = 0.85;
@@ -22,8 +25,10 @@ interface PreferencesState {
   easyReadMode: boolean;
   narrationEnabled: boolean;
   tutorialEnabled: boolean;
+  statLayout: StatLayout;
   combatMathEnabled: boolean;
   autoUpdateEnabled: boolean;
+  setStatLayout: (layout: StatLayout) => void;
   setUIScale: (scale: number) => void;
   resetUIScale: () => void;
   setBoardScale: (scale: number) => void;
@@ -57,6 +62,7 @@ interface PersistedPreferences {
   easyReadMode: boolean;
   narrationEnabled: boolean;
   tutorialEnabled: boolean;
+  statLayout: StatLayout;
   combatMathEnabled: boolean;
   autoUpdateEnabled: boolean;
 }
@@ -76,6 +82,7 @@ function loadPersistedPreferences(): PersistedPreferences {
         easyReadMode: typeof parsed.easyReadMode === 'boolean' ? parsed.easyReadMode : true,
         narrationEnabled: typeof parsed.narrationEnabled === 'boolean' ? parsed.narrationEnabled : false,
         tutorialEnabled: typeof parsed.tutorialEnabled === 'boolean' ? parsed.tutorialEnabled : true,
+        statLayout: ['spread', 'center', 'right'].includes(parsed.statLayout) ? parsed.statLayout : 'center',
         combatMathEnabled: typeof parsed.combatMathEnabled === 'boolean' ? parsed.combatMathEnabled : true,
         autoUpdateEnabled: typeof parsed.autoUpdateEnabled === 'boolean' ? parsed.autoUpdateEnabled : true,
       };
@@ -83,7 +90,7 @@ function loadPersistedPreferences(): PersistedPreferences {
   } catch {
     // corrupt data — fall through to defaults
   }
-  return { uiScale: DEFAULT_UI_SCALE, boardScale: DEFAULT_BOARD_SCALE, tier: DEFAULT_TIER, difficulty: DEFAULT_DIFFICULTY, battlefieldAmbience: true, battlefield: 'auto', easyReadMode: true, narrationEnabled: false, tutorialEnabled: true, combatMathEnabled: true, autoUpdateEnabled: true };
+  return { uiScale: DEFAULT_UI_SCALE, boardScale: DEFAULT_BOARD_SCALE, tier: DEFAULT_TIER, difficulty: DEFAULT_DIFFICULTY, battlefieldAmbience: true, battlefield: 'auto', easyReadMode: true, narrationEnabled: false, tutorialEnabled: true, statLayout: 'center', combatMathEnabled: true, autoUpdateEnabled: true };
 }
 
 function persistPreferences(prefs: PersistedPreferences) {
@@ -105,8 +112,14 @@ export const usePreferencesStore = create<PreferencesState>()(
     easyReadMode: initial.easyReadMode,
     narrationEnabled: initial.narrationEnabled,
     tutorialEnabled: initial.tutorialEnabled,
+    statLayout: initial.statLayout,
     combatMathEnabled: initial.combatMathEnabled,
     autoUpdateEnabled: initial.autoUpdateEnabled,
+
+    setStatLayout: (statLayout) => {
+      persistPreferences({ ...get(), statLayout });
+      set({ statLayout });
+    },
 
     setUIScale: (scale) => {
       const clamped = Math.round(Math.max(0.6, Math.min(1.4, scale)) * 100) / 100;
