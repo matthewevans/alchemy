@@ -60,10 +60,33 @@
   }
 }
 
-/* Hide opponent card fan on short screens (landscape phones) */
+/* Compact opponent hand on short screens (landscape phones) */
 @media (max-height: 499px) {
+  .opponent-hand-wrapper {
+    margin-top: -0.5rem;
+    margin-bottom: 0.25rem;
+  }
+  .opponent-hand {
+    margin-top: 0;
+  }
   .opponent-hand-fan {
-    display: none;
+    height: 0.5rem !important;
+    overflow: hidden;
+  }
+}
+
+/* ─── Title Screen — compact layout for landscape phones ─── */
+@media (max-height: 499px) {
+  .title-logo { margin-bottom: 0.5rem; }
+  .title-logo-img { max-width: 12rem; }
+  .title-buttons { gap: 0.5rem; }
+  .title-button { width: 12rem; padding: 0.375rem 1rem; font-size: 0.875rem; }
+  .title-subtitle { margin-top: 0.5rem; font-size: 0.75rem; }
+  .settings-dialog {
+    padding: 1rem 1.5rem;
+    max-height: 85dvh;
+    overflow-y: auto;
+    min-width: auto;
   }
 }
 

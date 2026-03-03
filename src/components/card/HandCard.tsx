@@ -12,8 +12,9 @@ interface HandCardProps {
   isSelected: boolean;
   verbose?: boolean;
   onClick: () => void;
+  onDoubleClick?: () => void;
   onHover: (hovering: boolean) => void;
-  onLongPress?: () => void;
+  onLongPress?: (pos: { x: number; y: number }) => void;
   onPointerDown?: (e: React.PointerEvent) => void;
 }
 
@@ -23,11 +24,12 @@ export function HandCard({
   isSelected,
   verbose,
   onClick,
+  onDoubleClick,
   onHover,
   onLongPress: onLongPressProp,
   onPointerDown: onPointerDownProp,
 }: HandCardProps) {
-  const longPress = useLongPress(() => onLongPressProp?.());
+  const longPress = useLongPress((pos) => onLongPressProp?.(pos));
   const card = CARD_REGISTRY[cardInstance.cardId];
   const elementColor = getElementColor(card.element);
   const isPreview = cardInstance.instanceId === '__preview__' || cardInstance.instanceId === '__reveal__';
@@ -60,7 +62,7 @@ export function HandCard({
       whileTap={{ scale: 0.97 }}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       onClick={() => { if (!longPress.firedRef.current) onClick(); }}
-      onContextMenu={(e) => { e.preventDefault(); onLongPressProp?.(); }}
+      onDoubleClick={onDoubleClick}
       onPointerDown={(e) => { longPress.onPointerDown(e); onPointerDownProp?.(e); }}
       onPointerMove={longPress.onPointerMove}
       onPointerUp={longPress.onPointerUp}

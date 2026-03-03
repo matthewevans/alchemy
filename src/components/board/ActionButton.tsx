@@ -40,8 +40,8 @@ export function ActionButton() {
         data-testid="combat-controls"
         className="fixed z-[45] pointer-events-none"
         style={{
-          right: 'calc(env(safe-area-inset-right) + 7rem)',
-          bottom: 'calc(env(safe-area-inset-bottom) + 0.65rem)',
+          right: 'calc(env(safe-area-inset-right) + var(--sidebar-w) + 1rem)',
+          bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)',
         }}
       >
         <AnimatePresence>
@@ -180,8 +180,8 @@ export function ActionButton() {
       data-testid="combat-controls"
       className="fixed z-[45] pointer-events-none"
       style={{
-        right: 'calc(env(safe-area-inset-right) + 7rem)',
-        bottom: 'calc(env(safe-area-inset-bottom) + 0.65rem)',
+        right: 'calc(env(safe-area-inset-right) + var(--sidebar-w) + 1rem)',
+        bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)',
       }}
     >
       <motion.button

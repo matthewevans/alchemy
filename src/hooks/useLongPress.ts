@@ -2,7 +2,7 @@ import { useRef, useCallback } from 'react';
 
 const MOVE_THRESHOLD = 10;
 
-export function useLongPress(onLongPress: () => void, ms = 500) {
+export function useLongPress(onLongPress: (pos: { x: number; y: number }) => void, ms = 500) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startPos = useRef<{ x: number; y: number } | null>(null);
   const firedRef = useRef(false);
@@ -21,7 +21,7 @@ export function useLongPress(onLongPress: () => void, ms = 500) {
       startPos.current = { x: e.clientX, y: e.clientY };
       timerRef.current = setTimeout(() => {
         firedRef.current = true;
-        onLongPress();
+        onLongPress(startPos.current!);
         cancel();
       }, ms);
     },

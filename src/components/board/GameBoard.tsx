@@ -144,7 +144,7 @@ export function GameBoard() {
       {showAmbience && battlefield && <BattlefieldAmbience config={battlefield.particles} count={battlefield.particleCount} />}
 
       {/* ═══ Opponent hand — top edge ═══ */}
-      <div className="shrink-0 -mt-10 mb-12 z-10">
+      <div className="opponent-hand-wrapper shrink-0 -mt-10 mb-12 z-10">
         <OpponentHand />
       </div>
 

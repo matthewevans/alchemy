@@ -30,7 +30,7 @@ export function OpponentHand() {
   const fanStep = opponentHandSize > 1 ? (maxFanAngle * 2) / (opponentHandSize - 1) : 0;
 
   return (
-    <div className="flex flex-col items-center -mt-3">
+    <div className="opponent-hand flex flex-col items-center -mt-3">
       <div
         className="opponent-hand-fan relative flex items-start justify-center"
         style={{ height: 'calc(var(--card-height) * 0.24)' }}

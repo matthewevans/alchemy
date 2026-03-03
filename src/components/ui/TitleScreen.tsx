@@ -104,7 +104,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
         ))}
 
       {/* Logo with glow */}
-      <div className="relative mb-8 flex items-center justify-center">
+      <div className="title-logo relative mb-8 flex items-center justify-center">
         {/* Golden radial glow behind logo */}
         {!shouldReduceMotion && (
           <motion.div
@@ -124,7 +124,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
         <motion.img
           src={logoWordmarkSrc}
           alt="Alchemy"
-          className="relative w-80 max-w-[80vw]"
+          className="title-logo-img relative w-80 max-w-[80vw]"
           style={{ filter: 'drop-shadow(0 4px 20px rgba(251, 191, 36, 0.3))' }}
           initial={{ opacity: 0, scale: 0.7, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -133,13 +133,13 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
       </div>
 
       {/* Buttons — individually staggered */}
-      <div className="flex flex-col items-center gap-4">
+      <div className="title-buttons flex flex-col items-center gap-4">
         {onResume && (
           <motion.button
             className={gameButtonClass({
               tone: 'blue',
               size: 'lg',
-              className: 'w-64 text-2xl font-bold',
+              className: 'title-button w-64 text-2xl font-bold',
             })}
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -156,7 +156,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
           className={gameButtonClass({
             tone: 'emerald',
             size: onResume ? 'md' : 'lg',
-            className: `w-64 ${onResume ? 'text-lg' : 'text-2xl'} font-bold flex items-center justify-center gap-2`,
+            className: `title-button w-64 ${onResume ? 'text-lg' : 'text-2xl'} font-bold flex items-center justify-center gap-2`,
           })}
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -172,7 +172,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
           className={gameButtonClass({
             tone: 'amber',
             size: 'lg',
-            className: 'w-64 text-xl font-bold flex items-center justify-center gap-2',
+            className: 'title-button w-64 text-xl font-bold flex items-center justify-center gap-2',
           })}
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -188,7 +188,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
           className={gameButtonClass({
             tone: 'neutral',
             size: 'md',
-            className: 'w-64 text-sm font-medium',
+            className: 'title-button w-64 text-sm font-medium',
           })}
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -203,7 +203,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
 
       {/* Subtitle */}
       <motion.p
-        className="mt-6 text-white/50 text-sm tracking-wide"
+        className="title-subtitle mt-6 text-white/50 text-sm tracking-wide"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.7 }}
@@ -244,7 +244,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
               aria-modal="true"
               aria-label="Settings"
               tabIndex={-1}
-              className="bg-slate-800/95 rounded-2xl p-8 flex flex-col items-center gap-4 min-w-[360px] max-w-[90vw] shadow-2xl border border-slate-600/40"
+              className="settings-dialog bg-slate-800/95 rounded-2xl p-8 flex flex-col items-center gap-4 min-w-[360px] max-w-[90vw] shadow-2xl border border-slate-600/40"
               style={{
                 boxShadow: '0 0 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(0, 0, 0, 0.3)',
               }}

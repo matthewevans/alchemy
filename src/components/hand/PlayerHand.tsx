@@ -63,6 +63,31 @@ export function PlayerHand() {
       .map((a) => a.cardIndex),
   );
 
+  // Resolve which card is at a given X position — avoids z-index overlap issues
+  // where the selected card (z-index 90) intercepts events for adjacent cards.
+  const findCardIndexAtX = (clientX: number): number => {
+    const cards = document.querySelectorAll('[data-hand-card]');
+    let closestIndex = -1;
+    let closestDist = Infinity;
+    cards.forEach((card, index) => {
+      const rect = card.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const dist = Math.abs(clientX - centerX);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestIndex = index;
+      }
+    });
+    return closestIndex;
+  };
+
+  const handleInspectAtPosition = (clientX: number) => {
+    const cardIndex = findCardIndexAtX(clientX);
+    if (cardIndex >= 0 && cardIndex < hand.length) {
+      inspectCard(hand[cardIndex].cardId);
+    }
+  };
+
   const handleCardClick = (index: number) => {
     // Suppress click if we just completed a drag
     if (dragActiveRef.current) return;
@@ -74,27 +99,26 @@ export function PlayerHand() {
       return;
     }
 
-    if (selectedHandIndex === index) {
-      // Second tap on same card — auto-play if possible
-      if (playableIndices.has(index)) {
-        const playAction = legalActions.find(
-          (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
-            a.type === 'PLAY_CARD' && a.cardIndex === index,
-        );
-        if (playAction) {
-          dispatch(playAction, humanPlayer);
-          selectHandCard(null);
-          return;
-        }
+    // Single click only selects — double-click (or drag) required to play
+    selectHandCard(index);
+  };
+
+  const handleCardDoubleClick = (index: number) => {
+    if (playableIndices.has(index)) {
+      const playAction = legalActions.find(
+        (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
+          a.type === 'PLAY_CARD' && a.cardIndex === index,
+      );
+      if (playAction) {
+        dispatch(playAction, humanPlayer);
+        selectHandCard(null);
+        return;
       }
-      // Show feedback why this card can't be played
-      if (!playableIndices.has(index) && state) {
-        const el = document.querySelector(`[data-testid="hand-card-${index}"]`) as HTMLElement | null;
-        tryFeedback(state, { type: 'PLAY_CARD', cardIndex: index }, humanPlayer, el);
-      }
-      selectHandCard(null);
-    } else {
-      selectHandCard(index);
+    }
+    // Show feedback why this card can't be played
+    if (!playableIndices.has(index) && state) {
+      const el = document.querySelector(`[data-testid="hand-card-${index}"]`) as HTMLElement | null;
+      tryFeedback(state, { type: 'PLAY_CARD', cardIndex: index }, humanPlayer, el);
     }
   };
 
@@ -225,6 +249,7 @@ export function PlayerHand() {
           : 'translateY(calc(var(--card-height) * 0.6))',
         transition: 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
       }}
+      onContextMenu={(e) => { e.preventDefault(); handleInspectAtPosition(e.clientX); }}
       onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHandHovered(true); }}
       onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHandHovered(false); }}
     >
@@ -260,8 +285,9 @@ export function PlayerHand() {
                 isPlayable={isPlayable}
                 isSelected={isSelected}
                 onClick={() => handleCardClick(index)}
+                onDoubleClick={() => handleCardDoubleClick(index)}
                 onHover={(hovering) => hoverCard(hovering ? cardInstance.cardId : null)}
-                onLongPress={() => inspectCard(cardInstance.cardId)}
+                onLongPress={(pos) => handleInspectAtPosition(pos.x)}
                 onPointerDown={(e) => handleDragPointerDown(index, e)}
               />
             </div>
