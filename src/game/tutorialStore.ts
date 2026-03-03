@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { usePreferencesStore } from './preferencesStore';
 
 // ─── Step Registry ───
 
@@ -37,72 +38,29 @@ export const TUTORIAL_STEPS: Record<TutorialStepId, TutorialStepDef> = {
   },
 };
 
-const ALL_STEP_IDS = Object.keys(TUTORIAL_STEPS) as TutorialStepId[];
-
-// ─── Persistence ───
-
-const STORAGE_KEY = 'alchemy:tutorial';
-
-function loadCompletedSteps(): Set<TutorialStepId> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const arr = JSON.parse(raw) as TutorialStepId[];
-      return new Set(arr);
-    }
-  } catch { /* ignore */ }
-  return new Set();
-}
-
-function saveCompletedSteps(steps: Set<TutorialStepId>): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([...steps]));
-}
-
 // ─── Store ───
 
 interface TutorialState {
-  tutorialComplete: boolean;
-  completedSteps: Set<TutorialStepId>;
   currentTip: TutorialStepDef | null;
   showTip: (stepId: TutorialStepId) => void;
   dismissTip: () => void;
   skipTutorial: () => void;
 }
 
-export const useTutorialStore = create<TutorialState>()((set, get) => {
-  const completedSteps = loadCompletedSteps();
-  return {
-    tutorialComplete: completedSteps.size >= ALL_STEP_IDS.length,
-    completedSteps,
-    currentTip: null,
+export const useTutorialStore = create<TutorialState>()((set, get) => ({
+  currentTip: null,
 
-    showTip: (stepId) => {
-      const { completedSteps, tutorialComplete, currentTip } = get();
-      if (tutorialComplete || completedSteps.has(stepId) || currentTip) return;
-      set({ currentTip: TUTORIAL_STEPS[stepId] });
-    },
+  showTip: (stepId) => {
+    if (get().currentTip) return;
+    set({ currentTip: TUTORIAL_STEPS[stepId] });
+  },
 
-    dismissTip: () => {
-      const { currentTip, completedSteps } = get();
-      if (!currentTip) return;
-      const next = new Set(completedSteps);
-      next.add(currentTip.id);
-      saveCompletedSteps(next);
-      set({
-        currentTip: null,
-        completedSteps: next,
-        tutorialComplete: next.size >= ALL_STEP_IDS.length,
-      });
-    },
+  dismissTip: () => {
+    set({ currentTip: null });
+  },
 
-    skipTutorial: () => {
-      const all = new Set(ALL_STEP_IDS);
-      saveCompletedSteps(all);
-      set({
-        currentTip: null,
-        completedSteps: all,
-        tutorialComplete: true,
-      });
-    },
-  };
-});
+  skipTutorial: () => {
+    set({ currentTip: null });
+    usePreferencesStore.getState().setTutorialEnabled(false);
+  },
+}));

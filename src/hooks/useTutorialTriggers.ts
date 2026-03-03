@@ -7,7 +7,6 @@ import { useTutorialStore } from '@game/tutorialStore';
 export function useTutorialTriggers(): void {
   useEffect(() => {
     if (!usePreferencesStore.getState().tutorialEnabled) return;
-    if (useTutorialStore.getState().tutorialComplete) return;
 
     return useGameStore.subscribe(
       (s) => s.state?.phase,
