@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
-import { useAnimationStore } from '@game/animationStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useUIStore } from '@game/uiStore';
 import type { GameAction } from '@engine/types';
@@ -209,35 +208,27 @@ export function PlayerHand() {
   // Phantom card for drag
   const draggedCard = draggedIndex !== null ? hand[draggedIndex] : null;
 
-  // Collapse hand during animations (combat strikes, spell effects, etc.)
-  const isAnimating = useAnimationStore((s) => s.isAnimating);
-
-  // Auto-collapse during combat phases and opponent's turn (like MTGA)
-  const activePlayer = useGameStore((s) => s.state?.activePlayer);
-  const isCombatPhase = phase?.type === 'battle';
-  const isOpponentTurn = activePlayer !== humanPlayer;
-  const shouldAutoCollapse = isAnimating || isCombatPhase || isOpponentTurn;
-
-  // Clear hover + selection on phase changes so hand collapses
+  // Auto-collapse on phase changes (hand peeks back down, user can re-expand)
   const phaseType = phase?.type;
   useEffect(() => {
     setHandHovered(false);
     selectHandCard(null);
   }, [phaseType, selectHandCard]);
 
-  // Click/tap outside hand area collapses hand (clears stuck hover on touch)
+  // Click/tap outside hand area collapses hand
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
       if (!(e.target as HTMLElement).closest('[data-hand-area]')) {
         setHandHovered(false);
+        selectHandCard(null);
       }
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, []);
+  }, [selectHandCard]);
 
-  // Hand expands when hovered (desktop mouse only), a card is selected/dragged (touch), or during discard phase
-  const isExpanded = !shouldAutoCollapse && (handHovered || selectedHandIndex !== null || draggedIndex !== null || isDiscardPhase);
+  // Player can always manually expand/collapse their hand
+  const isExpanded = handHovered || selectedHandIndex !== null || draggedIndex !== null || isDiscardPhase;
 
   return (
     <div
@@ -250,13 +241,14 @@ export function PlayerHand() {
         transition: 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
       }}
       onContextMenu={(e) => { e.preventDefault(); handleInspectAtPosition(e.clientX); }}
-      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHandHovered(true); }}
-      onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHandHovered(false); }}
+      onPointerDown={(e) => { if (e.pointerType !== 'mouse') setHandHovered(true); }}
     >
       {/* Fan layout — full card height container, clipped below viewport when collapsed */}
       <div
         className="relative flex items-end justify-center"
         style={{ height: 'var(--card-height)' }}
+        onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHandHovered(true); }}
+        onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHandHovered(false); }}
       >
         {hand.map((cardInstance, index) => {
           const angle = cardCount > 1 ? -maxFanAngle + fanStep * index : 0;

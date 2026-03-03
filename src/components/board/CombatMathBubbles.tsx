@@ -231,25 +231,27 @@ function MathBubble({
               }}
             >
               {/* Attacker → Blocker */}
-              <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="flex items-center gap-1.5 mb-1.5 whitespace-nowrap">
                 <span className="text-red-400 font-bold">{m.attackerName}</span>
                 <span className="text-red-400 font-bold">{m.attackerAtk} ⚔</span>
                 <span className="text-white/50">→</span>
+                <span className="text-blue-400 font-bold">{m.blockerName}</span>
                 <span className="text-green-400 font-bold">{m.blockerHP} ♥</span>
                 <span className="text-white/50">=</span>
                 <span className={`font-bold ${m.blockerSurvives ? 'text-amber-300' : 'text-red-400'}`}>
-                  {m.blockerSurvives ? `${m.blockerHPLeft} left` : 'KO!'}
+                  {m.blockerSurvives ? `${m.blockerHPLeft} ♥` : 'KO!'}
                 </span>
               </div>
               {/* Blocker → Attacker (counterattack) */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 whitespace-nowrap">
                 <span className="text-blue-400 font-bold">{m.blockerName}</span>
                 <span className="text-red-400 font-bold">{m.blockerAtk} ⚔</span>
                 <span className="text-white/50">→</span>
+                <span className="text-red-400 font-bold">{m.attackerName}</span>
                 <span className="text-green-400 font-bold">{m.attackerHP} ♥</span>
                 <span className="text-white/50">=</span>
                 <span className={`font-bold ${m.attackerSurvives ? 'text-amber-300' : 'text-red-400'}`}>
-                  {m.attackerSurvives ? `${m.attackerHPLeft} left` : 'KO!'}
+                  {m.attackerSurvives ? `${m.attackerHPLeft} ♥` : 'KO!'}
                 </span>
               </div>
             </div>

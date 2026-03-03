@@ -82,7 +82,7 @@ export function ActionButton() {
               )}
               <motion.button
                 className={gameButtonClass({
-                  tone: 'red',
+                  tone: hasTentativeAttackers ? 'red' : 'amber',
                   size: 'sm',
                   className: 'px-5 py-1.5 font-bold',
                 })}
@@ -108,7 +108,7 @@ export function ActionButton() {
               <span className="text-blue-300 font-medium text-sm">Assign blockers</span>
               <motion.button
                 className={gameButtonClass({
-                  tone: 'blue',
+                  tone: Object.keys(phase.tentativeBlockers).length > 0 ? 'blue' : 'amber',
                   size: 'sm',
                   className: 'px-4 py-1.5 font-bold',
                 })}

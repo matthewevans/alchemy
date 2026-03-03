@@ -64,6 +64,27 @@ export function useGameLoop() {
           return;
         }
 
+        // Auto-skip attacker declaration when human has no valid attackers
+        if (
+          state.phase.type === 'battle' &&
+          state.phase.step === 'declare_attackers' &&
+          !legalActions.some((a) => a.type === 'DECLARE_ATTACKER')
+        ) {
+          autoAdvanceTimeoutRef.current = setTimeout(() => {
+            const fresh = useGameStore.getState();
+            if (!fresh.state || fresh.state.phase.type === 'game_over') return;
+            if (
+              fresh.state.phase.type === 'battle' &&
+              fresh.state.phase.step === 'declare_attackers' &&
+              !fresh.legalActions.some((a) => a.type === 'DECLARE_ATTACKER')
+            ) {
+              dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer);
+              tick();
+            }
+          }, 200);
+          return;
+        }
+
         // Auto-advance when the player has no meaningful choices
         // (only ADVANCE_PHASE and CONCEDE available)
         if (shouldAutoAdvance(state, legalActions, humanPlayer)) {
@@ -106,7 +127,7 @@ export function useGameLoop() {
 function shouldAutoAdvance(state: GameState, legalActions: GameAction[], humanPlayer: PlayerId): boolean {
   if (state.activePlayer !== humanPlayer) return false;
 
-  // Never auto-skip battle — player always sees attack/block controls
+  // Never auto-skip battle — handled separately with correct action types
   if (state.phase.type === 'battle') return false;
 
   // For play phase: auto-advance if no cards are playable
