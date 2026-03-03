@@ -4,6 +4,8 @@ import { usePreferencesStore } from './preferencesStore';
 import { groupEventsIntoSteps, getPositions, useAnimationStore, STEP_DURATIONS } from './animationStore';
 import type { AnimationStep, BoardSnapshot } from './animationStore';
 import { narrateCard } from '@audio/tts';
+import { playEffectSound } from '@audio/sounds';
+import { useAudioStore } from '@audio/audioStore';
 
 type LocalActionHandler = (action: GameAction, actingPlayer: PlayerId) => void;
 
@@ -46,6 +48,36 @@ export function dispatchWithAnimations(
   }
 
   const steps = groupEventsIntoSteps(events, positions, cardIdMap);
+
+  // Immediate cues that are not reliably represented by animation effects.
+  const { sfxVolume } = useAudioStore.getState();
+  const canPlayImmediateSfx =
+    sfxVolume > 0
+    && typeof window !== 'undefined'
+    && 'AudioContext' in window;
+  if (canPlayImmediateSfx) {
+    if (action.type === 'ADVANCE_PHASE' && state?.phase.type === 'draw') {
+      playEffectSound('ui', { soundId: 'sfx_phase_draw' });
+    }
+    if (action.type === 'ADVANCE_PHASE' && state?.phase.type === 'energy') {
+      playEffectSound('ui', { soundId: 'sfx_phase_energy' });
+    }
+    if (events.some((e) => e.type === 'TURN_STARTED')) {
+      playEffectSound('ui', { soundId: 'sfx_turn_start' });
+    }
+    if (events.some((e) => e.type === 'CARD_DRAWN')) {
+      playEffectSound('ui', { soundId: 'sfx_card_draw' });
+    }
+
+    const summonEffects = steps.flatMap((s) => s.effects).filter((e) => e.type === 'summon');
+    const creatureEnterCount = events.filter((e) => e.type === 'CREATURE_ENTERED').length;
+    if (creatureEnterCount > summonEffects.length) {
+      const missingCount = creatureEnterCount - summonEffects.length;
+      for (let i = 0; i < missingCount; i += 1) {
+        playEffectSound('summon', { soundId: 'sfx_summon_creature' });
+      }
+    }
+  }
 
   // Prepend a card reveal step so the player can see what was played before effects resolve.
   // For opponents: always reveal (creatures + spells).
@@ -106,4 +138,3 @@ export function dispatchWithAnimations(
 
   return events;
 }
-

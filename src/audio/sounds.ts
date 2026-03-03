@@ -69,94 +69,72 @@ function randomItem<T>(arr: T[]): T | null {
 
 const CURATED_POOL_BY_TYPE: Partial<Record<EffectSoundType, readonly string[]>> = {
   combat_strike: [
-    'public/audio/sfx/combat/impactPunch_medium_000.m4a',
-    'public/audio/sfx/combat/impactPunch_medium_001.m4a',
-    'public/audio/sfx/combat/impactPunch_medium_003.m4a',
-    'public/audio/sfx/combat/impactPunch_heavy_001.m4a',
-    'public/audio/sfx/combat/impactMetal_medium_002.m4a',
+    'public/audio/sfx/damage/sfx_damage_creature_001.m4a',
   ],
-  block_link: [
-    'public/audio/sfx/combat/impactMetal_light_001.m4a',
-    'public/audio/sfx/combat/impactMetal_light_003.m4a',
-    'public/audio/sfx/combat/impactMetal_medium_000.m4a',
-    'public/audio/sfx/combat/impactMetal_medium_003.m4a',
-  ],
+  block_link: [],
   damage: [
-    'public/audio/sfx/damage/impactSoft_medium_000.m4a',
-    'public/audio/sfx/damage/impactSoft_medium_002.m4a',
-    'public/audio/sfx/damage/impactSoft_heavy_001.m4a',
-    'public/audio/sfx/damage/impactMetal_medium_001.m4a',
-    'public/audio/sfx/damage/impactGeneric_light_002.m4a',
+    'public/audio/sfx/damage/sfx_damage_creature_001.m4a',
   ],
   player_damage: [
-    'public/audio/sfx/damage/impactSoft_heavy_000.m4a',
-    'public/audio/sfx/damage/impactSoft_heavy_002.m4a',
-    'public/audio/sfx/damage/impactSoft_heavy_004.m4a',
-    'public/audio/sfx/damage/impactMetal_medium_004.m4a',
+    'public/audio/sfx/damage/sfx_damage_hero_001.m4a',
   ],
   death: [
-    'public/audio/sfx/death/explosionCrunch_001.m4a',
-    'public/audio/sfx/death/explosionCrunch_003.m4a',
-    'public/audio/sfx/death/lowFrequency_explosion_000.m4a',
-    'public/audio/sfx/death/impactMetal_heavy_001.m4a',
-    'public/audio/sfx/death/impactMetal_heavy_003.m4a',
+    'public/audio/sfx/death/sfx_death_creature_001.m4a',
   ],
   heal: [
-    'public/audio/sfx/heal/Healing Spell Impact 2.m4a',
-    'public/audio/sfx/heal/Healing Spell Impact 4.m4a',
-    'public/audio/sfx/heal/Healing Spell Impact 6.m4a',
-    'public/audio/sfx/heal/confirmation_002.m4a',
+    'public/audio/sfx/heal/sfx_heal_creature_001.m4a',
   ],
   player_heal: [
-    'public/audio/sfx/heal/Healing Spell Impact 3.m4a',
-    'public/audio/sfx/heal/Healing Spell Impact 5.m4a',
-    'public/audio/sfx/heal/confirmation_003.m4a',
+    'public/audio/sfx/heal/sfx_heal_hero_001.m4a',
   ],
   summon: [
-    'public/audio/sfx/summon/open_001.m4a',
-    'public/audio/sfx/summon/open_003.m4a',
-    'public/audio/sfx/summon/forceField_001.m4a',
-    'public/audio/sfx/summon/forceField_003.m4a',
+    'public/audio/sfx/summon/sfx_summon_creature_001.m4a',
+    'public/audio/sfx/summon/sfx_bounce_creature_001.m4a',
   ],
   keyword: [
-    'public/audio/sfx/keyword/confirmation_001.m4a',
-    'public/audio/sfx/keyword/confirmation_002.m4a',
-    'public/audio/sfx/keyword/confirmation_003.m4a',
+    'public/audio/sfx/keyword/sfx_keyword_trigger_001.m4a',
+  ],
+  ui: [
+    'public/audio/sfx/ui/sfx_card_draw_001.m4a',
+    'public/audio/sfx/ui/sfx_phase_draw_001.m4a',
+    'public/audio/sfx/ui/sfx_phase_energy_001.m4a',
+    'public/audio/sfx/ui/sfx_target_lock_001.m4a',
+    'public/audio/sfx/ui/sfx_turn_start_001.m4a',
+    'public/audio/sfx/ui/sfx_ui_error_001.m4a',
   ],
 };
 
 const CURATED_SPELL_POOL = {
   fire: [
-    'public/audio/sfx/spell/fire/Fire Spell Impact 1.m4a',
-    'public/audio/sfx/spell/fire/Fire Spell Impact 2.m4a',
-    'public/audio/sfx/spell/fire/Fire Spell Impact 4.m4a',
+    'public/audio/sfx/spell/fire/sfx_spell_fire_001.m4a',
   ],
   water: [
-    'public/audio/sfx/spell/water/Water Spell Impact 1.m4a',
-    'public/audio/sfx/spell/water/Water Spell Impact 3.m4a',
-    'public/audio/sfx/spell/water/Water Spell Impact 5.m4a',
+    'public/audio/sfx/spell/water/sfx_spell_water_001.m4a',
   ],
   air: [
-    'public/audio/sfx/spell/air/Lightning Spell Impact 1.m4a',
-    'public/audio/sfx/spell/air/Lightning Spell Impact 3.m4a',
-    'public/audio/sfx/spell/air/Wind Spell Impact 2.m4a',
+    'public/audio/sfx/spell/air/sfx_spell_air_001.m4a',
   ],
   earth: [
-    'public/audio/sfx/spell/earth/Earth Spell Impact 1.m4a',
-    'public/audio/sfx/spell/earth/Earth Spell Impact 3.m4a',
-    'public/audio/sfx/spell/nature/Plant Spell Impact 2.m4a',
+    'public/audio/sfx/spell/earth/sfx_spell_earth_001.m4a',
   ],
   shadow: [
-    'public/audio/sfx/spell/shadow/explosionCrunch_001.m4a',
-    'public/audio/sfx/spell/shadow/Ice Spell Impact 2.m4a',
-    'public/audio/sfx/spell/shadow/lowFrequency_explosion_001.m4a',
+    'public/audio/sfx/spell/shadow/sfx_spell_shadow_001.m4a',
   ],
   heal: [
-    'public/audio/sfx/spell/heal/Healing Spell Impact 1.m4a',
-    'public/audio/sfx/spell/heal/Healing Spell Impact 4.m4a',
-    'public/audio/sfx/spell/heal/Healing Spell Impact 7.m4a',
+    'public/audio/sfx/spell/heal/sfx_spell_heal_001.m4a',
   ],
 } as const;
+
+const SOUND_ID_SAMPLE_PATHS: Record<string, string> = {
+  sfx_summon_creature: 'public/audio/sfx/summon/sfx_summon_creature_001.m4a',
+  sfx_bounce_creature: 'public/audio/sfx/summon/sfx_bounce_creature_001.m4a',
+  sfx_card_draw: 'public/audio/sfx/ui/sfx_card_draw_001.m4a',
+  sfx_phase_draw: 'public/audio/sfx/ui/sfx_phase_draw_001.m4a',
+  sfx_phase_energy: 'public/audio/sfx/ui/sfx_phase_energy_001.m4a',
+  sfx_target_lock: 'public/audio/sfx/ui/sfx_target_lock_001.m4a',
+  sfx_turn_start: 'public/audio/sfx/ui/sfx_turn_start_001.m4a',
+  sfx_ui_error: 'public/audio/sfx/ui/sfx_ui_error_001.m4a',
+};
 
 function preferAllowList(candidates: string[], allowList?: readonly string[]): string[] {
   if (!allowList || allowList.length === 0) return candidates;
@@ -272,7 +250,7 @@ function loadSampleCatalog(): void {
   if (sampleCatalog || sampleCatalogLoad || sampleCatalogUnavailable || typeof window === 'undefined') return;
   sampleCatalogLoad = (async () => {
     try {
-      const res = await fetch(SAMPLE_CATALOG_URL);
+      const res = await fetch(SAMPLE_CATALOG_URL, { cache: 'no-store' });
       if (!res.ok) {
         sampleCatalogUnavailable = true;
         return;
@@ -336,6 +314,16 @@ function tryPlaySample(
     return 'pending';
   }
   const candidates = curateCandidates(type, resolveCandidates(sampleCatalog, type, opts), opts);
+  return tryPlayCandidates(ctx, dest, type, candidates, opts.amount);
+}
+
+function tryPlayCandidates(
+  ctx: AudioContext,
+  dest: AudioNode,
+  type: EffectSoundType,
+  candidates: string[],
+  amount?: number,
+): SamplePlayResult {
   if (candidates.length === 0) return 'unavailable';
 
   const ready: AudioBuffer[] = [];
@@ -361,7 +349,7 @@ function tryPlaySample(
 
   const selected = randomItem(ready);
   if (selected) {
-    playSampleBuffer(ctx, dest, selected, normalizeSampleGain(type, opts.amount));
+    playSampleBuffer(ctx, dest, selected, normalizeSampleGain(type, amount));
     return 'played';
   }
 
@@ -662,6 +650,14 @@ export function playEffectSound(
   if (opts.soundId && SOUND_REGISTRY[opts.soundId]) {
     SOUND_REGISTRY[opts.soundId](ctx, dest);
     return;
+  }
+
+  if (opts.soundId) {
+    const soundPath = SOUND_ID_SAMPLE_PATHS[opts.soundId];
+    if (soundPath) {
+      const byIdResult = tryPlayCandidates(ctx, dest, type, [soundPath], opts.amount);
+      if (byIdResult === 'played' || byIdResult === 'pending') return;
+    }
   }
 
   const sampleResult = tryPlaySample(ctx, dest, type, opts);

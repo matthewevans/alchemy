@@ -3,8 +3,8 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { setSfxVolume, setMusicVolume } from './audioContext';
 
 const STORAGE_KEY = 'alchemy:audio';
-const DEFAULT_SFX_VOLUME = 0.7;
-const DEFAULT_MUSIC_VOLUME = 0.3;
+const DEFAULT_SFX_VOLUME = 0.5;
+const DEFAULT_MUSIC_VOLUME = 0.2;
 
 interface AudioState {
   sfxVolume: number;
