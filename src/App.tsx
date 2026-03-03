@@ -40,7 +40,7 @@ function App() {
   return (
     <>
       <RouterProvider router={router} />
-      <div className="version-badge fixed left-2 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-[60]">
+      <div className="version-badge fixed left-2 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-[1]">
         <div className="relative rounded-md border border-slate-600/60 bg-slate-950/75 px-2 py-1 text-[10px] text-slate-300 shadow-lg shadow-black/40 backdrop-blur-sm flex items-center gap-1 overflow-hidden">
           <span>{`v${__APP_VERSION__}`}</span>
           <span className="text-slate-400">{__BUILD_HASH__}</span>
