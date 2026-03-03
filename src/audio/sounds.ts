@@ -100,14 +100,14 @@ const CURATED_POOL_BY_TYPE: Partial<Record<EffectSoundType, readonly string[]>> 
     'public/audio/sfx/death/impactMetal_heavy_003.m4a',
   ],
   heal: [
-    'public/audio/sfx/heal/Healing Spell Impact 2.wav',
-    'public/audio/sfx/heal/Healing Spell Impact 4.wav',
-    'public/audio/sfx/heal/Healing Spell Impact 6.wav',
+    'public/audio/sfx/heal/Healing Spell Impact 2.m4a',
+    'public/audio/sfx/heal/Healing Spell Impact 4.m4a',
+    'public/audio/sfx/heal/Healing Spell Impact 6.m4a',
     'public/audio/sfx/heal/confirmation_002.m4a',
   ],
   player_heal: [
-    'public/audio/sfx/heal/Healing Spell Impact 3.wav',
-    'public/audio/sfx/heal/Healing Spell Impact 5.wav',
+    'public/audio/sfx/heal/Healing Spell Impact 3.m4a',
+    'public/audio/sfx/heal/Healing Spell Impact 5.m4a',
     'public/audio/sfx/heal/confirmation_003.m4a',
   ],
   summon: [
@@ -125,34 +125,34 @@ const CURATED_POOL_BY_TYPE: Partial<Record<EffectSoundType, readonly string[]>> 
 
 const CURATED_SPELL_POOL = {
   fire: [
-    'public/audio/sfx/spell/fire/Fire Spell Impact 1.wav',
-    'public/audio/sfx/spell/fire/Fire Spell Impact 2.wav',
-    'public/audio/sfx/spell/fire/Fire Spell Impact 4.wav',
+    'public/audio/sfx/spell/fire/Fire Spell Impact 1.m4a',
+    'public/audio/sfx/spell/fire/Fire Spell Impact 2.m4a',
+    'public/audio/sfx/spell/fire/Fire Spell Impact 4.m4a',
   ],
   water: [
-    'public/audio/sfx/spell/water/Water Spell Impact 1.wav',
-    'public/audio/sfx/spell/water/Water Spell Impact 3.wav',
-    'public/audio/sfx/spell/water/Water Spell Impact 5.wav',
+    'public/audio/sfx/spell/water/Water Spell Impact 1.m4a',
+    'public/audio/sfx/spell/water/Water Spell Impact 3.m4a',
+    'public/audio/sfx/spell/water/Water Spell Impact 5.m4a',
   ],
   air: [
-    'public/audio/sfx/spell/air/Lightning Spell Impact 1.wav',
-    'public/audio/sfx/spell/air/Lightning Spell Impact 3.wav',
-    'public/audio/sfx/spell/air/Wind Spell Impact 2.wav',
+    'public/audio/sfx/spell/air/Lightning Spell Impact 1.m4a',
+    'public/audio/sfx/spell/air/Lightning Spell Impact 3.m4a',
+    'public/audio/sfx/spell/air/Wind Spell Impact 2.m4a',
   ],
   earth: [
-    'public/audio/sfx/spell/earth/Earth Spell Impact 1.wav',
-    'public/audio/sfx/spell/earth/Earth Spell Impact 3.wav',
-    'public/audio/sfx/spell/nature/Plant Spell Impact 2.wav',
+    'public/audio/sfx/spell/earth/Earth Spell Impact 1.m4a',
+    'public/audio/sfx/spell/earth/Earth Spell Impact 3.m4a',
+    'public/audio/sfx/spell/nature/Plant Spell Impact 2.m4a',
   ],
   shadow: [
     'public/audio/sfx/spell/shadow/explosionCrunch_001.m4a',
-    'public/audio/sfx/spell/shadow/Ice Spell Impact 2.wav',
+    'public/audio/sfx/spell/shadow/Ice Spell Impact 2.m4a',
     'public/audio/sfx/spell/shadow/lowFrequency_explosion_001.m4a',
   ],
   heal: [
-    'public/audio/sfx/spell/heal/Healing Spell Impact 1.wav',
-    'public/audio/sfx/spell/heal/Healing Spell Impact 4.wav',
-    'public/audio/sfx/spell/heal/Healing Spell Impact 7.wav',
+    'public/audio/sfx/spell/heal/Healing Spell Impact 1.m4a',
+    'public/audio/sfx/spell/heal/Healing Spell Impact 4.m4a',
+    'public/audio/sfx/spell/heal/Healing Spell Impact 7.m4a',
   ],
 } as const;
 
