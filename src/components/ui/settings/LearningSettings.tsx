@@ -2,7 +2,18 @@ import { usePreferencesStore } from '@game/preferencesStore';
 import { SettingsToggle } from './SettingsControls';
 
 export function LearningSettings() {
-  const { easyReadMode, setEasyReadMode, narrationEnabled, setNarrationEnabled, tutorialEnabled, setTutorialEnabled, combatMathEnabled, setCombatMathEnabled } = usePreferencesStore();
+  const {
+    easyReadMode,
+    setEasyReadMode,
+    narrationEnabled,
+    setNarrationEnabled,
+    tutorialEnabled,
+    setTutorialEnabled,
+    combatMathEnabled,
+    setCombatMathEnabled,
+    mathBreakdownEnabled,
+    setMathBreakdownEnabled,
+  } = usePreferencesStore();
 
   return (
     <>
@@ -23,6 +34,12 @@ export function LearningSettings() {
         label="Combat Math"
         checked={combatMathEnabled}
         onChange={setCombatMathEnabled}
+      />
+      <SettingsToggle
+        id="math-breakdown"
+        label="Math Breakdown"
+        checked={mathBreakdownEnabled}
+        onChange={setMathBreakdownEnabled}
       />
       <SettingsToggle
         id="tutorial"

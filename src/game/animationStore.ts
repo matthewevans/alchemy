@@ -90,8 +90,12 @@ interface AnimationStore {
   boardSnapshot: BoardSnapshot | null;
   /** Intermediate health values shown during animations so damage/healing appears per-step, not all at once. */
   displayHealth: Record<PlayerId, number> | null;
+  /** Health values before the current step was applied (for equation overlays). */
+  previousDisplayHealth: Record<PlayerId, number> | null;
   /** Intermediate creature damage shown during combat animations so health updates per-exchange, not all at once. */
   displayCreatureDamage: Record<string, number> | null;
+  /** Creature damage values before the current step was applied (for equation overlays). */
+  previousDisplayCreatureDamage: Record<string, number> | null;
 
   setSpeedMultiplier: (m: number) => void;
   enqueueSteps: (steps: AnimationStep[]) => void;
@@ -110,7 +114,9 @@ export const useAnimationStore = create<AnimationStore>()(
     speedMultiplier: 1,
     boardSnapshot: null,
     displayHealth: null,
+    previousDisplayHealth: null,
     displayCreatureDamage: null,
+    previousDisplayCreatureDamage: null,
 
     setSpeedMultiplier: (m) => set({ speedMultiplier: m }),
 
@@ -128,11 +134,15 @@ export const useAnimationStore = create<AnimationStore>()(
         const [first, ...rest] = scaled;
         const dh = get().displayHealth;
         const dcd = get().displayCreatureDamage;
+        const previousHealth = dh ? { ...dh } : null;
+        const previousCreatureDamage = dcd ? { ...dcd } : null;
         set({
           activeStep: first,
           queue: rest,
           isAnimating: true,
+          previousDisplayHealth: previousHealth,
           displayHealth: dh ? applyStepHealthDeltas(dh, first) : null,
+          previousDisplayCreatureDamage: previousCreatureDamage,
           displayCreatureDamage: dcd ? applyStepCreatureDamage(dcd, first) : null,
         });
       }
@@ -144,15 +154,27 @@ export const useAnimationStore = create<AnimationStore>()(
         const [next, ...rest] = queue;
         // Clear snapshot when death step begins — AnimatePresence exit runs alongside death particles
         const hasDeath = next.effects.some((e) => e.type === 'death');
+        const previousHealth = displayHealth ? { ...displayHealth } : null;
+        const previousCreatureDamage = displayCreatureDamage ? { ...displayCreatureDamage } : null;
         set({
           activeStep: next,
           queue: rest,
           boardSnapshot: hasDeath ? null : get().boardSnapshot,
+          previousDisplayHealth: previousHealth,
           displayHealth: displayHealth ? applyStepHealthDeltas(displayHealth, next) : null,
+          previousDisplayCreatureDamage: previousCreatureDamage,
           displayCreatureDamage: displayCreatureDamage ? applyStepCreatureDamage(displayCreatureDamage, next) : null,
         });
       } else {
-        set({ activeStep: null, isAnimating: false, boardSnapshot: null, displayHealth: null, displayCreatureDamage: null });
+        set({
+          activeStep: null,
+          isAnimating: false,
+          boardSnapshot: null,
+          displayHealth: null,
+          previousDisplayHealth: null,
+          displayCreatureDamage: null,
+          previousDisplayCreatureDamage: null,
+        });
       }
     },
 
@@ -163,7 +185,16 @@ export const useAnimationStore = create<AnimationStore>()(
     setDisplayCreatureDamage: (damage) => set({ displayCreatureDamage: damage }),
 
     clear: () => {
-      set({ queue: [], activeStep: null, isAnimating: false, boardSnapshot: null, displayHealth: null, displayCreatureDamage: null });
+      set({
+        queue: [],
+        activeStep: null,
+        isAnimating: false,
+        boardSnapshot: null,
+        displayHealth: null,
+        previousDisplayHealth: null,
+        displayCreatureDamage: null,
+        previousDisplayCreatureDamage: null,
+      });
     },
   })),
 );

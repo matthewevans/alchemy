@@ -19,10 +19,16 @@ export function ActionButton() {
     const declareActions = legalActions.filter(
       (a): a is Extract<GameAction, { type: 'DECLARE_ATTACKER' }> => a.type === 'DECLARE_ATTACKER',
     );
-    for (const action of declareActions) {
+    const undeclareActions = legalActions.filter(
+      (a): a is Extract<GameAction, { type: 'UNDECLARE_ATTACKER' }> => a.type === 'UNDECLARE_ATTACKER',
+    );
+
+    // Toggle all attackers: if any unselected attackers remain, select all.
+    // Otherwise (all selected), clear them all.
+    const actionsToDispatch = declareActions.length > 0 ? declareActions : undeclareActions;
+    for (const action of actionsToDispatch) {
       dispatch(action, humanPlayer);
     }
-    dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer);
   }, [legalActions, dispatch, humanPlayer]);
 
   if (!phase || !phaseInfo) return null;
@@ -32,7 +38,9 @@ export function ActionButton() {
 
   // Battle phase — combat controls
   if (phase.type === 'battle') {
-    const hasValidAttackers = legalActions.some((a) => a.type === 'DECLARE_ATTACKER');
+    const hasDeclareAttackers = legalActions.some((a) => a.type === 'DECLARE_ATTACKER');
+    const hasUndeclareAttackers = legalActions.some((a) => a.type === 'UNDECLARE_ATTACKER');
+    const hasAttackToggles = hasDeclareAttackers || hasUndeclareAttackers;
     const hasTentativeAttackers = phase.step === 'declare_attackers' && phase.tentativeAttackers.length > 0;
 
     return (
@@ -53,7 +61,7 @@ export function ActionButton() {
               exit={{ opacity: 0, y: 10, scale: 0.9 }}
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             >
-              {hasValidAttackers && !hasTentativeAttackers && (
+              {hasAttackToggles && (
                 <motion.button
                   className={gameButtonClass({
                     tone: 'red',

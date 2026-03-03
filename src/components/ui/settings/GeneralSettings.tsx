@@ -2,7 +2,18 @@ import { usePreferencesStore } from '@game/preferencesStore';
 import { SettingsToggle } from './SettingsControls';
 
 export function GeneralSettings() {
-  const { easyReadMode, setEasyReadMode, tutorialEnabled, setTutorialEnabled, combatMathEnabled, setCombatMathEnabled, autoUpdateEnabled, setAutoUpdateEnabled } = usePreferencesStore();
+  const {
+    easyReadMode,
+    setEasyReadMode,
+    tutorialEnabled,
+    setTutorialEnabled,
+    combatMathEnabled,
+    setCombatMathEnabled,
+    mathBreakdownEnabled,
+    setMathBreakdownEnabled,
+    autoUpdateEnabled,
+    setAutoUpdateEnabled,
+  } = usePreferencesStore();
 
   return (
     <>
@@ -17,6 +28,12 @@ export function GeneralSettings() {
         label="Combat Math"
         checked={combatMathEnabled}
         onChange={setCombatMathEnabled}
+      />
+      <SettingsToggle
+        id="math-breakdown"
+        label="Math Breakdown"
+        checked={mathBreakdownEnabled}
+        onChange={setMathBreakdownEnabled}
       />
       <SettingsToggle
         id="tutorial"

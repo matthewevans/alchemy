@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { createTestGameState, makeCardInstance, resetTestCounters } from '@engine/__tests__/__fixtures__/testHelpers';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { createTestGameState, makeCardInstance, makePermanent, resetTestCounters } from '@engine/__tests__/__fixtures__/testHelpers';
 import { GameDispatchProvider } from '@game/GameDispatchContext';
 import { useGameStore } from '@game/gameStore';
 import { useUIStore } from '@game/uiStore';
+import { createRNG } from '@engine/prng';
 import { GameBoard } from './GameBoard';
 
 describe('GameBoard', () => {
@@ -141,6 +142,64 @@ describe('GameBoard', () => {
         <GameBoard />
       </GameDispatchProvider>,
     );
+
+    expect(screen.getByRole('button', { name: 'No Attacks' })).toBeInTheDocument();
+  });
+
+  it('All Attack toggles attacker selection and does not auto-confirm combat', async () => {
+    const attackerA = makePermanent('fire_ember_sprite', 'player1');
+    const attackerB = makePermanent('fire_lava_hound', 'player1');
+
+    useGameStore.setState({
+      state: createTestGameState({
+        phase: {
+          type: 'battle',
+          step: 'declare_attackers',
+          tentativeAttackers: [],
+        },
+        activePlayer: 'player1',
+        player1: {
+          board: [attackerA, attackerB, null, null, null, null],
+        },
+      }),
+      legalActions: [
+        { type: 'CONFIRM_ATTACKERS' },
+        { type: 'DECLARE_ATTACKER', permanentId: attackerA.permanentId },
+        { type: 'DECLARE_ATTACKER', permanentId: attackerB.permanentId },
+      ],
+      rng: createRNG(123),
+      humanPlayer: 'player1',
+      events: [],
+      gameId: 'test-game',
+      player1DeckIds: [],
+      player2DeckIds: [],
+    });
+
+    render(
+      <GameDispatchProvider controller={null}>
+        <GameBoard />
+      </GameDispatchProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'All Attack' }));
+
+    await waitFor(() => {
+      const phase = useGameStore.getState().state?.phase;
+      expect(phase?.type).toBe('battle');
+      expect(phase?.type === 'battle' && phase.step).toBe('declare_attackers');
+      expect(phase?.type === 'battle' && phase.step === 'declare_attackers' && phase.tentativeAttackers.length).toBe(2);
+    });
+
+    expect(screen.getByRole('button', { name: 'Attack!' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'All Attack' }));
+
+    await waitFor(() => {
+      const phase = useGameStore.getState().state?.phase;
+      expect(phase?.type).toBe('battle');
+      expect(phase?.type === 'battle' && phase.step).toBe('declare_attackers');
+      expect(phase?.type === 'battle' && phase.step === 'declare_attackers' && phase.tentativeAttackers.length).toBe(0);
+    });
 
     expect(screen.getByRole('button', { name: 'No Attacks' })).toBeInTheDocument();
   });

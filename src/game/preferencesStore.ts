@@ -27,6 +27,7 @@ interface PreferencesState {
   tutorialEnabled: boolean;
   statLayout: StatLayout;
   combatMathEnabled: boolean;
+  mathBreakdownEnabled: boolean;
   autoUpdateEnabled: boolean;
   setStatLayout: (layout: StatLayout) => void;
   setUIScale: (scale: number) => void;
@@ -41,6 +42,7 @@ interface PreferencesState {
   setNarrationEnabled: (enabled: boolean) => void;
   setTutorialEnabled: (enabled: boolean) => void;
   setCombatMathEnabled: (enabled: boolean) => void;
+  setMathBreakdownEnabled: (enabled: boolean) => void;
   setAutoUpdateEnabled: (enabled: boolean) => void;
 }
 
@@ -64,6 +66,7 @@ interface PersistedPreferences {
   tutorialEnabled: boolean;
   statLayout: StatLayout;
   combatMathEnabled: boolean;
+  mathBreakdownEnabled: boolean;
   autoUpdateEnabled: boolean;
 }
 
@@ -84,13 +87,14 @@ function loadPersistedPreferences(): PersistedPreferences {
         tutorialEnabled: typeof parsed.tutorialEnabled === 'boolean' ? parsed.tutorialEnabled : true,
         statLayout: ['spread', 'center', 'right'].includes(parsed.statLayout) ? parsed.statLayout : 'center',
         combatMathEnabled: typeof parsed.combatMathEnabled === 'boolean' ? parsed.combatMathEnabled : true,
+        mathBreakdownEnabled: typeof parsed.mathBreakdownEnabled === 'boolean' ? parsed.mathBreakdownEnabled : false,
         autoUpdateEnabled: typeof parsed.autoUpdateEnabled === 'boolean' ? parsed.autoUpdateEnabled : true,
       };
     }
   } catch {
     // corrupt data — fall through to defaults
   }
-  return { uiScale: DEFAULT_UI_SCALE, boardScale: DEFAULT_BOARD_SCALE, tier: DEFAULT_TIER, difficulty: DEFAULT_DIFFICULTY, battlefieldAmbience: true, battlefield: 'auto', easyReadMode: true, narrationEnabled: false, tutorialEnabled: true, statLayout: 'center', combatMathEnabled: true, autoUpdateEnabled: true };
+  return { uiScale: DEFAULT_UI_SCALE, boardScale: DEFAULT_BOARD_SCALE, tier: DEFAULT_TIER, difficulty: DEFAULT_DIFFICULTY, battlefieldAmbience: true, battlefield: 'auto', easyReadMode: true, narrationEnabled: false, tutorialEnabled: true, statLayout: 'center', combatMathEnabled: true, mathBreakdownEnabled: false, autoUpdateEnabled: true };
 }
 
 function persistPreferences(prefs: PersistedPreferences) {
@@ -114,6 +118,7 @@ export const usePreferencesStore = create<PreferencesState>()(
     tutorialEnabled: initial.tutorialEnabled,
     statLayout: initial.statLayout,
     combatMathEnabled: initial.combatMathEnabled,
+    mathBreakdownEnabled: initial.mathBreakdownEnabled,
     autoUpdateEnabled: initial.autoUpdateEnabled,
 
     setStatLayout: (statLayout) => {
@@ -185,6 +190,11 @@ export const usePreferencesStore = create<PreferencesState>()(
     setCombatMathEnabled: (combatMathEnabled) => {
       persistPreferences({ ...get(), combatMathEnabled });
       set({ combatMathEnabled });
+    },
+
+    setMathBreakdownEnabled: (mathBreakdownEnabled) => {
+      persistPreferences({ ...get(), mathBreakdownEnabled });
+      set({ mathBreakdownEnabled });
     },
 
     setAutoUpdateEnabled: (autoUpdateEnabled) => {

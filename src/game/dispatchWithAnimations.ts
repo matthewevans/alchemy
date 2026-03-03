@@ -1,7 +1,7 @@
 import type { GameAction, GameEvent, PlayerId } from '@engine/types';
 import { useGameStore } from './gameStore';
 import { usePreferencesStore } from './preferencesStore';
-import { groupEventsIntoSteps, getPositions, useAnimationStore, STEP_DURATIONS } from './animationStore';
+import { groupEventsIntoSteps, getPositions, useAnimationStore } from './animationStore';
 import type { AnimationStep, BoardSnapshot } from './animationStore';
 import { narrateCard } from '@audio/tts';
 import { playEffectSound } from '@audio/sounds';
@@ -70,10 +70,13 @@ export function dispatchWithAnimations(
     }
   }
 
-  // Prepend a card reveal step so the player can see what was played before effects resolve.
+  // Add a card reveal effect so the player can see what was played.
   // For opponents: always reveal (creatures + spells).
   // For the caster: reveal untargeted spells only (targeted spells show a persistent
   // in-prompt preview instead; creatures appear on the board directly).
+  //
+  // Reveal is injected into the first animation step so gameplay resolution starts
+  // immediately; the UI keeps reveal visible independently.
   const cardPlayedEvent = events.find((e) => e.type === 'CARD_PLAYED');
   if (cardPlayedEvent && cardPlayedEvent.type === 'CARD_PLAYED') {
     const isOpponentPlay = actingPlayer !== humanPlayer;
@@ -81,11 +84,21 @@ export function dispatchWithAnimations(
       actingPlayer === humanPlayer && events.some((e) => e.type === 'SPELL_RESOLVED');
 
     if (isOpponentPlay || isCasterUntargetedSpell) {
-      const revealStep: AnimationStep = {
-        effects: [{ type: 'card_reveal', cardId: cardPlayedEvent.cardId }],
-        durationMs: STEP_DURATIONS.cardReveal,
+      const revealEffect: AnimationStep['effects'][number] = {
+        type: 'card_reveal',
+        cardId: cardPlayedEvent.cardId,
       };
-      steps.unshift(revealStep);
+      if (steps.length > 0) {
+        steps[0] = {
+          ...steps[0],
+          effects: [revealEffect, ...steps[0].effects],
+        };
+      } else {
+        steps.push({
+          effects: [revealEffect],
+          durationMs: 10,
+        });
+      }
     }
   }
 
