@@ -27,11 +27,16 @@ export function getAutoAction(
       return { action: { type: 'ADVANCE_PHASE' }, delay: 300 };
 
     case 'battle':
-      if (
-        state.phase.step === 'declare_attackers' &&
-        !legalActions.some((a) => a.type === 'DECLARE_ATTACKER')
-      ) {
-        return { action: { type: 'CONFIRM_ATTACKERS' }, delay: 200 };
+      if (state.phase.step === 'declare_attackers') {
+        const hasDeclare = legalActions.some((a) => a.type === 'DECLARE_ATTACKER');
+        const hasUndeclare = legalActions.some((a) => a.type === 'UNDECLARE_ATTACKER');
+        const hasSelectedAttackers = state.phase.tentativeAttackers.length > 0;
+
+        // Auto-skip only when the player has no attack selection to make.
+        // If any attackers are already selected, wait for explicit "Attack!" confirm.
+        if (!hasDeclare && !hasUndeclare && !hasSelectedAttackers) {
+          return { action: { type: 'CONFIRM_ATTACKERS' }, delay: 200 };
+        }
       }
       return null;
 

@@ -20,7 +20,7 @@ export function CardReveal({ cardId }: CardRevealProps) {
     <CollapsibleSidePanel
       storageKey="alchemy:card-reveal-collapsed"
       accentColor={elementColor}
-      collapseOffset={120}
+      collapseOffset={230}
     >
       {/* Card with element glow */}
       <div className="relative pointer-events-none">
@@ -38,10 +38,10 @@ export function CardReveal({ cardId }: CardRevealProps) {
         <motion.div
           className="relative"
           style={{
-            '--card-width': '110px',
-            '--card-height': '154px',
-            '--card-font-scale': '0.7',
-            filter: `drop-shadow(0 0 12px ${elementColor}44) drop-shadow(0 4px 10px rgba(0,0,0,0.5))`,
+            '--card-width': '185px',
+            '--card-height': '259px',
+            '--card-font-scale': '1',
+            filter: `drop-shadow(0 0 16px ${elementColor}55) drop-shadow(0 8px 16px rgba(0,0,0,0.55))`,
           } as React.CSSProperties}
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}

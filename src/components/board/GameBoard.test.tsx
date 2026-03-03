@@ -144,6 +144,7 @@ describe('GameBoard', () => {
     );
 
     expect(screen.getByRole('button', { name: 'No Attacks' })).toBeInTheDocument();
+    expect(screen.getByTestId('skip-attack-btn')).toHaveAttribute('data-pulsing', 'false');
   });
 
   it('All Attack toggles attacker selection and does not auto-confirm combat', async () => {
@@ -191,6 +192,7 @@ describe('GameBoard', () => {
     });
 
     expect(screen.getByRole('button', { name: 'Attack!' })).toBeInTheDocument();
+    expect(screen.getByTestId('skip-attack-btn')).toHaveAttribute('data-pulsing', 'true');
 
     fireEvent.click(screen.getByRole('button', { name: 'All Attack' }));
 
@@ -202,6 +204,7 @@ describe('GameBoard', () => {
     });
 
     expect(screen.getByRole('button', { name: 'No Attacks' })).toBeInTheDocument();
+    expect(screen.getByTestId('skip-attack-btn')).toHaveAttribute('data-pulsing', 'false');
   });
 
   it('renders resolving label during combat resolution', () => {

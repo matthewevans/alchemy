@@ -96,7 +96,24 @@ export function ActionButton() {
                 })}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                animate={hasTentativeAttackers
+                  ? {
+                      scale: [1, 1.06, 1],
+                      boxShadow: [
+                        '0 0 0 rgba(239, 68, 68, 0)',
+                        '0 0 18px rgba(239, 68, 68, 0.6)',
+                        '0 0 0 rgba(239, 68, 68, 0)',
+                      ],
+                    }
+                  : {
+                      scale: 1,
+                      boxShadow: '0 0 0 rgba(239, 68, 68, 0)',
+                    }}
+                transition={hasTentativeAttackers
+                  ? { duration: 1.1, repeat: Infinity, ease: 'easeInOut' }
+                  : { duration: 0.2, ease: 'easeOut' }}
                 data-testid="skip-attack-btn"
+                data-pulsing={hasTentativeAttackers ? 'true' : 'false'}
                 onClick={() => dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer)}
               >
                 {hasTentativeAttackers ? 'Attack!' : 'No Attacks'}

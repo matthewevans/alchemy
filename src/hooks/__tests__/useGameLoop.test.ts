@@ -96,6 +96,26 @@ describe('getAutoAction', () => {
       });
       expect(result).toEqual({ action: { type: 'CONFIRM_ATTACKERS' }, delay: 200 });
     });
+
+    it('returns null when attackers are already selected (requires explicit Attack! confirm)', () => {
+      const attacker = makePermanent('fire_lava_hound', 'player1', {
+        isTapped: false,
+        summonedThisTurn: false,
+      });
+
+      const result = autoAction({
+        phase: {
+          type: 'battle',
+          step: 'declare_attackers',
+          tentativeAttackers: [attacker.permanentId],
+        },
+        player1: {
+          board: [attacker, null, null, null, null],
+        },
+      });
+
+      expect(result).toBeNull();
+    });
   });
 
   // ─── Play phase: auto-skip when nothing playable ───
