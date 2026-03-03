@@ -1,40 +1,83 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTutorialStore } from '@game/tutorialStore';
+import wizardImg from '/wizard_helper.webp?url';
+
+const VIEWPORT_PAD = 12;
+
+function clampToViewport(
+  tooltip: HTMLElement,
+  anchorSelector?: string,
+): { left: number; top: number } {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const tw = tooltip.offsetWidth;
+  const th = tooltip.offsetHeight;
+
+  const anchor = anchorSelector ? document.querySelector(anchorSelector) : null;
+
+  if (anchor) {
+    const rect = anchor.getBoundingClientRect();
+    const anchorCX = rect.left + rect.width / 2;
+
+    // Try above the anchor; fall below if no room
+    let top = rect.top - th - 8;
+    if (top < VIEWPORT_PAD) {
+      top = rect.bottom + 8;
+    }
+
+    let left = anchorCX - tw / 2;
+    left = Math.max(VIEWPORT_PAD, Math.min(left, vw - tw - VIEWPORT_PAD));
+    top = Math.max(VIEWPORT_PAD, Math.min(top, vh - th - VIEWPORT_PAD));
+
+    return { left, top };
+  }
+
+  // No anchor — center in viewport
+  return {
+    left: Math.max(VIEWPORT_PAD, (vw - tw) / 2),
+    top: Math.max(VIEWPORT_PAD, vh * 0.25),
+  };
+}
 
 export function CoachOverlay() {
   const currentTip = useTutorialStore((s) => s.currentTip);
   const dismissTip = useTutorialStore((s) => s.dismissTip);
   const skipTutorial = useTutorialStore((s) => s.skipTutorial);
-  const [anchorPos, setAnchorPos] = useState<{ x: number; y: number } | null>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
 
+  // Callback ref — fires when the tooltip element mounts/unmounts
+  const tooltipRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node || !currentTip) return;
+      // Wait one frame so the browser has laid out the element
+      requestAnimationFrame(() => {
+        setPos(clampToViewport(node, currentTip.anchorSelector));
+      });
+    },
+    [currentTip],
+  );
+
+  // Reset position when tip changes so the new tip doesn't flash at the old spot
   useEffect(() => {
-    if (!currentTip?.anchorSelector) {
-      setAnchorPos(null);
-      return;
-    }
-    const el = document.querySelector(currentTip.anchorSelector);
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      setAnchorPos({ x: rect.left + rect.width / 2, y: rect.top });
-    } else {
-      setAnchorPos(null);
-    }
+    if (!currentTip) setPos(null);
   }, [currentTip]);
 
   return (
     <AnimatePresence>
       {currentTip && (
         <motion.div
+          ref={tooltipRef}
           key={currentTip.id}
-          className="fixed z-50 pointer-events-auto flex flex-col items-center"
+          className="fixed z-50 pointer-events-auto"
           style={{
-            left: anchorPos ? anchorPos.x : '50%',
-            top: anchorPos ? Math.max(anchorPos.y - 16, 60) : '30%',
-            transform: 'translateX(-50%)',
+            left: pos?.left ?? '50%',
+            top: pos?.top ?? '30%',
+            transform: pos ? undefined : 'translateX(-50%)',
+            visibility: pos ? 'visible' : 'hidden',
           }}
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
+          animate={{ opacity: pos ? 1 : 0, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -10, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         >
@@ -49,7 +92,7 @@ export function CoachOverlay() {
             {/* Wizard avatar */}
             <div className="flex justify-center -mt-8 mb-1">
               <img
-                src="/wizard_helper.webp"
+                src={wizardImg}
                 alt="Wizard helper"
                 className="w-12 h-12 rounded-full select-none"
                 style={{
@@ -77,16 +120,6 @@ export function CoachOverlay() {
               </button>
             </div>
           </div>
-
-          {/* Speech bubble arrow pointing down */}
-          <div
-            className="w-0 h-0"
-            style={{
-              borderLeft: '8px solid transparent',
-              borderRight: '8px solid transparent',
-              borderTop: '8px solid rgba(15, 23, 42, 0.97)',
-            }}
-          />
         </motion.div>
       )}
     </AnimatePresence>

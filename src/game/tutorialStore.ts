@@ -77,8 +77,8 @@ export const useTutorialStore = create<TutorialState>()((set, get) => {
     currentTip: null,
 
     showTip: (stepId) => {
-      const { completedSteps, tutorialComplete } = get();
-      if (tutorialComplete || completedSteps.has(stepId)) return;
+      const { completedSteps, tutorialComplete, currentTip } = get();
+      if (tutorialComplete || completedSteps.has(stepId) || currentTip) return;
       set({ currentTip: TUTORIAL_STEPS[stepId] });
     },
 
