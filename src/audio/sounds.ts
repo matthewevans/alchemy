@@ -46,7 +46,8 @@ interface SampleCatalog {
   };
 }
 
-const SAMPLE_CATALOG_URL = '/audio/sfx/catalog.json';
+const BASE = import.meta.env.BASE_URL;
+const SAMPLE_CATALOG_URL = `${BASE}audio/sfx/catalog.json`;
 const ENABLE_PROCEDURAL_FALLBACK = false;
 const sampleBufferCache = new Map<string, AudioBuffer | null>();
 const sampleBufferLoads = new Map<string, Promise<void>>();
@@ -55,9 +56,9 @@ let sampleCatalogLoad: Promise<void> | null = null;
 let sampleCatalogUnavailable = false;
 
 function toAssetUrl(path: string): string {
-  if (path.startsWith('/')) return path;
-  if (path.startsWith('public/')) return `/${path.slice('public/'.length)}`;
-  return `/${path}`;
+  if (path.startsWith('public/')) return `${BASE}${path.slice('public/'.length)}`;
+  if (path.startsWith('/')) return `${BASE}${path.slice(1)}`;
+  return `${BASE}${path}`;
 }
 
 function randomItem<T>(arr: T[]): T | null {
