@@ -1,4 +1,4 @@
-import { useState, useCallback, lazy, Suspense } from 'react';
+import { useState, useCallback, useRef, lazy, Suspense } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import type { PlayerId } from '@engine/types';
 import { createRNG } from '@engine/prng';
@@ -12,6 +12,7 @@ import { clearSavedGame, loadActiveGameId, loadGame } from '@storage/persistence
 import type { PeerSession } from '@network/peer';
 import { setPendingSession } from '@network/sessionTransfer';
 import { TitleScreen } from '@components/ui';
+import type { InitialDeck } from '@components/ui/DeckBuilder';
 
 type SubScreen = 'title' | 'deck_select' | 'deck_builder' | 'multiplayer_lobby';
 
@@ -78,7 +79,15 @@ export function HomePage() {
     setSubScreen('multiplayer_lobby');
   }, []);
 
+  const initialDeckRef = useRef<InitialDeck | undefined>(undefined);
+
   const handleDeckBuilder = useCallback(() => {
+    initialDeckRef.current = undefined;
+    setSubScreen('deck_builder');
+  }, []);
+
+  const handleCloneToDeckBuilder = useCallback((name: string, cardIds: string[]) => {
+    initialDeckRef.current = { name, cardIds };
     setSubScreen('deck_builder');
   }, []);
 
@@ -156,13 +165,13 @@ export function HomePage() {
     case 'deck_select':
       return (
         <Suspense fallback={<HomeLoading label="Loading decks..." />}>
-          <DeckSelectorScreen onSelectDeck={handleSelectDeck} onBack={handleBack} tier={selectedTier} onTierChange={setSelectedTier} difficulty={selectedDifficulty} onDifficultyChange={setSelectedDifficulty} />
+          <DeckSelectorScreen onSelectDeck={handleSelectDeck} onBack={handleBack} onCloneToDeckBuilder={handleCloneToDeckBuilder} tier={selectedTier} onTierChange={setSelectedTier} difficulty={selectedDifficulty} onDifficultyChange={setSelectedDifficulty} />
         </Suspense>
       );
     case 'deck_builder':
       return (
         <Suspense fallback={<HomeLoading label="Loading deck builder..." />}>
-          <DeckBuilderScreen onSelectDeck={handleSelectDeck} onBack={handleBack} tier={selectedTier} onTierChange={setSelectedTier} />
+          <DeckBuilderScreen onSelectDeck={handleSelectDeck} onBack={handleBack} tier={selectedTier} onTierChange={setSelectedTier} initialDeck={initialDeckRef.current} />
         </Suspense>
       );
     case 'multiplayer_lobby':

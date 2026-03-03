@@ -7,8 +7,8 @@ import type { AIDifficulty } from '@engine/aiConfig';
 export type BattlefieldPreference = string;
 
 const STORAGE_KEY = 'alchemy:preferences';
-const DEFAULT_UI_SCALE = 1;
-const DEFAULT_BOARD_SCALE = 0.85;
+export const DEFAULT_UI_SCALE = 1;
+export const DEFAULT_BOARD_SCALE = 0.85;
 const DEFAULT_TIER: Tier = 'apprentice';
 const DEFAULT_DIFFICULTY: AIDifficulty = 'medium';
 

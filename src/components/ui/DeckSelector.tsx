@@ -1,11 +1,16 @@
-import { motion, useReducedMotion } from 'framer-motion';
+import { useState, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import type { Element, Tier } from '@engine/types';
 import { ELEMENT_META } from '@engine/elements';
+import { CARD_REGISTRY } from '@engine/cards';
+import { KEYWORD_REGISTRY } from '@engine/keywords';
 import { TIER_ORDER } from '@engine/ruleset';
 import { STARTER_DECKS, buildStarterDeck } from '@engine/starterDecks';
+import type { StarterDeck } from '@engine/starterDecks';
 import type { AIDifficulty } from '@engine/aiConfig';
 import { DIFFICULTY_ORDER, DIFFICULTY_LABELS } from '@engine/aiConfig';
 import { getElementColor, getElementIconPath } from '@components/card/cardUtils';
+import { CardPreview } from '@components/card/CardPreview';
 import { gameButtonClass } from './buttonStyles';
 
 const TIER_LABELS: Record<Tier, { label: string; description: string }> = {
@@ -17,6 +22,7 @@ const TIER_LABELS: Record<Tier, { label: string; description: string }> = {
 export interface DeckSelectorProps {
   onSelectDeck: (deckCardIds: string[]) => void;
   onBack: () => void;
+  onCloneToDeckBuilder?: (name: string, cardIds: string[]) => void;
   tier?: Tier;
   onTierChange?: (tier: Tier) => void;
   difficulty?: AIDifficulty;
@@ -48,8 +54,10 @@ function ElementIcon({ element }: { element: Element }) {
   );
 }
 
-export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTierChange, difficulty = 'medium', onDifficultyChange }: DeckSelectorProps) {
+export function DeckSelector({ onSelectDeck, onBack, onCloneToDeckBuilder, tier = 'apprentice', onTierChange, difficulty = 'medium', onDifficultyChange }: DeckSelectorProps) {
   const shouldReduceMotion = useReducedMotion();
+  const [inspectedDeck, setInspectedDeck] = useState<StarterDeck | null>(null);
+  const [previewCardId, setPreviewCardId] = useState<string | null>(null);
 
   return (
     <div className="h-screen w-screen bg-slate-950 overflow-y-auto pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
@@ -92,7 +100,7 @@ export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTier
                 })}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => onTierChange(t)}
+                onClick={() => { onTierChange(t); setInspectedDeck(null); }}
               >
                 <div className="flex flex-col items-center">
                   <span>{TIER_LABELS[t].label}</span>
@@ -132,8 +140,8 @@ export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTier
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {STARTER_DECKS.map((deck, i) => {
             const cardCount = buildStarterDeck(deck, tier).length;
-
             const primaryColor = getElementColor(deck.elements[0]);
+            const isSelected = inspectedDeck === deck;
 
             return (
               <motion.button
@@ -146,7 +154,8 @@ export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTier
                     'relative w-full sm:min-h-[11.5rem] p-4 rounded-xl bg-slate-800/65 text-left hover:bg-slate-800/80 overflow-hidden flex flex-col items-start justify-start',
                 })}
                 style={{
-                  borderColor: `${primaryColor}33`,
+                  borderColor: isSelected ? `${primaryColor}aa` : `${primaryColor}33`,
+                  boxShadow: isSelected ? `0 0 20px ${primaryColor}33, inset 0 0 20px ${primaryColor}11` : undefined,
                 }}
                 initial={{ opacity: 0, y: 24, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -157,7 +166,7 @@ export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTier
                   boxShadow: `0 0 20px ${primaryColor}22, 0 4px 16px rgba(0,0,0,0.3)`,
                 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => onSelectDeck(buildStarterDeck(deck, tier))}
+                onClick={() => setInspectedDeck(isSelected ? null : deck)}
               >
                 {/* Element icon watermark */}
                 <motion.img
@@ -182,7 +191,158 @@ export function DeckSelector({ onSelectDeck, onBack, tier = 'apprentice', onTier
           })}
         </div>
       </div>
+
+      {/* Deck detail panel */}
+      <AnimatePresence>
+        {inspectedDeck && (
+          <DeckDetailPanel
+            deck={inspectedDeck}
+            tier={tier}
+            onPlay={() => onSelectDeck(buildStarterDeck(inspectedDeck, tier))}
+            onClone={onCloneToDeckBuilder ? () => {
+              const cardIds = buildStarterDeck(inspectedDeck, tier);
+              onCloneToDeckBuilder(inspectedDeck.name, cardIds);
+            } : undefined}
+            onClose={() => setInspectedDeck(null)}
+            onPreviewCard={setPreviewCardId}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Card preview overlay */}
+      <AnimatePresence>
+        {previewCardId && (
+          <CardPreview cardId={previewCardId} onDismiss={() => setPreviewCardId(null)} />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+// ─── Deck Detail Panel ───
+
+interface DeckDetailPanelProps {
+  deck: StarterDeck;
+  tier: Tier;
+  onPlay: () => void;
+  onClone?: () => void;
+  onClose: () => void;
+  onPreviewCard: (cardId: string) => void;
+}
+
+function DeckDetailPanel({ deck, tier, onPlay, onClone, onClose, onPreviewCard }: DeckDetailPanelProps) {
+  const cardIds = useMemo(() => buildStarterDeck(deck, tier), [deck, tier]);
+  const primaryColor = getElementColor(deck.elements[0]);
+
+  // Group cards by id with counts, sorted by cost
+  const cardEntries = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const id of cardIds) counts.set(id, (counts.get(id) ?? 0) + 1);
+    return [...counts.entries()]
+      .map(([id, count]) => ({ card: CARD_REGISTRY[id], count }))
+      .sort((a, b) => a.card.cost - b.card.cost || a.card.name.localeCompare(b.card.name));
+  }, [cardIds]);
+
+  const handleCardClick = useCallback((cardId: string) => {
+    onPreviewCard(cardId);
+  }, [onPreviewCard]);
+
+  return (
+    <motion.div
+      className="fixed inset-x-0 bottom-0 z-40 bg-slate-900/98 border-t backdrop-blur-sm flex flex-col"
+      style={{
+        borderColor: `${primaryColor}44`,
+        maxHeight: '60vh',
+      }}
+      initial={{ y: '100%' }}
+      animate={{ y: 0 }}
+      exit={{ y: '100%' }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+    >
+      {/* Header */}
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-white/10">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg font-bold text-white truncate">{deck.name}</h2>
+          <p className="text-white/50 text-xs">{cardIds.length} cards</p>
+        </div>
+        <button
+          className={gameButtonClass({ tone: 'neutral', size: 'sm', className: 'px-3 text-sm' })}
+          onClick={onClose}
+        >
+          Close
+        </button>
+      </div>
+
+      {/* Card list */}
+      <div className="flex-1 overflow-y-auto px-4 py-2">
+        <div className="max-w-2xl mx-auto space-y-px">
+          {cardEntries.map(({ card, count }) => {
+            const color = getElementColor(card.element);
+            const iconPath = getElementIconPath(card.element);
+            return (
+              <button
+                key={card.id}
+                className="w-full flex items-center h-10 rounded overflow-hidden transition-colors hover:brightness-125 cursor-pointer text-left"
+                style={{
+                  background: `linear-gradient(90deg, ${color}15 0%, ${color}08 60%, transparent 100%)`,
+                  borderLeft: `2px solid ${color}`,
+                }}
+                onClick={() => handleCardClick(card.id)}
+              >
+                <div className="shrink-0 w-8 flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">{card.cost}</span>
+                </div>
+                <img src={iconPath} alt="" className="w-4 h-4 shrink-0 opacity-70" />
+                <div className="flex-1 flex items-center gap-2 px-2 min-w-0">
+                  <span className="text-white text-sm font-medium truncate">{card.name}</span>
+                  {card.type === 'creature' && (
+                    <span className="text-white/40 text-xs shrink-0">{card.attack}/{card.health}</span>
+                  )}
+                  {card.keywords.length > 0 && (
+                    <span className="text-amber-300/60 text-xs shrink-0 truncate">
+                      {card.keywords.map((kw) => KEYWORD_REGISTRY[kw].name).join(', ')}
+                    </span>
+                  )}
+                </div>
+                <div className="shrink-0 text-white/40 text-xs pr-3 tabular-nums">x{count}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="shrink-0 px-4 py-3 border-t border-white/10">
+        <div className="max-w-2xl mx-auto flex gap-3">
+          <motion.button
+            className={gameButtonClass({
+              tone: 'emerald',
+              size: 'md',
+              className: 'flex-1 font-bold',
+            })}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onPlay}
+          >
+            Play
+          </motion.button>
+          {onClone && (
+            <motion.button
+              className={gameButtonClass({
+                tone: 'amber',
+                size: 'md',
+                className: 'flex-1 font-bold',
+              })}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onClone}
+            >
+              Clone to Builder
+            </motion.button>
+          )}
+        </div>
+      </div>
+    </motion.div>
   );
 }
 

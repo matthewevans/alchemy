@@ -6,8 +6,10 @@ import { ELEMENTS, ELEMENT_META } from '@engine/elements';
 import { KEYWORD_REGISTRY } from '@engine/keywords';
 import { EFFECT_REGISTRY } from '@engine/effects';
 import { TIER_CONFIGS, TIER_ORDER } from '@engine/ruleset';
+import { STARTER_DECKS, buildStarterDeck } from '@engine/starterDecks';
 import { validateDeck } from '@engine/deck';
 import { getElementColor, getElementIconPath } from '@components/card/cardUtils';
+import { CardPreview } from '@components/card/CardPreview';
 import { loadSavedDecks, saveDeck, deleteDeck } from '@storage/deckStorage';
 import { encodeDeck, decodeDeck } from '@storage/shareCode';
 import type { SavedDeck } from '@storage/deckStorage';
@@ -19,26 +21,41 @@ const TIER_LABELS: Record<Tier, string> = {
   archmage: 'Archmage',
 };
 
+export interface InitialDeck {
+  name: string;
+  cardIds: string[];
+}
+
 interface DeckBuilderProps {
   onSelectDeck: (deckCardIds: string[]) => void;
   onBack: () => void;
   tier?: Tier;
   onTierChange?: (tier: Tier) => void;
+  initialDeck?: InitialDeck;
 }
 
 type ElementFilter = Element | 'all';
 
-export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice', onTierChange }: DeckBuilderProps) {
+function cardIdsToCounts(cardIds: string[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const id of cardIds) counts[id] = (counts[id] ?? 0) + 1;
+  return counts;
+}
+
+export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice', onTierChange, initialDeck }: DeckBuilderProps) {
   const RULESET = TIER_CONFIGS[tier];
   const tierIndex = TIER_ORDER.indexOf(tier);
   const [elementFilter, setElementFilter] = useState<ElementFilter>('all');
-  const [deckCounts, setDeckCounts] = useState<Record<string, number>>({});
-  const [deckName, setDeckName] = useState('My Deck');
+  const [deckCounts, setDeckCounts] = useState<Record<string, number>>(
+    () => initialDeck ? cardIdsToCounts(initialDeck.cardIds) : {},
+  );
+  const [deckName, setDeckName] = useState(initialDeck?.name ?? 'My Deck');
   const [savedDecks, setSavedDecks] = useState<SavedDeck[]>(() => loadSavedDecks());
   const [shareInput, setShareInput] = useState('');
   const [shareCode, setShareCode] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const [showSaved, setShowSaved] = useState(false);
+  const [previewCardId, setPreviewCardId] = useState<string | null>(null);
   const [showMobileDeckPanel, setShowMobileDeckPanel] = useState(false);
 
   const filteredCards = useMemo(
@@ -141,13 +158,9 @@ export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice', onTierC
     showToast('Deck saved!');
   }, [deckName, deckCardIds, showToast]);
 
-  const handleLoad = useCallback((deck: SavedDeck) => {
-    setDeckName(deck.name);
-    const counts: Record<string, number> = {};
-    for (const id of deck.cardIds) {
-      counts[id] = (counts[id] ?? 0) + 1;
-    }
-    setDeckCounts(counts);
+  const handleLoad = useCallback((name: string, cardIds: string[]) => {
+    setDeckName(name);
+    setDeckCounts(cardIdsToCounts(cardIds));
     setShowSaved(false);
     setShowMobileDeckPanel(false);
   }, []);
@@ -176,11 +189,7 @@ export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice', onTierC
       showToast('Invalid share code');
       return;
     }
-    const counts: Record<string, number> = {};
-    for (const id of result.cardIds) {
-      counts[id] = (counts[id] ?? 0) + 1;
-    }
-    setDeckCounts(counts);
+    setDeckCounts(cardIdsToCounts(result.cardIds));
     setShareInput('');
     showToast('Deck imported!');
   }, [shareInput, showToast]);
@@ -270,6 +279,7 @@ export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice', onTierC
                 count={count}
                 maxCopies={RULESET.maxCopiesPerCard}
                 onClick={() => removeCard(card.id)}
+                onPreview={() => setPreviewCardId(card.id)}
               />
             ))}
           </div>
@@ -487,6 +497,7 @@ export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice', onTierC
                       deckFull={totalCards >= RULESET.deckSize}
                       onAdd={() => addCard(card.id)}
                       onRemove={() => removeCard(card.id)}
+                      onPreview={() => setPreviewCardId(card.id)}
                     />
                   ))}
                 </div>
@@ -509,13 +520,38 @@ export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice', onTierC
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
             >
+              {/* Starter decks */}
               <div className="px-3 py-2 border-b border-white/10">
+                <span className="text-white/60 text-xs font-medium">Starter Decks</span>
+              </div>
+              <div className="max-h-40 overflow-y-auto">
+                {STARTER_DECKS.map((starter) => {
+                  const cardIds = buildStarterDeck(starter, tier);
+                  return (
+                    <button
+                      key={starter.name}
+                      className={gameButtonClass({
+                        tone: 'neutral',
+                        size: 'xs',
+                        className: 'w-full text-left text-white/70 hover:text-white px-3 py-2 hover:bg-white/5 truncate',
+                      })}
+                      onClick={() => handleLoad(starter.name, cardIds)}
+                    >
+                      {starter.name}
+                      <span className="text-white/30 ml-1">({cardIds.length})</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Saved decks */}
+              <div className="px-3 py-2 border-b border-white/10 border-t border-white/10">
                 <span className="text-white/60 text-xs font-medium">Saved Decks</span>
               </div>
               {savedDecks.length === 0 ? (
                 <p className="px-3 py-4 text-white/30 text-xs text-center">No saved decks</p>
               ) : (
-                <div className="max-h-64 overflow-y-auto">
+                <div className="max-h-40 overflow-y-auto">
                   {savedDecks.map((deck) => (
                     <div
                       key={deck.id}
@@ -527,7 +563,7 @@ export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice', onTierC
                             size: 'xs',
                             className: 'flex-1 text-left text-white/70 hover:text-white truncate',
                           })}
-                          onClick={() => handleLoad(deck)}
+                          onClick={() => handleLoad(deck.name, deck.cardIds)}
                         >
                         {deck.name}
                         <span className="text-white/30 ml-1">({deck.cardIds.length})</span>
@@ -605,6 +641,13 @@ export function DeckBuilder({ onSelectDeck, onBack, tier = 'apprentice', onTierC
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Card preview overlay */}
+      <AnimatePresence>
+        {previewCardId && (
+          <CardPreview cardId={previewCardId} onDismiss={() => setPreviewCardId(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -618,6 +661,7 @@ function CollectionCardBar({
   deckFull,
   onAdd,
   onRemove,
+  onPreview,
 }: {
   card: CardDefinition;
   count: number;
@@ -625,6 +669,7 @@ function CollectionCardBar({
   deckFull: boolean;
   onAdd: () => void;
   onRemove: () => void;
+  onPreview: () => void;
 }) {
   const color = getElementColor(card.element);
   const iconPath = getElementIconPath(card.element);
@@ -639,6 +684,7 @@ function CollectionCardBar({
         borderLeft: `2px solid ${color}`,
       }}
       onClick={canAdd ? onAdd : undefined}
+      onContextMenu={(e) => { e.preventDefault(); onPreview(); }}
     >
       {/* Cost */}
       <div className="shrink-0 w-8 flex items-center justify-center">
@@ -716,11 +762,13 @@ function DeckCardBar({
   count,
   maxCopies,
   onClick,
+  onPreview,
 }: {
   card: CardDefinition;
   count: number;
   maxCopies: number;
   onClick: () => void;
+  onPreview: () => void;
 }) {
   const color = getElementColor(card.element);
 
@@ -736,6 +784,7 @@ function DeckCardBar({
         backgroundColor: `${color}22`,
       }}
       onClick={onClick}
+      onContextMenu={(e) => { e.preventDefault(); onPreview(); }}
     >
       {/* Cost badge */}
       <div

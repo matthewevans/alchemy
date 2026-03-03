@@ -1,4 +1,4 @@
-import { usePreferencesStore } from '@game/preferencesStore';
+import { usePreferencesStore, DEFAULT_UI_SCALE, DEFAULT_BOARD_SCALE } from '@game/preferencesStore';
 import { useAudioStore } from '@audio/audioStore';
 import { BATTLEFIELDS } from '@components/board/battlefields';
 import { SettingsSlider, SettingsToggle, SettingsSelect } from './SettingsControls';
@@ -25,7 +25,7 @@ export function GeneralSettings() {
         accentColor="#fbbf24"
         onChange={setUIScale}
         onReset={resetUIScale}
-        showReset={uiScale !== 1}
+        showReset={uiScale !== DEFAULT_UI_SCALE}
       />
       <SettingsSlider
         id="board-scale"
@@ -38,7 +38,7 @@ export function GeneralSettings() {
         accentColor="#34d399"
         onChange={setBoardScale}
         onReset={resetBoardScale}
-        showReset={boardScale !== 1}
+        showReset={boardScale !== DEFAULT_BOARD_SCALE}
       />
       <SettingsSlider
         id="sfx-volume"
