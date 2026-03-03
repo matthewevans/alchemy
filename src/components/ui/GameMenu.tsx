@@ -6,6 +6,7 @@ import { gameButtonClass } from './buttonStyles';
 import { SettingsPanel } from './settings/SettingsPanel';
 import { FallingAshes } from './FallingAshes';
 import { useDialogA11y } from '@hooks/useDialogA11y';
+import { getAudioDiagnostics } from '@audio/sounds';
 
 interface GameMenuProps {
   onResume: () => void;
@@ -209,6 +210,7 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
                     <div>P2: <span className="text-white/80">{gameState.players.player2.health}hp {gameState.players.player2.currentEnergy}/{gameState.players.player2.maxEnergy}e</span> hand={gameState.players.player2.hand.length} deck={gameState.players.player2.deck.length}</div>
                     <div>Legal: <span className="text-white/80">{legalActions.length}</span> actions</div>
                     <div>Anim: <span className="text-white/80">{isAnimating ? `playing (${animQueueLength} queued${activeStepType ? `, ${activeStepType}` : ''})` : 'idle'}</span></div>
+                    <AudioDebugInfo />
                     <button
                       type="button"
                       className={gameButtonClass({
@@ -233,5 +235,27 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
         </AnimatePresence>
       </motion.div>
     </motion.div>
+  );
+}
+
+function AudioDebugInfo() {
+  const [info, setInfo] = useState<ReturnType<typeof getAudioDiagnostics> | null>(null);
+  return (
+    <>
+      <button
+        type="button"
+        className="text-amber-400/70 hover:text-amber-300 underline"
+        onClick={() => setInfo(getAudioDiagnostics())}
+      >
+        refresh audio info
+      </button>
+      {info && (
+        <div className="space-y-0.5">
+          <div>AudioCtx: <span className="text-white/80">{info.contextState}</span></div>
+          <div>Catalog: <span className="text-white/80">{info.catalogStatus}</span></div>
+          <div>Samples: <span className="text-white/80">{info.cachedSamples} cached, {info.failedSamples} failed, {info.pendingLoads} loading</span></div>
+        </div>
+      )}
+    </>
   );
 }

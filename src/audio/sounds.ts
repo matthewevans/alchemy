@@ -624,6 +624,29 @@ export function registerSound(id: string, fn: SoundFn): void {
   SOUND_REGISTRY[id] = fn;
 }
 
+/** Diagnostic snapshot for debug panel. */
+export function getAudioDiagnostics(): {
+  contextState: string;
+  catalogStatus: string;
+  cachedSamples: number;
+  failedSamples: number;
+  pendingLoads: number;
+} {
+  let contextState = 'not created';
+  try {
+    const c = getAudioContext();
+    contextState = c.state;
+  } catch { /* no context */ }
+
+  return {
+    contextState,
+    catalogStatus: sampleCatalog ? 'loaded' : sampleCatalogUnavailable ? 'unavailable' : sampleCatalogLoad ? 'loading' : 'not started',
+    cachedSamples: [...sampleBufferCache.values()].filter((b) => b !== null).length,
+    failedSamples: [...sampleBufferCache.values()].filter((b) => b === null).length,
+    pendingLoads: sampleBufferLoads.size,
+  };
+}
+
 export function playEffectSound(
   type: EffectSoundType,
   opts: { element?: Element; amount?: number; soundId?: string; spellImpactKind?: SpellImpactKind },
