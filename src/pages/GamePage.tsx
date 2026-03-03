@@ -12,6 +12,7 @@ import { useAnimationStore } from '@game/animationStore';
 import { useGameLoop } from '@hooks/useGameLoop';
 import { useAmbientMusic } from '@hooks/useAmbientMusic';
 import { useTutorialTriggers } from '@hooks/useTutorialTriggers';
+import { prewarmEffectSounds } from '@audio/sounds';
 import { clearSavedGame, saveHistoryEntry } from '@storage/persistence';
 import { AnimatePresence } from 'framer-motion';
 import { GameBoard } from '@components/board';
@@ -174,6 +175,9 @@ function PlayingScreenInner({
   useGameLoop();
   useAmbientMusic();
   useTutorialTriggers();
+  useEffect(() => {
+    prewarmEffectSounds();
+  }, []);
 
   const dispatch = useGameDispatch();
   const humanPlayer = useGameStore((s) => s.humanPlayer);

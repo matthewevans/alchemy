@@ -52,6 +52,8 @@ const ENABLE_PROCEDURAL_FALLBACK = false;
 const MAX_SAMPLE_WARMS_PER_CALL = 2;
 const sampleBufferCache = new Map<string, AudioBuffer | null>();
 const sampleBufferLoads = new Map<string, Promise<void>>();
+const deferredPlaybackUrls = new Set<string>();
+let runtimeSamplesPrewarmed = false;
 let sampleCatalog: SampleCatalog | null = null;
 let sampleCatalogLoad: Promise<void> | null = null;
 let sampleCatalogUnavailable = false;
@@ -246,6 +248,44 @@ function resolveCandidates(
   }
 }
 
+function dedupePaths(paths: readonly string[]): string[] {
+  return [...new Set(paths)];
+}
+
+function listCatalogPrewarmPaths(catalog: SampleCatalog): string[] {
+  const runtime = catalog.runtime_sound_types;
+  const spellMap = runtime.spell_impact_by_element;
+  return dedupePaths([
+    ...runtime.combat_strike,
+    ...runtime.block_link,
+    ...runtime.damage,
+    ...runtime.player_damage,
+    ...runtime.death,
+    ...runtime.heal,
+    ...runtime.player_heal,
+    ...runtime.summon,
+    ...runtime.keyword,
+    ...runtime.ui,
+    ...runtime.ambient_optional,
+    ...spellMap.fire,
+    ...spellMap.water,
+    ...spellMap.air,
+    ...spellMap.earth,
+    ...spellMap.nature,
+    ...spellMap.shadow,
+    ...spellMap.heal,
+  ]);
+}
+
+function listCuratedPrewarmPaths(): string[] {
+  const curatedRuntime = Object.values(CURATED_POOL_BY_TYPE)
+    .flatMap((paths) => (paths ? [...paths] : []));
+  const curatedSpell = Object.values(CURATED_SPELL_POOL)
+    .flatMap((paths) => [...paths]);
+  const mappedIds = Object.values(SOUND_ID_SAMPLE_PATHS);
+  return dedupePaths([...curatedRuntime, ...curatedSpell, ...mappedIds]);
+}
+
 function loadSampleCatalog(): void {
   if (sampleCatalog || sampleCatalogLoad || sampleCatalogUnavailable || typeof window === 'undefined') return;
   sampleCatalogLoad = (async () => {
@@ -302,6 +342,29 @@ function playSampleBuffer(
   source.start(ctx.currentTime);
 }
 
+function queuePlaybackAfterLoad(
+  ctx: AudioContext,
+  dest: AudioNode,
+  url: string,
+  type: EffectSoundType,
+  amount?: number,
+): void {
+  if (deferredPlaybackUrls.has(url)) return;
+  const load = sampleBufferLoads.get(url);
+  if (!load) return;
+  deferredPlaybackUrls.add(url);
+  void load.then(() => {
+    const buffer = sampleBufferCache.get(url);
+    if (buffer) {
+      playSampleBuffer(ctx, dest, buffer, normalizeSampleGain(type, amount));
+    }
+  }).catch(() => {
+    // Ignore failed deferred playback — caller will try again on next trigger.
+  }).finally(() => {
+    deferredPlaybackUrls.delete(url);
+  });
+}
+
 function tryPlaySample(
   ctx: AudioContext,
   dest: AudioNode,
@@ -328,6 +391,7 @@ function tryPlayCandidates(
 
   const ready: AudioBuffer[] = [];
   let hasPendingLoad = false;
+  let pendingUrl: string | null = null;
   let warmBudget = MAX_SAMPLE_WARMS_PER_CALL;
   for (const path of candidates) {
     const url = toAssetUrl(path);
@@ -338,10 +402,12 @@ function tryPlayCandidates(
         warmBudget -= 1;
       }
       hasPendingLoad = true;
+      if (!pendingUrl) pendingUrl = url;
       continue;
     }
     if (sampleBufferLoads.has(url)) {
       hasPendingLoad = true;
+      if (!pendingUrl) pendingUrl = url;
       continue;
     }
     if (cached) ready.push(cached);
@@ -353,7 +419,10 @@ function tryPlayCandidates(
     return 'played';
   }
 
-  if (hasPendingLoad) return 'pending';
+  if (hasPendingLoad) {
+    if (pendingUrl) queuePlaybackAfterLoad(ctx, dest, pendingUrl, type, amount);
+    return 'pending';
+  }
   return 'unavailable';
 }
 
@@ -615,6 +684,43 @@ const SOUND_REGISTRY: Record<string, SoundFn> = {};
 
 export function registerSound(id: string, fn: SoundFn): void {
   SOUND_REGISTRY[id] = fn;
+}
+
+/**
+ * Decode runtime SFX up front so first-use events do not miss audio while files load.
+ * Safe to call more than once; it only runs the first time.
+ */
+export function prewarmEffectSounds(): void {
+  if (runtimeSamplesPrewarmed || typeof window === 'undefined') return;
+  runtimeSamplesPrewarmed = true;
+
+  const ctx = getAudioContext();
+  const warmPaths = (paths: string[]): void => {
+    for (const path of paths) {
+      warmSampleBuffer(ctx, toAssetUrl(path));
+    }
+  };
+
+  const warmFromCatalog = (): boolean => {
+    if (!sampleCatalog) return false;
+    warmPaths(listCatalogPrewarmPaths(sampleCatalog));
+    return true;
+  };
+
+  if (warmFromCatalog()) return;
+
+  loadSampleCatalog();
+  if (sampleCatalogLoad) {
+    void sampleCatalogLoad.then(() => {
+      if (warmFromCatalog()) return;
+      warmPaths(listCuratedPrewarmPaths());
+    }).catch(() => {
+      warmPaths(listCuratedPrewarmPaths());
+    });
+    return;
+  }
+
+  warmPaths(listCuratedPrewarmPaths());
 }
 
 /** Diagnostic snapshot for debug panel. */

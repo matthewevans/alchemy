@@ -56,15 +56,6 @@ export function dispatchWithAnimations(
     && typeof window !== 'undefined'
     && 'AudioContext' in window;
   if (canPlayImmediateSfx) {
-    if (action.type === 'ADVANCE_PHASE' && state?.phase.type === 'draw') {
-      playEffectSound('ui', { soundId: 'sfx_phase_draw' });
-    }
-    if (action.type === 'ADVANCE_PHASE' && state?.phase.type === 'energy') {
-      playEffectSound('ui', { soundId: 'sfx_phase_energy' });
-    }
-    if (events.some((e) => e.type === 'TURN_STARTED')) {
-      playEffectSound('ui', { soundId: 'sfx_turn_start' });
-    }
     if (events.some((e) => e.type === 'CARD_DRAWN')) {
       playEffectSound('ui', { soundId: 'sfx_card_draw' });
     }
