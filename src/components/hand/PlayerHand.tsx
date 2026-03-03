@@ -188,8 +188,32 @@ export function PlayerHand() {
   // Collapse hand during animations (combat strikes, spell effects, etc.)
   const isAnimating = useAnimationStore((s) => s.isAnimating);
 
-  // Hand expands when hovered (desktop), a card is selected/dragged (touch), or during discard phase
-  const isExpanded = !isAnimating && (handHovered || selectedHandIndex !== null || draggedIndex !== null || isDiscardPhase);
+  // Auto-collapse during combat phases and opponent's turn (like MTGA)
+  const activePlayer = useGameStore((s) => s.state?.activePlayer);
+  const isCombatPhase = phase?.type === 'battle';
+  const isOpponentTurn = activePlayer !== humanPlayer;
+  const shouldAutoCollapse = isAnimating || isCombatPhase || isOpponentTurn;
+
+  // Clear hover + selection on phase changes so hand collapses
+  const phaseType = phase?.type;
+  useEffect(() => {
+    setHandHovered(false);
+    selectHandCard(null);
+  }, [phaseType, selectHandCard]);
+
+  // Click/tap outside hand area collapses hand (clears stuck hover on touch)
+  useEffect(() => {
+    const onPointerDown = (e: PointerEvent) => {
+      if (!(e.target as HTMLElement).closest('[data-hand-area]')) {
+        setHandHovered(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, []);
+
+  // Hand expands when hovered (desktop mouse only), a card is selected/dragged (touch), or during discard phase
+  const isExpanded = !shouldAutoCollapse && (handHovered || selectedHandIndex !== null || draggedIndex !== null || isDiscardPhase);
 
   return (
     <div
@@ -201,8 +225,8 @@ export function PlayerHand() {
           : 'translateY(calc(var(--card-height) * 0.6))',
         transition: 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
       }}
-      onMouseEnter={() => setHandHovered(true)}
-      onMouseLeave={() => setHandHovered(false)}
+      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHandHovered(true); }}
+      onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHandHovered(false); }}
     >
       {/* Fan layout — full card height container, clipped below viewport when collapsed */}
       <div

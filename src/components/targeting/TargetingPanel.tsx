@@ -3,6 +3,7 @@ import { CARD_REGISTRY } from '@engine/cards';
 import { useUIStore } from '@game/uiStore';
 import { getElementColor } from '@components/card/cardUtils';
 import { HandCard } from '@components/card/HandCard';
+import { CollapsibleSidePanel } from '@components/ui/CollapsibleSidePanel';
 
 interface TargetingPanelProps {
   cardId: string;
@@ -11,8 +12,8 @@ interface TargetingPanelProps {
 
 /**
  * Combined card reveal + targeting prompt anchored to the right edge.
- * Replaces the separate top-center targeting prompt and right-side CardReveal
- * with a single compact panel that keeps the battlefield clear on mobile.
+ * Uses CollapsibleSidePanel for the collapse/expand chevron so the
+ * panel can get out of the way on tight screens.
  */
 export function TargetingPanel({ cardId, onCancel }: TargetingPanelProps) {
   const card = CARD_REGISTRY[cardId];
@@ -20,13 +21,10 @@ export function TargetingPanel({ cardId, onCancel }: TargetingPanelProps) {
   const inspectCard = useUIStore((s) => s.inspectCard);
 
   return (
-    <motion.div
-      className="fixed top-1/2 -translate-y-1/2 z-[36]"
-      style={{ right: 'calc(6rem + env(safe-area-inset-right))' }}
-      initial={{ opacity: 0, x: 40 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 40 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+    <CollapsibleSidePanel
+      storageKey="alchemy:targeting-panel-collapsed"
+      accentColor={elementColor}
+      collapseOffset={200}
     >
       <motion.div
         className="rounded-2xl bg-slate-900/90 backdrop-blur-sm shadow-xl shadow-black/40 p-3 flex flex-col items-center gap-3"
@@ -81,6 +79,6 @@ export function TargetingPanel({ cardId, onCancel }: TargetingPanelProps) {
           )}
         </div>
       </motion.div>
-    </motion.div>
+    </CollapsibleSidePanel>
   );
 }
