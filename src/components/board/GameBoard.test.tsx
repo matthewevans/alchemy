@@ -88,7 +88,7 @@ describe('GameBoard', () => {
     expect(screen.getByText('Healing Rain')).toBeInTheDocument();
   });
 
-  it('renders blocker controls with Done button during declare_blockers', () => {
+  it('renders blocker controls with No Blocks button during declare_blockers', () => {
     useGameStore.setState({
       state: createTestGameState({
         phase: {
@@ -115,10 +115,10 @@ describe('GameBoard', () => {
 
     expect(screen.getByTestId('combat-controls')).toHaveClass('fixed');
     expect(screen.getByTestId('blocker-controls')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'No Blocks' })).toBeInTheDocument();
   });
 
-  it('renders attacker controls with Skip button during declare_attackers', () => {
+  it('renders attacker controls with No Attacks button during declare_attackers', () => {
     useGameStore.setState({
       state: createTestGameState({
         phase: {
@@ -142,7 +142,7 @@ describe('GameBoard', () => {
       </GameDispatchProvider>,
     );
 
-    expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'No Attacks' })).toBeInTheDocument();
   });
 
   it('renders resolving label during combat resolution', () => {
