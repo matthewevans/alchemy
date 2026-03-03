@@ -8,6 +8,8 @@ export function useTutorialTriggers(): void {
   useEffect(() => {
     if (!usePreferencesStore.getState().tutorialEnabled) return;
 
+    useTutorialStore.getState().resetForNewGame();
+
     return useGameStore.subscribe(
       (s) => s.state?.phase,
       (phase) => {

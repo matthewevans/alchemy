@@ -42,17 +42,23 @@ export const TUTORIAL_STEPS: Record<TutorialStepId, TutorialStepDef> = {
 
 interface TutorialState {
   currentTip: TutorialStepDef | null;
+  shownThisGame: Set<TutorialStepId>;
   showTip: (stepId: TutorialStepId) => void;
   dismissTip: () => void;
   skipTutorial: () => void;
+  resetForNewGame: () => void;
 }
 
 export const useTutorialStore = create<TutorialState>()((set, get) => ({
   currentTip: null,
+  shownThisGame: new Set(),
 
   showTip: (stepId) => {
-    if (get().currentTip) return;
-    set({ currentTip: TUTORIAL_STEPS[stepId] });
+    const { currentTip, shownThisGame } = get();
+    if (currentTip || shownThisGame.has(stepId)) return;
+    const next = new Set(shownThisGame);
+    next.add(stepId);
+    set({ currentTip: TUTORIAL_STEPS[stepId], shownThisGame: next });
   },
 
   dismissTip: () => {
@@ -62,5 +68,9 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
   skipTutorial: () => {
     set({ currentTip: null });
     usePreferencesStore.getState().setTutorialEnabled(false);
+  },
+
+  resetForNewGame: () => {
+    set({ currentTip: null, shownThisGame: new Set() });
   },
 }));
