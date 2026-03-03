@@ -231,9 +231,55 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     }
   };
 
-  const creatures = useMemo(() => board.filter((p): p is Permanent => p !== null), [board]);
+  const rawCreatures = useMemo(() => board.filter((p): p is Permanent => p !== null), [board]);
 
   const fanned = shouldFanOut(phase, isPlayerBoard, humanPlayer, activePlayer);
+
+  // During declare_blockers, reorder the defender's creatures so each blocker sits
+  // opposite its assigned attacker, minimizing line crossings in BlockAssignmentLines.
+  const creatures = useMemo(() => {
+    if (
+      !isPlayerBoard
+      || !phase
+      || phase.type !== 'battle'
+      || phase.step !== 'declare_blockers'
+      || Object.keys(tentativeBlockers).length === 0
+    ) {
+      return rawCreatures;
+    }
+
+    const opponentId = getOpponent(playerId);
+    const opponentBoard = useGameStore.getState().state?.players[opponentId].board ?? [];
+    const opponentCreatures = opponentBoard.filter((p): p is Permanent => p !== null);
+
+    // Map each attacker to its visual column index in the opponent row
+    const attackerColumn = new Map<string, number>();
+    opponentCreatures.forEach((c, i) => {
+      if (confirmedAttackers.includes(c.permanentId)) {
+        attackerColumn.set(c.permanentId, i);
+      }
+    });
+
+    const blockers: Permanent[] = [];
+    const nonBlockers: Permanent[] = [];
+    for (const c of rawCreatures) {
+      if (c.permanentId in tentativeBlockers) {
+        blockers.push(c);
+      } else {
+        nonBlockers.push(c);
+      }
+    }
+
+    // Sort blockers by their assigned attacker's column (left-to-right)
+    blockers.sort((a, b) => {
+      const colA = attackerColumn.get(tentativeBlockers[a.permanentId]) ?? Infinity;
+      const colB = attackerColumn.get(tentativeBlockers[b.permanentId]) ?? Infinity;
+      return colA - colB;
+    });
+
+    return [...blockers, ...nonBlockers];
+  }, [rawCreatures, isPlayerBoard, phase, playerId, confirmedAttackers, tentativeBlockers]);
+
   const stacks = useMemo(() => fanned ? null : groupIntoStacks(creatures), [fanned, creatures]);
 
   // Visual slot count for sizing — stacks take fewer visual slots
