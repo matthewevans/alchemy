@@ -10,6 +10,7 @@ import { useUIStore } from '@game/uiStore';
 import { BoardCard } from '@components/card';
 import { calculateBoardCardSize } from './boardSizing';
 import { groupIntoStacks } from './boardStacking';
+import { sortCreaturesForBlockers } from './blockerSorting';
 import { CardStackGroup } from './CardStackGroup';
 
 interface CreatureSlotsProps {
@@ -243,7 +244,6 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
       || !phase
       || phase.type !== 'battle'
       || phase.step !== 'declare_blockers'
-      || Object.keys(tentativeBlockers).length === 0
     ) {
       return rawCreatures;
     }
@@ -252,32 +252,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     const opponentBoard = useGameStore.getState().state?.players[opponentId].board ?? [];
     const opponentCreatures = opponentBoard.filter((p): p is Permanent => p !== null);
 
-    // Map each attacker to its visual column index in the opponent row
-    const attackerColumn = new Map<string, number>();
-    opponentCreatures.forEach((c, i) => {
-      if (confirmedAttackers.includes(c.permanentId)) {
-        attackerColumn.set(c.permanentId, i);
-      }
-    });
-
-    const blockers: Permanent[] = [];
-    const nonBlockers: Permanent[] = [];
-    for (const c of rawCreatures) {
-      if (c.permanentId in tentativeBlockers) {
-        blockers.push(c);
-      } else {
-        nonBlockers.push(c);
-      }
-    }
-
-    // Sort blockers by their assigned attacker's column (left-to-right)
-    blockers.sort((a, b) => {
-      const colA = attackerColumn.get(tentativeBlockers[a.permanentId]) ?? Infinity;
-      const colB = attackerColumn.get(tentativeBlockers[b.permanentId]) ?? Infinity;
-      return colA - colB;
-    });
-
-    return [...blockers, ...nonBlockers];
+    return sortCreaturesForBlockers(rawCreatures, opponentCreatures, confirmedAttackers, tentativeBlockers);
   }, [rawCreatures, isPlayerBoard, phase, playerId, confirmedAttackers, tentativeBlockers]);
 
   const stacks = useMemo(() => fanned ? null : groupIntoStacks(creatures), [fanned, creatures]);

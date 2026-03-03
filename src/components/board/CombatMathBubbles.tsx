@@ -110,11 +110,18 @@ export function CombatMathBubbles() {
       return;
     }
 
-    const raf = requestAnimationFrame(() => {
-      const results: MatchupMath[] = [];
-      const allBoard = [...players.player1.board, ...players.player2.board];
+    let rafId: number;
+    let stableCount = 0;
+    let lastKey = '';
 
-      for (const [blockerId, attackerId] of Object.entries(phase.tentativeBlockers)) {
+    const { tentativeBlockers } = phase;
+    const currentPlayers = players;
+
+    function update() {
+      const results: MatchupMath[] = [];
+      const allBoard = [...currentPlayers.player1.board, ...currentPlayers.player2.board];
+
+      for (const [blockerId, attackerId] of Object.entries(tentativeBlockers)) {
         const blocker = findPermanent(allBoard, blockerId);
         const attacker = findPermanent(allBoard, attackerId);
         if (!blocker || !attacker) continue;
@@ -130,15 +137,28 @@ export function CombatMathBubbles() {
       }
 
       setMatchups(results);
-    });
 
-    return () => cancelAnimationFrame(raf);
+      const key = results.map((r) => `${Math.round(r.midX)},${Math.round(r.midY)}`).join('|');
+      if (key === lastKey) {
+        stableCount++;
+      } else {
+        stableCount = 0;
+        lastKey = key;
+      }
+
+      if (stableCount < 10) {
+        rafId = requestAnimationFrame(update);
+      }
+    }
+
+    rafId = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(rafId);
   }, [phase, players, combatMathEnabled]);
 
   if (matchups.length === 0) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[101] pointer-events-none">
+    <div className="fixed inset-0 z-[46] pointer-events-none">
       {matchups.map((m) => (
         <MathBubble
           key={`${m.blockerId}-${m.attackerId}`}

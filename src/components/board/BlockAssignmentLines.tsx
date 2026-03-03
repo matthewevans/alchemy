@@ -24,17 +24,22 @@ export function BlockAssignmentLines() {
   const phase = useGameStore((s) => s.state?.phase);
   const [links, setLinks] = useState<BlockLink[]>([]);
 
-  // Use useEffect (not useLayoutEffect) so board cards have fully rendered and
-  // Framer Motion has applied layout — getBoundingClientRect returns final positions.
+  // Poll card positions via RAF until they stabilize. This tracks Framer Motion
+  // layout animations so lines follow cards smoothly during rearrangement, then
+  // stop polling once positions settle (~10 stable frames).
   useEffect(() => {
     if (!phase || phase.type !== 'battle' || phase.step !== 'declare_blockers') {
       setLinks([]);
       return;
     }
 
-    // Defer one frame to let Framer Motion settle card positions after layout changes
-    const raf = requestAnimationFrame(() => {
-      const newLinks = Object.entries(phase.tentativeBlockers)
+    const { tentativeBlockers } = phase;
+    let rafId: number;
+    let stableCount = 0;
+    let lastKey = '';
+
+    function updateLinks() {
+      const newLinks = Object.entries(tentativeBlockers)
         .map(([blockerId, attackerId]) => {
           const from = getCardCenter(blockerId);
           const to = getCardCenter(attackerId);
@@ -44,9 +49,25 @@ export function BlockAssignmentLines() {
         .filter((link): link is BlockLink => link !== null);
 
       setLinks(newLinks);
-    });
 
-    return () => cancelAnimationFrame(raf);
+      const key = newLinks
+        .map((l) => `${Math.round(l.fromX)},${Math.round(l.fromY)},${Math.round(l.toX)},${Math.round(l.toY)}`)
+        .join('|');
+
+      if (key === lastKey) {
+        stableCount++;
+      } else {
+        stableCount = 0;
+        lastKey = key;
+      }
+
+      if (stableCount < 10) {
+        rafId = requestAnimationFrame(updateLinks);
+      }
+    }
+
+    rafId = requestAnimationFrame(updateLinks);
+    return () => cancelAnimationFrame(rafId);
   }, [phase]);
 
   if (links.length === 0) return null;
@@ -55,7 +76,7 @@ export function BlockAssignmentLines() {
     <svg
       data-testid="block-assignment-overlay"
       className="fixed inset-0 pointer-events-none"
-      style={{ zIndex: 100, width: '100vw', height: '100vh' }}
+      style={{ zIndex: 45, width: '100vw', height: '100vh' }}
       viewBox={`0 0 ${window.innerWidth} ${window.innerHeight}`}
     >
       <defs>
