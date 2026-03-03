@@ -59,7 +59,11 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
         aria-modal="true"
         aria-label="Game menu"
         tabIndex={-1}
-        className="bg-slate-800/95 rounded-2xl p-8 flex flex-col items-center gap-4 min-w-[360px] max-w-[90vw] shadow-2xl border border-slate-600/40"
+        className={`bg-slate-800/95 rounded-2xl p-5 sm:p-8 flex flex-col gap-4 shadow-2xl border border-slate-600/40 ${
+          view === 'settings'
+            ? 'settings-dialog items-stretch w-[95vw] max-w-[720px] max-h-[88dvh] overflow-hidden'
+            : 'items-center min-w-[360px] max-w-[90vw]'
+        }`}
         style={{
           boxShadow: '0 0 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(0, 0, 0, 0.3)',
         }}
@@ -69,23 +73,25 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <img
-          src={`${import.meta.env.BASE_URL}logo_wordmark.webp`}
-          alt="Alchemy"
-          className="w-40 mb-2 opacity-80"
-          style={{ filter: 'drop-shadow(0 2px 8px rgba(251, 191, 36, 0.2))' }}
-        />
+        {view === 'menu' && (
+          <img
+            src={`${import.meta.env.BASE_URL}logo_wordmark.webp`}
+            alt="Alchemy"
+            className="w-40 mb-2 opacity-80"
+            style={{ filter: 'drop-shadow(0 2px 8px rgba(251, 191, 36, 0.2))' }}
+          />
+        )}
         <AnimatePresence mode="wait" initial={false}>
           {view === 'settings' ? (
             <motion.div
               key="settings"
-              className="w-full flex flex-col items-center gap-4"
+              className="w-full flex flex-col items-stretch gap-4"
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 40 }}
               transition={{ duration: 0.15 }}
             >
-              <h2 className="text-xl font-bold text-white mb-2">Settings</h2>
+              <h2 className="text-xl font-bold text-white text-center">Settings</h2>
               <SettingsPanel onClose={() => setView('menu')} />
             </motion.div>
           ) : (

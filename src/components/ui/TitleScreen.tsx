@@ -4,6 +4,7 @@ import { gameButtonClass } from './buttonStyles';
 import { SettingsPanel } from './settings/SettingsPanel';
 import { FallingAshes } from './FallingAshes';
 import { useDialogA11y } from '@hooks/useDialogA11y';
+import { AudioMuteButton } from './AudioMuteButton';
 
 interface TitleScreenProps {
   onPlay: () => void;
@@ -211,21 +212,23 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
         A card game for wizards-in-training
       </motion.p>
 
-      {/* Settings gear button */}
-      <button
-        className={gameButtonClass({
-          tone: 'slate',
-          size: 'sm',
-          className:
-            'fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-30 w-14 h-14 p-0 rounded-full flex items-center justify-center text-white/40 hover:text-white/70',
-        })}
-        onClick={() => setShowSettings(true)}
-        aria-label="Settings"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-7 h-7">
-          <path fillRule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clipRule="evenodd" />
-        </svg>
-      </button>
+      {/* Bottom-right quick controls */}
+      <div className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-30 flex items-center gap-2">
+        <AudioMuteButton className="w-14 h-14 p-0 rounded-full flex items-center justify-center text-white/40 hover:text-white/70" />
+        <button
+          className={gameButtonClass({
+            tone: 'slate',
+            size: 'sm',
+            className: 'w-14 h-14 p-0 rounded-full flex items-center justify-center text-white/40 hover:text-white/70',
+          })}
+          onClick={() => setShowSettings(true)}
+          aria-label="Settings"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-7 h-7">
+            <path fillRule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
 
       {/* Settings modal */}
       <AnimatePresence>
@@ -244,7 +247,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
               aria-modal="true"
               aria-label="Settings"
               tabIndex={-1}
-              className="settings-dialog bg-slate-800/95 rounded-2xl p-8 flex flex-col items-center gap-4 min-w-[360px] max-w-[90vw] shadow-2xl border border-slate-600/40"
+              className="settings-dialog bg-slate-800/95 rounded-2xl p-5 sm:p-7 flex flex-col items-stretch gap-4 w-[95vw] max-w-[720px] max-h-[88dvh] overflow-hidden shadow-2xl border border-slate-600/40"
               style={{
                 boxShadow: '0 0 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(0, 0, 0, 0.3)',
               }}
@@ -254,7 +257,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-xl font-bold text-white mb-2">Settings</h2>
+              <h2 className="text-xl font-bold text-white text-center">Settings</h2>
               <SettingsPanel onClose={() => setShowSettings(false)} />
             </motion.div>
           </motion.div>

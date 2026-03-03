@@ -18,6 +18,9 @@ interface CreatureSlotsProps {
   isOpponent: boolean;
 }
 
+const EMPTY_ATTACKER_IDS: string[] = [];
+const EMPTY_BLOCKERS: Record<string, string> = {};
+
 /** Should this board fan out (show individual cards) rather than stacking? */
 function shouldFanOut(
   phase: Phase | undefined,
@@ -82,12 +85,19 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   const isPlayerBoard = playerId === humanPlayer;
 
   const isBattlePhase = phase?.type === 'battle';
-  const tentativeAttackers = isBattlePhase && phase.step === 'declare_attackers' ? phase.tentativeAttackers : [];
+  const tentativeAttackers = isBattlePhase && phase.step === 'declare_attackers'
+    ? phase.tentativeAttackers
+    : EMPTY_ATTACKER_IDS;
   const confirmedAttackers = isBattlePhase && (phase.step === 'declare_blockers' || phase.step === 'order_blockers')
     ? phase.confirmedAttackers
-    : [];
-  const resolvingAttackers = isBattlePhase && phase.step === 'resolving' ? phase.attackers : [];
-  const allAttackers = [...tentativeAttackers, ...confirmedAttackers, ...resolvingAttackers];
+    : EMPTY_ATTACKER_IDS;
+  const resolvingAttackers = isBattlePhase && phase.step === 'resolving'
+    ? phase.attackers
+    : EMPTY_ATTACKER_IDS;
+  const allAttackers = useMemo(
+    () => [...tentativeAttackers, ...confirmedAttackers, ...resolvingAttackers],
+    [tentativeAttackers, confirmedAttackers, resolvingAttackers],
+  );
 
   // During animation, only shift forward the creature whose combat_strike is playing
   const activeAttackerId = useAnimationStore((s) => {
@@ -97,17 +107,27 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     return strike && strike.type === 'combat_strike' ? strike.sourceId : null;
   });
 
-  const tentativeBlockers = isBattlePhase && phase.step === 'declare_blockers' ? phase.tentativeBlockers : {};
-  const orderedBlockers = isBattlePhase && phase.step === 'order_blockers' ? phase.blockers : {};
-  const resolvingBlockers = isBattlePhase && phase.step === 'resolving' ? phase.blockers : {};
-  const allBlockers = {
-    ...tentativeBlockers,
-    ...orderedBlockers,
-    ...resolvingBlockers,
-  };
-  const allBlockerIds = new Set([
-    ...Object.keys(allBlockers),
-  ]);
+  const tentativeBlockers = isBattlePhase && phase.step === 'declare_blockers'
+    ? phase.tentativeBlockers
+    : EMPTY_BLOCKERS;
+  const orderedBlockers = isBattlePhase && phase.step === 'order_blockers'
+    ? phase.blockers
+    : EMPTY_BLOCKERS;
+  const resolvingBlockers = isBattlePhase && phase.step === 'resolving'
+    ? phase.blockers
+    : EMPTY_BLOCKERS;
+  const allBlockers = useMemo(
+    () => ({
+      ...tentativeBlockers,
+      ...orderedBlockers,
+      ...resolvingBlockers,
+    }),
+    [tentativeBlockers, orderedBlockers, resolvingBlockers],
+  );
+  const allBlockerIds = useMemo(
+    () => new Set(Object.keys(allBlockers)),
+    [allBlockers],
+  );
 
   // Determine valid attackers / blockers / targets from legal actions
   const validAttackerIds = new Set(
@@ -303,6 +323,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   }, [rawCreatures, phase, playerId, confirmedAttackers, allBlockers, activePlayer, humanPlayer]);
 
   const stacks = useMemo(() => fanned ? null : groupIntoStacks(creatures), [fanned, creatures]);
+  const stackCount = stacks?.length ?? 0;
   const [stackingActive, setStackingActive] = useState(false);
   const prioritizedOrderBlockers = useMemo(
     () =>
@@ -344,22 +365,31 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
       const unstackedPerSlot = creatures.length > 0
         ? (availableWidth - gap * (creatures.length - 1)) / creatures.length
         : baseWidth;
-      const shouldStack = !fanned && stacks !== null
-        && stacks.length < creatures.length
+      const shouldStack = !fanned
+        && stackCount > 0
+        && stackCount < creatures.length
         && unstackedPerSlot < minWidth;
 
       setStackingActive(shouldStack);
 
-      const slotCount = shouldStack && stacks ? stacks.length : creatures.length;
-      setCardSize(
-        calculateBoardCardSize({
-          containerWidth: rect.width,
-          containerHeight: rect.height,
-          slotCount: Math.max(slotCount, 1),
-          baseWidth,
-          baseHeight,
-        }),
-      );
+      const slotCount = shouldStack ? stackCount : creatures.length;
+      const nextSize = calculateBoardCardSize({
+        containerWidth: rect.width,
+        containerHeight: rect.height,
+        slotCount: Math.max(slotCount, 1),
+        baseWidth,
+        baseHeight,
+      });
+      setCardSize((prev) => {
+        if (
+          prev
+          && Math.abs(prev.width - nextSize.width) < 0.01
+          && Math.abs(prev.height - nextSize.height) < 0.01
+        ) {
+          return prev;
+        }
+        return nextSize;
+      });
     };
 
     updateSize();
@@ -367,7 +397,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [creatures.length, stacks, fanned, boardScale]);
+  }, [creatures.length, stackCount, fanned, boardScale]);
 
   const cardWidth = cardSize?.width;
   const cardHeight = cardSize?.height;
