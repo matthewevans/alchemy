@@ -3,6 +3,7 @@ import { useGameStore } from '@game/gameStore';
 import { useAnimationStore } from '@game/animationStore';
 import { usePreferencesStore } from '@game/preferencesStore';
 import { useTutorialStore } from '@game/tutorialStore';
+import { getActingPlayer } from '@engine/types';
 
 export function useTutorialTriggers(): void {
   useEffect(() => {
@@ -15,6 +16,9 @@ export function useTutorialTriggers(): void {
       (phase) => {
         if (!phase) return;
         if (useAnimationStore.getState().isAnimating) return;
+
+        const { state, humanPlayer } = useGameStore.getState();
+        if (!state || getActingPlayer(state) !== humanPlayer) return;
 
         const { showTip } = useTutorialStore.getState();
 
