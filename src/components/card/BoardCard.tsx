@@ -120,10 +120,7 @@ export function BoardCard({
     <motion.div
       ref={posRef}
       data-testid={`board-card-${permanent.permanentId}`}
-      className={`
-        touch-target relative flex flex-col cursor-pointer select-none
-        ${isSummoningSick ? 'saturate-50 brightness-75' : ''}
-      `}
+      className="touch-target relative flex flex-col cursor-pointer select-none"
       style={{
         width: cardWidth ? `${cardWidth}px` : 'var(--board-card-width)',
         height: cardHeight ? `${cardHeight}px` : 'var(--board-card-height)',
@@ -197,27 +194,35 @@ export function BoardCard({
         />
       )}
 
-      {/* Summoning sickness frost overlay */}
+      {/* Summoning sickness frost overlay (inside filtered area) */}
       {isSummoningSick && (
-        <motion.div
+        <div
           className="absolute inset-0 rounded-xl z-[5] pointer-events-none"
           style={{
             background: 'linear-gradient(180deg, rgba(147, 197, 253, 0.15) 0%, rgba(147, 197, 253, 0.05) 40%, rgba(147, 197, 253, 0.18) 100%)',
             boxShadow: 'inset 0 0 12px rgba(147, 197, 253, 0.2)',
           }}
+        />
+      )}
+
+      {/* Summoning sickness 💤 badge — outside filter so it stays bright */}
+      {isSummoningSick && (
+        <motion.div
+          className="absolute inset-0 z-[10] flex items-center justify-center pointer-events-none"
           animate={{
-            opacity: [0.5, 0.8, 0.5],
+            opacity: [0.85, 1, 0.85],
           }}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
         >
           <motion.span
-            className="absolute top-0.5 right-1 text-blue-300/60 font-bold select-none"
-            style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}
-            animate={{
-              opacity: [0.3, 0.7, 0.3],
-              y: [0, -2, 0],
+            className="select-none rounded-full px-1.5 py-0.5"
+            style={{
+              fontSize: 'calc(var(--card-font-scale) * 1.5rem)',
+              background: 'rgba(0, 0, 0, 0.55)',
+              filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.8))',
             }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
           >
             💤
           </motion.span>
@@ -248,21 +253,23 @@ export function BoardCard({
         />
       )}
 
-      <CardFace
-        cardId={permanent.cardId}
-        viewLevel={cardWidth && cardWidth < 90 ? 'compact' : 'normal'}
-        stats={{
-          attack: effectiveAttack,
-          health: currentHealth,
-          baseAttack: card.attack ?? 0,
-          isDamaged,
-        }}
-        statFlashControls={{
-          attack: attackFlashControls,
-          health: healthFlashControls,
-        }}
-        statusEffects={statusEffects}
-      />
+      <div className={`w-full h-full ${isSummoningSick ? 'saturate-50 brightness-75' : ''}`}>
+        <CardFace
+          cardId={permanent.cardId}
+          viewLevel={cardWidth && cardWidth < 90 ? 'compact' : 'normal'}
+          stats={{
+            attack: effectiveAttack,
+            health: currentHealth,
+            baseAttack: card.attack ?? 0,
+            isDamaged,
+          }}
+          statFlashControls={{
+            attack: attackFlashControls,
+            health: healthFlashControls,
+          }}
+          statusEffects={statusEffects}
+        />
+      </div>
     </motion.div>
   );
 }
