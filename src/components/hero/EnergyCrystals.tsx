@@ -3,18 +3,33 @@ import { motion, useAnimationControls, AnimatePresence } from 'framer-motion';
 import type { PlayerId } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
 
-interface EnergyCrystalsProps {
-  playerId: PlayerId;
+/** Default mana-blue for opponent pips. */
+const DEFAULT_PIP_COLOR = '#3b82f6';
+
+/** Convert hex color to rgba with given alpha. Falls back to color as-is for non-hex. */
+function hexToRgba(hex: string, alpha: number): string {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!match) return hex;
+  return `rgba(${parseInt(match[1], 16)}, ${parseInt(match[2], 16)}, ${parseInt(match[3], 16)}, ${alpha})`;
 }
 
-/** Energy pips — horizontal row, MTGA mana-pip style. */
-export function EnergyCrystals({ playerId }: EnergyCrystalsProps) {
+interface EnergyCrystalsProps {
+  playerId: PlayerId;
+  /** Hex or rgb color for filled pips. Defaults to mana-blue. */
+  color?: string;
+}
+
+/** Energy pips — horizontal row of circular orbs beside the portrait. */
+export function EnergyCrystals({ playerId, color = DEFAULT_PIP_COLOR }: EnergyCrystalsProps) {
   const maxEnergy = useGameStore((s) => s.state?.players[playerId]?.maxEnergy);
   const currentEnergy = useGameStore((s) => s.state?.players[playerId]?.currentEnergy);
   const energyCap = useGameStore((s) => s.state?.ruleset.energyCap ?? 10);
   const energyGlowControls = useAnimationControls();
   const prevMaxEnergyRef = useRef(maxEnergy);
   const prevCurrentEnergyRef = useRef(currentEnergy);
+
+  const filled = color;
+  const glow = hexToRgba(color, 0.6);
 
   useEffect(() => {
     if (maxEnergy === undefined || currentEnergy === undefined) return;
@@ -24,9 +39,9 @@ export function EnergyCrystals({ playerId }: EnergyCrystalsProps) {
     if (prevMax !== undefined && (maxEnergy > prevMax || (prevCurrent !== undefined && currentEnergy > prevCurrent))) {
       energyGlowControls.start({
         boxShadow: [
-          '0 0 12px rgba(251, 191, 36, 0.6)',
-          '0 0 6px rgba(251, 191, 36, 0.2)',
-          '0 0 0px rgba(251, 191, 36, 0)',
+          `0 0 12px ${glow}`,
+          `0 0 6px ${glow}`,
+          '0 0 0px rgba(0, 0, 0, 0)',
         ],
         transition: { duration: 0.5, ease: 'easeOut' },
       });
@@ -34,20 +49,21 @@ export function EnergyCrystals({ playerId }: EnergyCrystalsProps) {
 
     prevMaxEnergyRef.current = maxEnergy;
     prevCurrentEnergyRef.current = currentEnergy;
-  }, [maxEnergy, currentEnergy, energyGlowControls]);
+  }, [maxEnergy, currentEnergy, energyGlowControls, glow]);
 
   if (maxEnergy === undefined || currentEnergy === undefined) return null;
 
   return (
     <motion.div
-      className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5"
+      className="flex items-center gap-1 rounded-full px-1.5 py-0.5"
       style={{
-        background: 'rgba(120, 53, 15, 0.2)',
-        border: '1px solid rgba(251, 191, 36, 0.15)',
+        background: 'rgba(0, 0, 0, 0.3)',
+        border: `1px solid ${color}33`,
       }}
       aria-label="Energy"
       animate={energyGlowControls}
     >
+      <span className="text-[0.6rem] leading-none select-none" style={{ filter: 'saturate(0.7)' }}>⚡</span>
       <AnimatePresence>
         {Array.from({ length: Math.min(maxEnergy, energyCap) }, (_, i) => {
           const isFilled = i < currentEnergy;
@@ -58,10 +74,10 @@ export function EnergyCrystals({ playerId }: EnergyCrystalsProps) {
               animate={{
                 scale: isFilled ? [1.3, 1] : 1,
                 opacity: 1,
-                backgroundColor: isFilled ? 'rgb(217, 160, 22)' : 'rgba(80, 45, 10, 0.45)',
-                borderColor: isFilled ? 'rgb(234, 179, 40)' : 'rgba(140, 70, 8, 0.35)',
+                backgroundColor: isFilled ? filled : 'rgba(80, 80, 80, 0.35)',
+                borderColor: isFilled ? filled : 'rgba(120, 120, 120, 0.3)',
                 boxShadow: isFilled
-                  ? '0 0 5px rgba(234, 179, 40, 0.6), inset 0 1px 1px rgba(255,255,255,0.2)'
+                  ? `0 0 5px ${glow}, inset 0 1px 1px rgba(255,255,255,0.2)`
                   : 'inset 0 1px 2px rgba(0,0,0,0.4)',
               }}
               style={{
@@ -69,8 +85,7 @@ export function EnergyCrystals({ playerId }: EnergyCrystalsProps) {
                 height: 'var(--hero-pip)',
                 borderWidth: 1.5,
                 borderStyle: 'solid',
-                borderRadius: 2,
-                transform: 'rotate(45deg)',
+                borderRadius: '50%',
               }}
               transition={{
                 scale: { duration: 0.25, ease: 'easeOut' },
