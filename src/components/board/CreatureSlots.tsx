@@ -41,6 +41,11 @@ function shouldFanOut(
     return humanPlayer === defender;
   }
 
+  // Order blockers: attacker chooses damage assignment order for multi-blocks.
+  if (phase.step === 'order_blockers') {
+    return humanPlayer === activePlayer;
+  }
+
   // Resolving: fan out so player can see individual combat
   if (phase.step === 'resolving') return true;
 
@@ -78,7 +83,9 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
 
   const isBattlePhase = phase?.type === 'battle';
   const tentativeAttackers = isBattlePhase && phase.step === 'declare_attackers' ? phase.tentativeAttackers : [];
-  const confirmedAttackers = isBattlePhase && phase.step === 'declare_blockers' ? phase.confirmedAttackers : [];
+  const confirmedAttackers = isBattlePhase && (phase.step === 'declare_blockers' || phase.step === 'order_blockers')
+    ? phase.confirmedAttackers
+    : [];
   const resolvingAttackers = isBattlePhase && phase.step === 'resolving' ? phase.attackers : [];
   const allAttackers = [...tentativeAttackers, ...confirmedAttackers, ...resolvingAttackers];
 
@@ -91,10 +98,15 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
   });
 
   const tentativeBlockers = isBattlePhase && phase.step === 'declare_blockers' ? phase.tentativeBlockers : {};
+  const orderedBlockers = isBattlePhase && phase.step === 'order_blockers' ? phase.blockers : {};
   const resolvingBlockers = isBattlePhase && phase.step === 'resolving' ? phase.blockers : {};
+  const allBlockers = {
+    ...tentativeBlockers,
+    ...orderedBlockers,
+    ...resolvingBlockers,
+  };
   const allBlockerIds = new Set([
-    ...Object.keys(tentativeBlockers),
-    ...Object.keys(resolvingBlockers),
+    ...Object.keys(allBlockers),
   ]);
 
   // Determine valid attackers / blockers / targets from legal actions
@@ -112,6 +124,11 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     legalActions
       .filter((a): a is Extract<GameAction, { type: 'ASSIGN_BLOCKER' }> => a.type === 'ASSIGN_BLOCKER')
       .map((a) => a.blockerPermanentId),
+  );
+  const validOrderableBlockerIds = new Set(
+    legalActions
+      .filter((a): a is Extract<GameAction, { type: 'SET_BLOCKER_ORDER' }> => a.type === 'SET_BLOCKER_ORDER')
+      .map((a) => a.blockerPermanentIds[0]),
   );
   const validTargetActions = legalActions.filter(
     (a): a is Extract<GameAction, { type: 'SELECT_TARGET' }> => a.type === 'SELECT_TARGET',
@@ -230,21 +247,44 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
       }
       return;
     }
+
+    // Battle: attacker chooses multi-block order
+    if (isBattlePhase && phase.step === 'order_blockers') {
+      if (humanPlayer !== activePlayer) return;
+      if (isPlayerBoard) return;
+
+      const attackerId = phase.blockers[permanentId];
+      if (!attackerId) return;
+      const reorderAction = legalActions.find(
+        (a): a is Extract<GameAction, { type: 'SET_BLOCKER_ORDER' }> =>
+          a.type === 'SET_BLOCKER_ORDER'
+          && a.attackerPermanentId === attackerId
+          && a.blockerPermanentIds[0] === permanentId,
+      );
+      if (reorderAction) {
+        dispatch(reorderAction, humanPlayer);
+      }
+      return;
+    }
   };
 
   const rawCreatures = useMemo(() => board.filter((p): p is Permanent => p !== null), [board]);
 
   const fanned = shouldFanOut(phase, isPlayerBoard, humanPlayer, activePlayer);
 
-  // During declare_blockers, reorder the defender's creatures so each blocker sits
-  // opposite its assigned attacker, minimizing line crossings in BlockAssignmentLines.
+  // During blocker declaration/order, reorder the defender's creatures so each blocker
+  // sits opposite its assigned attacker, minimizing line crossings.
   const creatures = useMemo(() => {
-    if (
-      !isPlayerBoard
-      || !phase
-      || phase.type !== 'battle'
-      || phase.step !== 'declare_blockers'
-    ) {
+    const isBlockerPlanningPhase =
+      phase
+      && phase.type === 'battle'
+      && (phase.step === 'declare_blockers' || phase.step === 'order_blockers');
+    if (!phase || !isBlockerPlanningPhase) {
+      return rawCreatures;
+    }
+
+    const defender = getOpponent(activePlayer ?? humanPlayer);
+    if (playerId !== defender) {
       return rawCreatures;
     }
 
@@ -252,11 +292,29 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     const opponentBoard = useGameStore.getState().state?.players[opponentId].board ?? [];
     const opponentCreatures = opponentBoard.filter((p): p is Permanent => p !== null);
 
-    return sortCreaturesForBlockers(rawCreatures, opponentCreatures, confirmedAttackers, tentativeBlockers);
-  }, [rawCreatures, isPlayerBoard, phase, playerId, confirmedAttackers, tentativeBlockers]);
+    const attackerBlockerOrder = phase.step === 'order_blockers' ? phase.attackerBlockerOrder : undefined;
+    return sortCreaturesForBlockers(
+      rawCreatures,
+      opponentCreatures,
+      confirmedAttackers,
+      allBlockers,
+      attackerBlockerOrder,
+    );
+  }, [rawCreatures, phase, playerId, confirmedAttackers, allBlockers, activePlayer, humanPlayer]);
 
   const stacks = useMemo(() => fanned ? null : groupIntoStacks(creatures), [fanned, creatures]);
   const [stackingActive, setStackingActive] = useState(false);
+  const prioritizedOrderBlockers = useMemo(
+    () =>
+      isBattlePhase && phase.step === 'order_blockers'
+        ? new Set(
+            Object.values(phase.attackerBlockerOrder)
+              .map((order) => order[0])
+              .filter((id): id is string => Boolean(id)),
+          )
+        : null,
+    [isBattlePhase, phase],
+  );
 
   useLayoutEffect(() => {
     if (
@@ -322,13 +380,14 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     const isBlocking = allBlockerIds.has(permanent.permanentId);
     const isValidTarget = validTargetPermanentIds.has(permanent.permanentId);
     const isValidAttacker = validAttackerIds.has(permanent.permanentId) || undeclareAttackerIds.has(permanent.permanentId);
-    const isValidBlocker = validBlockerIds.has(permanent.permanentId);
+    const isValidBlocker = validBlockerIds.has(permanent.permanentId) || validOrderableBlockerIds.has(permanent.permanentId);
     const isSelectedForBlock =
       isBattlePhase
-      && phase.step === 'declare_blockers'
+      && (phase.step === 'declare_blockers' || phase.step === 'order_blockers')
       && (
         (isPlayerBoard && selectedBlockerId === permanent.permanentId)
         || (!isPlayerBoard && selectedAttackerId === permanent.permanentId)
+        || (phase.step === 'order_blockers' && Boolean(prioritizedOrderBlockers?.has(permanent.permanentId)))
       );
 
     return {

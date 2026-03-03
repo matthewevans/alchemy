@@ -95,4 +95,23 @@ describe('sortCreaturesForBlockers', () => {
       'second_blocker',
     ]);
   });
+
+  it('respects explicit attacker blocker order when provided', () => {
+    const a = makePermanent('c1', 'player1', { permanentId: 'first_blocker' });
+    const b = makePermanent('c2', 'player1', { permanentId: 'second_blocker' });
+    const atk = makePermanent('x', 'player2', { permanentId: 'attacker' });
+
+    const result = sortCreaturesForBlockers(
+      [a, b],
+      [atk],
+      ['attacker'],
+      { first_blocker: 'attacker', second_blocker: 'attacker' },
+      { attacker: ['second_blocker', 'first_blocker'] },
+    );
+
+    expect(result.map((c) => c.permanentId)).toEqual([
+      'second_blocker',
+      'first_blocker',
+    ]);
+  });
 });

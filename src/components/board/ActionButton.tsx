@@ -121,6 +121,30 @@ export function ActionButton() {
             </motion.div>
           )}
 
+          {phase.step === 'order_blockers' && isAttacker && (
+            <motion.div
+              className="pointer-events-auto flex items-center gap-2"
+              initial={{ opacity: 0, y: 10, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.9 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <span className="text-blue-300 font-medium text-sm">Choose block order</span>
+              <motion.button
+                className={gameButtonClass({
+                  tone: 'blue',
+                  size: 'sm',
+                  className: 'px-4 py-1.5 font-bold',
+                })}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => dispatch({ type: 'CONFIRM_BLOCKER_ORDER' }, humanPlayer)}
+              >
+                Resolve
+              </motion.button>
+            </motion.div>
+          )}
+
           {phase.step === 'resolving' && (
             <motion.div
               className="pointer-events-auto"

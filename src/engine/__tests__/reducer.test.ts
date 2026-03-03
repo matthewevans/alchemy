@@ -1119,7 +1119,11 @@ describe('Combat - multi-block', () => {
       },
     });
 
-    const { newState, events } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+    const { newState: orderState } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+    expect(orderState.phase.type).toBe('battle');
+    expect(orderState.phase).toMatchObject({ step: 'order_blockers' });
+
+    const { newState, events } = reduce(orderState, { type: 'CONFIRM_BLOCKER_ORDER' }, 'player1', rng);
 
     // No face damage — attacker was fully blocked
     expect(newState.players.player2.health).toBe(20);
@@ -1186,7 +1190,11 @@ describe('Combat - multi-block', () => {
       },
     });
 
-    const { newState } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+    const { newState: orderState } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+    expect(orderState.phase.type).toBe('battle');
+    expect(orderState.phase).toMatchObject({ step: 'order_blockers' });
+
+    const { newState } = reduce(orderState, { type: 'CONFIRM_BLOCKER_ORDER' }, 'player1', rng);
 
     expect(newState.players.player2.health).toBe(20);
 
@@ -1209,6 +1217,60 @@ describe('Combat - multi-block', () => {
     );
     expect(b2After).toBeTruthy();
     expect(b2After!.damage).toBe(0);
+  });
+
+  it('attacker can reorder blockers before combat resolves', () => {
+    const attacker = makePermanent('fire_magma_golem', 'player1', {
+      attack: 3,
+      health: 5,
+    });
+    const blockerA = makePermanent('earth_treant_sapling', 'player2', {
+      attack: 1,
+      health: 3,
+    });
+    const blockerB = makePermanent('earth_pebble_pup', 'player2', {
+      attack: 1,
+      health: 1,
+    });
+
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_blockers',
+        confirmedAttackers: [attacker.permanentId],
+        tentativeBlockers: {
+          [blockerA.permanentId]: attacker.permanentId,
+          [blockerB.permanentId]: attacker.permanentId,
+        },
+      },
+      player1: {
+        board: [{ ...attacker, isTapped: true }, null, null, null, null],
+      },
+      player2: {
+        board: [blockerA, blockerB, null, null, null],
+      },
+    });
+
+    const { newState: orderState } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+    const { newState: reordered } = reduce(
+      orderState,
+      {
+        type: 'SET_BLOCKER_ORDER',
+        attackerPermanentId: attacker.permanentId,
+        blockerPermanentIds: [blockerB.permanentId, blockerA.permanentId],
+      },
+      'player1',
+      rng,
+    );
+    const { newState } = reduce(reordered, { type: 'CONFIRM_BLOCKER_ORDER' }, 'player1', rng);
+
+    const bAAfter = newState.players.player2.board.find((p) => p?.permanentId === blockerA.permanentId);
+    const bBAfter = newState.players.player2.board.find((p) => p?.permanentId === blockerB.permanentId);
+
+    expect(bBAfter).toBeUndefined(); // blockerB dies first
+    expect(bAAfter).toBeTruthy();
+    expect(bAAfter!.damage).toBe(2); // remaining overflow damage after blockerB dies
   });
 });
 

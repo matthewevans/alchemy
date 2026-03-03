@@ -28,18 +28,24 @@ export function BlockAssignmentLines() {
   // layout animations so lines follow cards smoothly during rearrangement, then
   // stop polling once positions settle (~10 stable frames).
   useEffect(() => {
-    if (!phase || phase.type !== 'battle' || phase.step !== 'declare_blockers') {
+    if (
+      !phase
+      || phase.type !== 'battle'
+      || (phase.step !== 'declare_blockers' && phase.step !== 'order_blockers')
+    ) {
       setLinks([]);
       return;
     }
 
-    const { tentativeBlockers } = phase;
+    const blockerAssignments = phase.step === 'declare_blockers'
+      ? phase.tentativeBlockers
+      : phase.blockers;
     let rafId: number;
     let stableCount = 0;
     let lastKey = '';
 
     function updateLinks() {
-      const newLinks = Object.entries(tentativeBlockers)
+      const newLinks = Object.entries(blockerAssignments)
         .map(([blockerId, attackerId]) => {
           const from = getCardCenter(blockerId);
           const to = getCardCenter(attackerId);

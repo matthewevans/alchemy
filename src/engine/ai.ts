@@ -392,6 +392,10 @@ function chooseBattleAction(
     return chooseBlockerAction(state, aiPlayer, actions, rng, config);
   }
 
+  if (state.phase.step === 'order_blockers') {
+    return chooseBlockerOrderAction(state, aiPlayer, actions, rng, config);
+  }
+
   return actions[0];
 }
 
@@ -509,6 +513,51 @@ function chooseBlockerAction(
   return bestBlock && bestBlockScore > 0 ? bestBlock : (confirmAction ?? actions[0]);
 }
 
+function chooseBlockerOrderAction(
+  state: GameState,
+  aiPlayer: PlayerId,
+  actions: GameAction[],
+  rng: RNG,
+  config?: AIConfig,
+): GameAction {
+  if (state.phase.type !== 'battle' || state.phase.step !== 'order_blockers') {
+    return actions[0];
+  }
+
+  const setActions = actions.filter((a) => a.type === 'SET_BLOCKER_ORDER');
+  const confirmAction = actions.find((a) => a.type === 'CONFIRM_BLOCKER_ORDER');
+  if (!confirmAction) return setActions[0] ?? actions[0];
+  if (setActions.length === 0) return confirmAction;
+
+  if (!config?.combatLookahead || !isSeededRNG(rng)) {
+    return confirmAction;
+  }
+
+  const candidates = [...setActions, confirmAction];
+  return selectByScore(
+    candidates,
+    (action) => {
+      if (action.type === 'CONFIRM_BLOCKER_ORDER') {
+        const result = simulateAction(state, action, aiPlayer, rng as SeededRNG);
+        return result ? evaluateState(result, aiPlayer, config.weights) : -Infinity;
+      }
+      if (action.type !== 'SET_BLOCKER_ORDER') return -Infinity;
+
+      const orderedState = simulateAction(state, action, aiPlayer, rng as SeededRNG);
+      if (!orderedState) return -Infinity;
+      const postCombatState = simulateAction(
+        orderedState,
+        { type: 'CONFIRM_BLOCKER_ORDER' },
+        aiPlayer,
+        rng as SeededRNG,
+      );
+      return postCombatState ? evaluateState(postCombatState, aiPlayer, config.weights) : -Infinity;
+    },
+    config.temperature,
+    rng,
+  );
+}
+
 function chooseDiscardAction(
   state: GameState,
   aiPlayer: PlayerId,
@@ -582,4 +631,3 @@ export function runAITurn(
 
   return { finalState: currentState, actions, events };
 }
-

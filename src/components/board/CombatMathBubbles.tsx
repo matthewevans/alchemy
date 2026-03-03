@@ -102,7 +102,7 @@ export function CombatMathBubbles() {
       !combatMathEnabled ||
       !phase ||
       phase.type !== 'battle' ||
-      phase.step !== 'declare_blockers' ||
+      (phase.step !== 'declare_blockers' && phase.step !== 'order_blockers') ||
       !players
     ) {
       setMatchups([]);
@@ -114,14 +114,16 @@ export function CombatMathBubbles() {
     let stableCount = 0;
     let lastKey = '';
 
-    const { tentativeBlockers } = phase;
+    const blockerAssignments = phase.step === 'declare_blockers'
+      ? phase.tentativeBlockers
+      : phase.blockers;
     const currentPlayers = players;
 
     function update() {
       const results: MatchupMath[] = [];
       const allBoard = [...currentPlayers.player1.board, ...currentPlayers.player2.board];
 
-      for (const [blockerId, attackerId] of Object.entries(tentativeBlockers)) {
+      for (const [blockerId, attackerId] of Object.entries(blockerAssignments)) {
         const blocker = findPermanent(allBoard, blockerId);
         const attacker = findPermanent(allBoard, attackerId);
         if (!blocker || !attacker) continue;

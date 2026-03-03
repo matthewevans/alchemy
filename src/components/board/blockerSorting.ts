@@ -13,6 +13,7 @@ export function sortCreaturesForBlockers(
   opponentCreatures: Permanent[],
   confirmedAttackers: string[],
   tentativeBlockers: Record<string, string>,
+  attackerBlockerOrder?: Record<string, string[]>,
 ): Permanent[] {
   if (Object.keys(tentativeBlockers).length === 0) return defenderCreatures;
 
@@ -38,7 +39,22 @@ export function sortCreaturesForBlockers(
   blockers.sort((a, b) => {
     const colA = attackerColumn.get(tentativeBlockers[a.permanentId]) ?? Infinity;
     const colB = attackerColumn.get(tentativeBlockers[b.permanentId]) ?? Infinity;
-    return colA - colB;
+    if (colA !== colB) return colA - colB;
+
+    // When two blockers share the same attacker, preserve explicit combat order if present.
+    const attackerA = tentativeBlockers[a.permanentId];
+    const attackerB = tentativeBlockers[b.permanentId];
+    if (
+      attackerA
+      && attackerA === attackerB
+      && attackerBlockerOrder
+      && attackerBlockerOrder[attackerA]
+    ) {
+      const order = attackerBlockerOrder[attackerA];
+      return order.indexOf(a.permanentId) - order.indexOf(b.permanentId);
+    }
+
+    return 0;
   });
 
   return [...blockers, ...nonBlockers];

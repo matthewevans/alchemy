@@ -857,6 +857,48 @@ describe('validateAction', () => {
     });
   });
 
+  describe('order blockers actions', () => {
+    it('SET_BLOCKER_ORDER is valid for the active attacker in order_blockers', () => {
+      const phase: Phase = {
+        type: 'battle',
+        step: 'order_blockers',
+        confirmedAttackers: ['atk_1'],
+        blockers: { blk_1: 'atk_1', blk_2: 'atk_1' },
+        attackerBlockerOrder: { atk_1: ['blk_1', 'blk_2'] },
+      };
+      const state = createTestGameState({
+        phase,
+        activePlayer: 'player1',
+      });
+      const result = validateAction(
+        state,
+        {
+          type: 'SET_BLOCKER_ORDER',
+          attackerPermanentId: 'atk_1',
+          blockerPermanentIds: ['blk_2', 'blk_1'],
+        },
+        'player1',
+      );
+      expect(result).toEqual({ valid: true });
+    });
+
+    it('CONFIRM_BLOCKER_ORDER is invalid for the defending player', () => {
+      const phase: Phase = {
+        type: 'battle',
+        step: 'order_blockers',
+        confirmedAttackers: ['atk_1'],
+        blockers: { blk_1: 'atk_1', blk_2: 'atk_1' },
+        attackerBlockerOrder: { atk_1: ['blk_1', 'blk_2'] },
+      };
+      const state = createTestGameState({
+        phase,
+        activePlayer: 'player1',
+      });
+      const result = validateAction(state, { type: 'CONFIRM_BLOCKER_ORDER' }, 'player2');
+      expect(result.valid).toBe(false);
+    });
+  });
+
   // ─── DISCARD_CARD ───
 
   describe('DISCARD_CARD', () => {
@@ -1129,6 +1171,28 @@ describe('enumerateLegalActions', () => {
     // Blocker is already assigned, so no ASSIGN_BLOCKER for it
     const assignActions = actions.filter((a) => a.type === 'ASSIGN_BLOCKER');
     expect(assignActions).toHaveLength(0);
+  });
+
+  it('in order_blockers, returns confirm + reorder actions for active attacker', () => {
+    const phase: Phase = {
+      type: 'battle',
+      step: 'order_blockers',
+      confirmedAttackers: ['atk_1'],
+      blockers: { blk_1: 'atk_1', blk_2: 'atk_1' },
+      attackerBlockerOrder: { atk_1: ['blk_1', 'blk_2'] },
+    };
+    const state = createTestGameState({
+      phase,
+      activePlayer: 'player1',
+    });
+    const actions = enumerateLegalActions(state, 'player1');
+
+    expect(actions).toContainEqual({ type: 'CONFIRM_BLOCKER_ORDER' });
+    expect(actions).toContainEqual({
+      type: 'SET_BLOCKER_ORDER',
+      attackerPermanentId: 'atk_1',
+      blockerPermanentIds: ['blk_2', 'blk_1'],
+    });
   });
 
   it('in discard phase, returns DISCARD_CARD for each card in hand', () => {

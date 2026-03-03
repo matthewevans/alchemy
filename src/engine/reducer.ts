@@ -73,6 +73,12 @@ export function reduce(
     case 'CONFIRM_BLOCKERS':
       result = handleConfirmBlockers(state);
       break;
+    case 'SET_BLOCKER_ORDER':
+      result = handleSetBlockerOrder(state, action.attackerPermanentId, action.blockerPermanentIds);
+      break;
+    case 'CONFIRM_BLOCKER_ORDER':
+      result = handleConfirmBlockerOrder(state);
+      break;
     case 'DISCARD_CARD':
       result = handleDiscardCard(state, actingPlayer, action.cardIndex);
       break;
@@ -1313,11 +1319,29 @@ function handleConfirmBlockers(state: GameState): ReducerResult {
     assignments: phase.tentativeBlockers,
   });
 
+  const attackerBlockerOrder = buildAttackerBlockerOrder(phase.tentativeBlockers);
+  if (hasMultiBlock(attackerBlockerOrder)) {
+    return {
+      newState: {
+        ...state,
+        phase: {
+          type: 'battle',
+          step: 'order_blockers',
+          confirmedAttackers: phase.confirmedAttackers,
+          blockers: phase.tentativeBlockers,
+          attackerBlockerOrder,
+        },
+      },
+      events,
+    };
+  }
+
   // Resolve combat immediately
   const combatResult = resolveCombat(
     state,
     phase.confirmedAttackers,
     phase.tentativeBlockers,
+    attackerBlockerOrder,
   );
   events.push(...combatResult.events);
 
@@ -1332,23 +1356,77 @@ function handleConfirmBlockers(state: GameState): ReducerResult {
   };
 }
 
+function handleSetBlockerOrder(
+  state: GameState,
+  attackerPermanentId: string,
+  blockerPermanentIds: string[],
+): ReducerResult {
+  const phase = state.phase as Extract<Phase, { type: 'battle'; step: 'order_blockers' }>;
+  return {
+    newState: {
+      ...state,
+      phase: {
+        ...phase,
+        attackerBlockerOrder: {
+          ...phase.attackerBlockerOrder,
+          [attackerPermanentId]: blockerPermanentIds,
+        },
+      },
+    },
+    events: [],
+  };
+}
+
+function handleConfirmBlockerOrder(state: GameState): ReducerResult {
+  const phase = state.phase as Extract<Phase, { type: 'battle'; step: 'order_blockers' }>;
+  const events: GameEvent[] = [{
+    type: 'BLOCKERS_DECLARED',
+    assignments: phase.blockers,
+  }];
+  const combatResult = resolveCombat(
+    state,
+    phase.confirmedAttackers,
+    phase.blockers,
+    phase.attackerBlockerOrder,
+  );
+  events.push(...combatResult.events);
+
+  if (combatResult.newState.phase.type === 'game_over') {
+    return { newState: combatResult.newState, events };
+  }
+
+  return {
+    newState: { ...combatResult.newState, phase: { type: 'play', postCombat: true } },
+    events,
+  };
+}
+
+function buildAttackerBlockerOrder(blockers: Record<string, string>): Record<string, string[]> {
+  const attackerToBlockers: Record<string, string[]> = {};
+  for (const [blockerId, attackerId] of Object.entries(blockers)) {
+    if (!attackerToBlockers[attackerId]) attackerToBlockers[attackerId] = [];
+    attackerToBlockers[attackerId].push(blockerId);
+  }
+  return attackerToBlockers;
+}
+
+function hasMultiBlock(attackerToBlockers: Record<string, string[]>): boolean {
+  return Object.values(attackerToBlockers).some((blockerIds) => blockerIds.length > 1);
+}
+
 // ─── Combat Resolution ───
 
 function resolveCombat(
   state: GameState,
   attackers: string[],
   blockers: Record<string, string>, // blocker → attacker
+  attackerToBlockersOverride?: Record<string, string[]>,
 ): EffectResult {
   const events: GameEvent[] = [];
   let currentState = state;
   const defender = getOpponent(state.activePlayer);
 
-  // Invert blockers: attacker → blockerIds[] (supports multiple blockers per attacker)
-  const attackerToBlockers: Record<string, string[]> = {};
-  for (const [blockerId, attackerId] of Object.entries(blockers)) {
-    if (!attackerToBlockers[attackerId]) attackerToBlockers[attackerId] = [];
-    attackerToBlockers[attackerId].push(blockerId);
-  }
+  const attackerToBlockers = attackerToBlockersOverride ?? buildAttackerBlockerOrder(blockers);
 
   for (const attackerId of attackers) {
     const blockerIds = attackerToBlockers[attackerId];

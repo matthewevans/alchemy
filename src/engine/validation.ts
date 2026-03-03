@@ -34,6 +34,15 @@ export function validateAction(
       return validateRemoveBlocker(state, action.blockerPermanentId, actingPlayer);
     case 'CONFIRM_BLOCKERS':
       return validateConfirmBlockers(state, actingPlayer);
+    case 'SET_BLOCKER_ORDER':
+      return validateSetBlockerOrder(
+        state,
+        action.attackerPermanentId,
+        action.blockerPermanentIds,
+        actingPlayer,
+      );
+    case 'CONFIRM_BLOCKER_ORDER':
+      return validateConfirmBlockerOrder(state, actingPlayer);
     case 'DISCARD_CARD':
       return validateDiscardCard(state, action.cardIndex, actingPlayer);
     case 'CONCEDE':
@@ -269,6 +278,51 @@ function validateConfirmBlockers(state: GameState, actingPlayer: PlayerId): Vali
   return { valid: true };
 }
 
+function validateSetBlockerOrder(
+  state: GameState,
+  attackerPermanentId: string,
+  blockerPermanentIds: string[],
+  actingPlayer: PlayerId,
+): ValidationResult {
+  if (state.phase.type !== 'battle' || state.phase.step !== 'order_blockers') {
+    return { valid: false, reason: 'SET_BLOCKER_ORDER is only valid during order_blockers step' };
+  }
+  if (actingPlayer !== state.activePlayer) {
+    return { valid: false, reason: 'Only the attacking player can order blockers' };
+  }
+
+  const currentOrder = state.phase.attackerBlockerOrder[attackerPermanentId];
+  if (!currentOrder || currentOrder.length <= 1) {
+    return { valid: false, reason: 'No multi-block assignment found for this attacker' };
+  }
+  if (blockerPermanentIds.length !== currentOrder.length) {
+    return { valid: false, reason: 'Blocker order must include every assigned blocker exactly once' };
+  }
+
+  const currentSet = new Set(currentOrder);
+  const nextSet = new Set(blockerPermanentIds);
+  if (nextSet.size !== blockerPermanentIds.length || nextSet.size !== currentSet.size) {
+    return { valid: false, reason: 'Blocker order contains duplicates or missing blockers' };
+  }
+  for (const blockerId of blockerPermanentIds) {
+    if (!currentSet.has(blockerId)) {
+      return { valid: false, reason: 'Blocker order includes an unassigned blocker' };
+    }
+  }
+
+  return { valid: true };
+}
+
+function validateConfirmBlockerOrder(state: GameState, actingPlayer: PlayerId): ValidationResult {
+  if (state.phase.type !== 'battle' || state.phase.step !== 'order_blockers') {
+    return { valid: false, reason: 'CONFIRM_BLOCKER_ORDER is only valid during order_blockers step' };
+  }
+  if (actingPlayer !== state.activePlayer) {
+    return { valid: false, reason: 'Only the attacking player can confirm blocker order' };
+  }
+  return { valid: true };
+}
+
 function validateDiscardCard(
   state: GameState,
   cardIndex: number,
@@ -485,6 +539,27 @@ function enumerateBattleActions(
 
     for (const blockerPermanentId of Object.keys(state.phase.tentativeBlockers)) {
       actions.push({ type: 'REMOVE_BLOCKER', blockerPermanentId });
+    }
+  } else if (state.phase.step === 'order_blockers') {
+    if (actingPlayer !== state.activePlayer) {
+      return;
+    }
+
+    actions.push({ type: 'CONFIRM_BLOCKER_ORDER' });
+
+    for (const [attackerPermanentId, blockerOrder] of Object.entries(state.phase.attackerBlockerOrder)) {
+      if (blockerOrder.length <= 1) continue;
+      for (const blockerPermanentId of blockerOrder) {
+        if (blockerPermanentId === blockerOrder[0]) continue;
+        actions.push({
+          type: 'SET_BLOCKER_ORDER',
+          attackerPermanentId,
+          blockerPermanentIds: [
+            blockerPermanentId,
+            ...blockerOrder.filter((id) => id !== blockerPermanentId),
+          ],
+        });
+      }
     }
   }
   // 'resolving' step has no player actions

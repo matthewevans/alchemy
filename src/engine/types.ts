@@ -93,6 +93,13 @@ export type Phase =
     }
   | {
       type: 'battle';
+      step: 'order_blockers';
+      confirmedAttackers: string[];
+      blockers: Record<string, string>;
+      attackerBlockerOrder: Record<string, string[]>;
+    }
+  | {
+      type: 'battle';
       step: 'resolving';
       attackers: string[];
       blockers: Record<string, string>;
@@ -169,6 +176,12 @@ export type GameAction =
     }
   | { type: 'REMOVE_BLOCKER'; blockerPermanentId: string }
   | { type: 'CONFIRM_BLOCKERS' }
+  | {
+      type: 'SET_BLOCKER_ORDER';
+      attackerPermanentId: string;
+      blockerPermanentIds: string[];
+    }
+  | { type: 'CONFIRM_BLOCKER_ORDER' }
   | { type: 'DISCARD_CARD'; cardIndex: number }
   | { type: 'CONCEDE' };
 

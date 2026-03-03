@@ -1,0 +1,229 @@
+%% Alchemy Engine Internal Flow
+%% Living diagram: keep node IDs stable; add new nodes inside the marked extension zones.
+flowchart TB
+  %% ==========================================================
+  %% 1) Runtime Entrypoints / Orchestration
+  %% ==========================================================
+  subgraph ENTRY["Runtime Entrypoints"]
+    direction TB
+    UI["Human UI Input<br/>(buttons, board interactions)"]
+    AUTO["Auto-Advance Loop<br/>(draw/energy/end, no-attack, no-play)"]
+    AI["AI Controller<br/>(chooseAction via ai.ts)"]
+    NET["Network Controller<br/>(peer action messages)"]
+  end
+
+  subgraph DISPATCH["Dispatch Pipeline"]
+    direction TB
+    CTX["GameDispatchContext<br/>dispatchWithAnimations wrapper"]
+    PRE["Pre-dispatch snapshots<br/>(positions + board + cardId map)"]
+    STORE_DISPATCH["useGameStore.dispatch(action, actingPlayer)"]
+    ENGINE_REDUCE["engine.reduce(state, action, actingPlayer, rng)"]
+    POST["Post-dispatch processing<br/>(legal actions + autosave + animation steps)"]
+  end
+
+  UI --> CTX
+  AUTO --> CTX
+  AI --> CTX
+  NET --> CTX
+  CTX --> PRE --> STORE_DISPATCH --> ENGINE_REDUCE --> POST
+
+  %% ==========================================================
+  %% 2) Core Engine Reduce Pipeline
+  %% ==========================================================
+  subgraph REDUCER["Reducer Core (src/engine/reducer.ts)"]
+    direction TB
+    VALIDATE["validateAction(state, action, actingPlayer)"]
+    ROUTE["Action switch router"]
+    HANDLERS["Action handlers<br/>KEEP_HAND / MULLIGAN_CARDS / ADVANCE_PHASE / PLAY_CARD / ..."]
+    DERIVE_STATS["deriveStatsFromEvents()<br/>damageDealt / damageReceived / creaturesDefeated"]
+    REDUCE_OUT["ReducerResult<br/>{ newState, events }"]
+  end
+
+  ENGINE_REDUCE --> VALIDATE --> ROUTE --> HANDLERS --> DERIVE_STATS --> REDUCE_OUT
+  REDUCE_OUT --> POST
+
+  %% ==========================================================
+  %% 3) Turn / Phase State Machine
+  %% ==========================================================
+  subgraph PHASES["Phase State Machine (GameState.phase)"]
+    direction TB
+    MULLI["mulligan(player)"]
+    DRAW["draw"]
+    ENERGY["energy"]
+    PLAY_PRE["play (pre-combat)"]
+    BATTLE_ATK["battle: declare_attackers"]
+    BATTLE_BLK["battle: declare_blockers"]
+    BATTLE_ORD["battle: order_blockers"]
+    PLAY_POST["play (postCombat=true)"]
+    DISCARD["discard(player, mustDiscard)"]
+    END["end"]
+    GAME_OVER["game_over(winner)"]
+  end
+
+  MULLI -->|player1 keep or mulligan| MULLI
+  MULLI -->|player2 mulligan complete| DRAW
+  DRAW -->|ADVANCE_PHASE| ENERGY
+  ENERGY -->|ADVANCE_PHASE| PLAY_PRE
+  PLAY_PRE -->|ADVANCE_PHASE| BATTLE_ATK
+  PLAY_PRE -->|PLAY_CARD targeted spell| PLAY_PRE
+  PLAY_PRE -->|PLAY_CARD untargeted spell or creature| PLAY_PRE
+  BATTLE_ATK -->|CONFIRM_ATTACKERS none| PLAY_POST
+  BATTLE_ATK -->|attackers declared| BATTLE_BLK
+  BATTLE_BLK -->|single block or no multi block| PLAY_POST
+  BATTLE_BLK -->|multi-block detected| BATTLE_ORD
+  BATTLE_ORD -->|CONFIRM_BLOCKER_ORDER| PLAY_POST
+  PLAY_POST -->|ADVANCE_PHASE no overflow| END
+  PLAY_POST -->|ADVANCE_PHASE hand overflow| DISCARD
+  DISCARD -->|mustDiscard reaches 0| END
+  END -->|ADVANCE_PHASE| DRAW
+
+  DRAW -->|fatigue lethal| GAME_OVER
+  PLAY_PRE -->|combat or spell lethal| GAME_OVER
+  BATTLE_ATK -->|combat lethal| GAME_OVER
+  BATTLE_BLK -->|combat lethal| GAME_OVER
+  BATTLE_ORD -->|combat lethal| GAME_OVER
+  PLAY_POST -->|concede or lethal| GAME_OVER
+  DISCARD -->|CONCEDE| GAME_OVER
+  END -->|CONCEDE| GAME_OVER
+
+  %% ==========================================================
+  %% 4) Card Resolution Pipeline
+  %% ==========================================================
+  subgraph CARD_FLOW["Card Play + Targeting + Effect Steps"]
+    direction TB
+    PLAY_CARD["handlePlayCard"]
+    CARD_TYPE{"Card type?"}
+    CREATURE_PATH["Creature path<br/>- remove from hand<br/>- spend energy<br/>- place permanent"]
+    SPELL_PATH["Spell path<br/>- remove from hand<br/>- spend energy"]
+    ETB["processETBKeywords<br/>(blast/heal/draw)"]
+    TARGET_CHECK{"Has targetingType?"}
+    TARGET_PHASE["phase = targeting(effectId, casterId, sourceCardId, validTargets)"]
+    SELECT_TARGET["SELECT_TARGET / CANCEL_TARGETING"]
+    EFFECT_STEPS["resolveEffectSteps(step[])"]
+    EFFECT_TYPES["resolveEffectStep()<br/>damage | heal | draw | bounce | buff | grant_keyword | destroy | prevent_attack"]
+    SPELL_DONE["SPELL_RESOLVED event + move card to discard"]
+  end
+
+  PLAY_CARD --> CARD_TYPE
+  CARD_TYPE -->|creature| CREATURE_PATH --> ETB --> PLAY_PRE
+  CARD_TYPE -->|spell| SPELL_PATH --> TARGET_CHECK
+  TARGET_CHECK -->|yes| TARGET_PHASE --> SELECT_TARGET --> EFFECT_STEPS --> EFFECT_TYPES --> SPELL_DONE --> PLAY_PRE
+  TARGET_CHECK -->|no| EFFECT_STEPS --> EFFECT_TYPES --> SPELL_DONE --> PLAY_PRE
+
+  %% ==========================================================
+  %% 5) Combat Resolution Pipeline
+  %% ==========================================================
+  subgraph COMBAT["Combat Internals"]
+    direction TB
+    DECLARE["DECLARE/UNDECLARE attackers"]
+    CONFIRM_ATK["CONFIRM_ATTACKERS<br/>tap attackers + ATTACKERS_DECLARED"]
+    DEFENDER_CHECK{"Defender has eligible blockers?"}
+    BLOCK_ASSIGN["ASSIGN/REMOVE blockers + CONFIRM_BLOCKERS"]
+    ORDER_REQ{"Any attacker blocked by >1 blocker?"}
+    ORDER_SET["SET_BLOCKER_ORDER / CONFIRM_BLOCKER_ORDER"]
+    RESOLVE_COMBAT["resolveCombat(attackers, blockers, order)"]
+    COMBAT_BRANCH["Per-attacker branch<br/>unblocked | single-block | multi-block"]
+    KEYWORDS_COMBAT["Combat keyword logic<br/>fury, armor, deathtouch, lifesteal"]
+    DEATH_SWEEP["checkAndRemoveDeadCreatures"]
+    COMBAT_EXIT["Back to post-combat play or game_over"]
+  end
+
+  DECLARE --> CONFIRM_ATK --> DEFENDER_CHECK
+  DEFENDER_CHECK -->|no| RESOLVE_COMBAT
+  DEFENDER_CHECK -->|yes| BLOCK_ASSIGN --> ORDER_REQ
+  ORDER_REQ -->|no| RESOLVE_COMBAT
+  ORDER_REQ -->|yes| ORDER_SET --> RESOLVE_COMBAT
+  RESOLVE_COMBAT --> COMBAT_BRANCH --> KEYWORDS_COMBAT --> DEATH_SWEEP --> COMBAT_EXIT
+
+  %% ==========================================================
+  %% 6) Event / Animation / UX Projection
+  %% ==========================================================
+  subgraph EVENTS["Event Emission and Projection"]
+    direction TB
+    EVENTS_RAW["GameEvent[] emitted by reducer"]
+    GROUP["groupEventsIntoSteps(events, positions, cardIdMap)"]
+    STEP_KIND["Step classifiers<br/>combat | spell | ETB | summon | standalone damage"]
+    ANIM_Q["useAnimationStore.enqueueSteps(queue)"]
+    PLAYBACK["Animation playback<br/>advanceStep + display overlays"]
+    AUDIO["Audio hooks<br/>TTS narration + SFX cues"]
+    UI_SYNC["UI updates from store state + animation overlays"]
+  end
+
+  REDUCE_OUT --> EVENTS_RAW --> GROUP --> STEP_KIND --> ANIM_Q --> PLAYBACK --> UI_SYNC
+  EVENTS_RAW --> AUDIO
+
+  %% ==========================================================
+  %% 7) Determinism / Persistence / Simulation
+  %% ==========================================================
+  subgraph SYSTEM["Determinism + Persistence + Offline Simulation"]
+    direction TB
+    RNG["Seeded RNG<br/>createRNG / restoreRNG"]
+    INIT["createInitialGameState<br/>(ruleset, decks, rng)"]
+    LEGAL["enumerateLegalActions(currentState, actingPlayer)"]
+    SAVE["Autosave pipeline<br/>saveGame(gameState, rngState, metadata)"]
+    SIM["simulateGame / simulateMatchup<br/>AI-vs-AI loops for balancing"]
+  end
+
+  RNG --> INIT --> MULLI
+  REDUCE_OUT --> LEGAL
+  REDUCE_OUT --> SAVE
+  RNG --> SIM
+  INIT --> SIM
+  REDUCE_OUT --> SIM
+  LEGAL --> AI
+
+  %% ==========================================================
+  %% 8) Engine Data Registries (Primary Extension Surface)
+  %% ==========================================================
+  subgraph DATA["Data Registries + Config"]
+    direction TB
+    CARDS["CARD_REGISTRY / ALL_CARDS"]
+    EFFECTS["EFFECT_REGISTRY<br/>(effect steps + targeting model)"]
+    KEYWORDS["KEYWORD_REGISTRY"]
+    RULESET["TIER_CONFIGS / ruleset"]
+    DECKS["Starter decks / deck validation"]
+  end
+
+  CARDS --> PLAY_CARD
+  EFFECTS --> TARGET_CHECK
+  EFFECTS --> EFFECT_TYPES
+  KEYWORDS --> ETB
+  KEYWORDS --> KEYWORDS_COMBAT
+  RULESET --> INIT
+  RULESET --> DRAW
+  RULESET --> ENERGY
+  RULESET --> PLAY_POST
+  DECKS --> INIT
+
+  %% ==========================================================
+  %% 9) Living Extension Hooks
+  %% ==========================================================
+  subgraph EXT["Extension Hooks (Keep IDs Stable)"]
+    direction TB
+    EXT_A["A. New Action<br/>1) types.ts GameAction<br/>2) validation.ts rules + enumeration<br/>3) reducer.ts handler + router case"]
+    EXT_B["B. New Effect Type<br/>1) effects.ts EffectStep union<br/>2) reducer.ts resolveEffectStep case<br/>3) optional animation mapping"]
+    EXT_C["C. New Keyword<br/>1) keywords.ts registry<br/>2) reducer.ts ETB/combat logic<br/>3) cards.ts keyword usage"]
+    EXT_D["D. New Phase / Combat Step<br/>1) types.ts Phase union<br/>2) validation + enumeration<br/>3) reducer transitions + UI controls"]
+    EXT_E["E. New Event + Animation<br/>1) types.ts GameEvent<br/>2) reducer emit points<br/>3) animationStore grouping/effects"]
+    EXT_F["F. New Controller Source<br/>1) OpponentController impl<br/>2) GameDispatchProvider integration"]
+  end
+
+  EXT_A -.updates.-> ROUTE
+  EXT_B -.updates.-> EFFECT_TYPES
+  EXT_C -.updates.-> KEYWORDS_COMBAT
+  EXT_D -.updates.-> PHASES
+  EXT_E -.updates.-> EVENTS
+  EXT_F -.updates.-> ENTRY
+
+  %% Visual grouping styles for maintainability
+  classDef runtime fill:#e8f4ff,stroke:#3b82f6,stroke-width:1px,color:#0f172a;
+  classDef engine fill:#eefce8,stroke:#22c55e,stroke-width:1px,color:#052e16;
+  classDef flow fill:#fff7e8,stroke:#f59e0b,stroke-width:1px,color:#451a03;
+  classDef data fill:#f5f3ff,stroke:#8b5cf6,stroke-width:1px,color:#2e1065;
+  classDef ext fill:#fdf2f8,stroke:#ec4899,stroke-width:1px,color:#500724;
+
+  class UI,AUTO,AI,NET,CTX,PRE,STORE_DISPATCH,ENGINE_REDUCE,POST runtime;
+  class VALIDATE,ROUTE,HANDLERS,DERIVE_STATS,REDUCE_OUT,MULLI,DRAW,ENERGY,PLAY_PRE,BATTLE_ATK,BATTLE_BLK,BATTLE_ORD,PLAY_POST,DISCARD,END,GAME_OVER,PLAY_CARD,CARD_TYPE,CREATURE_PATH,SPELL_PATH,ETB,TARGET_CHECK,TARGET_PHASE,SELECT_TARGET,EFFECT_STEPS,EFFECT_TYPES,SPELL_DONE,DECLARE,CONFIRM_ATK,DEFENDER_CHECK,BLOCK_ASSIGN,ORDER_REQ,ORDER_SET,RESOLVE_COMBAT,COMBAT_BRANCH,KEYWORDS_COMBAT,DEATH_SWEEP,COMBAT_EXIT engine;
+  class EVENTS_RAW,GROUP,STEP_KIND,ANIM_Q,PLAYBACK,AUDIO,UI_SYNC,RNG,INIT,LEGAL,SAVE,SIM flow;
+  class CARDS,EFFECTS,KEYWORDS,RULESET,DECKS data;
+  class EXT_A,EXT_B,EXT_C,EXT_D,EXT_E,EXT_F ext;
