@@ -62,6 +62,8 @@ const DEFAULT_PARTICLE: Particle = {
 
 // Size of pre-rendered glow sprite canvases (px). Large enough for smooth gradients.
 const GLOW_SPRITE_SIZE = 128;
+const MAX_PARTICLE_DPR = 2;
+const MAX_TEXTURE_SPRITES = 64;
 
 export class ParticleSystem {
   private particles: Particle[] = [];
@@ -81,7 +83,7 @@ export class ParticleSystem {
   attach(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d', { alpha: true })!;
-    this.dpr = window.devicePixelRatio || 1;
+    this.dpr = this.getTargetDpr();
     this.resize();
     this.lastTime = performance.now();
     // Don't start the loop until there's work to do
@@ -103,11 +105,15 @@ export class ParticleSystem {
 
   resize() {
     if (!this.canvas) return;
-    this.dpr = window.devicePixelRatio || 1;
+    this.dpr = this.getTargetDpr();
     const rect = this.canvas.getBoundingClientRect();
     this.canvas.width = rect.width * this.dpr;
     this.canvas.height = rect.height * this.dpr;
     // No ctx.scale() here — draw() resets the transform each frame via setTransform
+  }
+
+  private getTargetDpr(): number {
+    return Math.min(window.devicePixelRatio || 1, MAX_PARTICLE_DPR);
   }
 
   emit(partials: Partial<Particle>[]) {
@@ -237,7 +243,12 @@ export class ParticleSystem {
   private getTextureSprite(url: string): HTMLImageElement | null {
     if (this.textureSpriteFailed.has(url)) return null;
     const existing = this.textureSprites.get(url);
-    if (existing) return existing;
+    if (existing) {
+      // Refresh LRU position for frequently used sprites.
+      this.textureSprites.delete(url);
+      this.textureSprites.set(url, existing);
+      return existing;
+    }
     if (this.textureSpriteLoading.has(url)) return null;
 
     this.textureSpriteLoading.add(url);
@@ -246,6 +257,7 @@ export class ParticleSystem {
     img.onload = () => {
       this.textureSpriteLoading.delete(url);
       this.textureSprites.set(url, img);
+      this.evictTextureSpritesIfNeeded();
       this.ensureRunning();
     };
     img.onerror = () => {
@@ -254,6 +266,14 @@ export class ParticleSystem {
     };
     img.src = url;
     return null;
+  }
+
+  private evictTextureSpritesIfNeeded() {
+    while (this.textureSprites.size > MAX_TEXTURE_SPRITES) {
+      const oldest = this.textureSprites.keys().next().value as string | undefined;
+      if (!oldest) break;
+      this.textureSprites.delete(oldest);
+    }
   }
 
   warmSprite(url: string) {

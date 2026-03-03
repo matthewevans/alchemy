@@ -1656,6 +1656,62 @@ describe('Blocker assignment with shared card IDs', () => {
   });
 });
 
+// ─── Derived Stats ───
+
+describe('Derived stats', () => {
+  it('credits damageDealt and damageReceived on unblocked combat damage', () => {
+    const attacker = makePermanent('fire_lava_hound', 'player1', {
+      attack: 3,
+      health: 3,
+      isTapped: true,
+    });
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_blockers',
+        confirmedAttackers: [attacker.permanentId],
+        tentativeBlockers: {},
+      },
+      player1: { board: [attacker, null, null, null, null] },
+      player2: { board: [null, null, null, null, null], health: 20 },
+    });
+
+    const { newState } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+
+    expect(newState.stats.player1.damageDealt).toBe(3);
+    expect(newState.stats.player2.damageReceived).toBe(3);
+  });
+
+  it('credits creaturesDefeated to the opponent when a creature dies', () => {
+    const attacker = makePermanent('fire_lava_hound', 'player1', {
+      attack: 3,
+      health: 3,
+      isTapped: true,
+    });
+    const blocker = makePermanent('water_shell_crab', 'player2', {
+      attack: 1,
+      health: 1,
+    });
+
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_blockers',
+        confirmedAttackers: [attacker.permanentId],
+        tentativeBlockers: { [blocker.permanentId]: attacker.permanentId },
+      },
+      player1: { board: [attacker, null, null, null, null] },
+      player2: { board: [blocker, null, null, null, null] },
+    });
+
+    const { newState } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+
+    expect(newState.stats.player1.creaturesDefeated).toBe(1);
+  });
+});
+
 // ─── Immutability ───
 
 describe('Immutability', () => {

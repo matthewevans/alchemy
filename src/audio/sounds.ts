@@ -49,6 +49,7 @@ interface SampleCatalog {
 const BASE = import.meta.env.BASE_URL;
 const SAMPLE_CATALOG_URL = `${BASE}audio/sfx/catalog.json`;
 const ENABLE_PROCEDURAL_FALLBACK = false;
+const MAX_SAMPLE_WARMS_PER_CALL = 2;
 const sampleBufferCache = new Map<string, AudioBuffer | null>();
 const sampleBufferLoads = new Map<string, Promise<void>>();
 let sampleCatalog: SampleCatalog | null = null;
@@ -298,7 +299,7 @@ function warmSampleBuffer(ctx: AudioContext, url: string): void {
         return;
       }
       const arrayBuffer = await response.arrayBuffer();
-      const buffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+      const buffer = await ctx.decodeAudioData(arrayBuffer);
       sampleBufferCache.set(url, buffer);
     } catch {
       sampleBufferCache.set(url, null);
@@ -339,11 +340,15 @@ function tryPlaySample(
 
   const ready: AudioBuffer[] = [];
   let hasPendingLoad = false;
+  let warmBudget = MAX_SAMPLE_WARMS_PER_CALL;
   for (const path of candidates) {
     const url = toAssetUrl(path);
     const cached = sampleBufferCache.get(url);
     if (cached === undefined) {
-      warmSampleBuffer(ctx, url);
+      if (warmBudget > 0) {
+        warmSampleBuffer(ctx, url);
+        warmBudget -= 1;
+      }
       hasPendingLoad = true;
       continue;
     }

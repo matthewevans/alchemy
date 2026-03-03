@@ -33,6 +33,52 @@ interface GameStore {
   reset: () => void;
 }
 
+interface PendingAutoSave {
+  gameId: string;
+  gameState: GameState;
+  rngState: number;
+  humanPlayer: PlayerId;
+  player1DeckIds: string[];
+  player2DeckIds: string[];
+  aiConfig?: AIConfig;
+}
+
+const AUTOSAVE_DEBOUNCE_MS = 250;
+let pendingAutoSave: PendingAutoSave | null = null;
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function flushAutoSave(): void {
+  if (!pendingAutoSave) return;
+  const save = pendingAutoSave;
+  pendingAutoSave = null;
+  saveGame(
+    save.gameId,
+    save.gameState,
+    save.rngState,
+    save.humanPlayer,
+    save.player1DeckIds,
+    save.player2DeckIds,
+    save.aiConfig,
+  );
+}
+
+function scheduleAutoSave(save: PendingAutoSave): void {
+  pendingAutoSave = save;
+  if (autoSaveTimer !== null) return;
+  autoSaveTimer = setTimeout(() => {
+    autoSaveTimer = null;
+    flushAutoSave();
+  }, AUTOSAVE_DEBOUNCE_MS);
+}
+
+function cancelAutoSave(): void {
+  if (autoSaveTimer !== null) {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
+  }
+  pendingAutoSave = null;
+}
+
 export const useGameStore = create<GameStore>()(
   subscribeWithSelector((set, get) => ({
     state: null,
@@ -66,6 +112,7 @@ export const useGameStore = create<GameStore>()(
       });
 
       saveActiveGameId(gameId);
+      cancelAutoSave();
       saveGame(gameId, gameState, rng.getState(), humanPlayer, p1Ids, p2Ids, aiConfig);
       return gameId;
     },
@@ -102,13 +149,24 @@ export const useGameStore = create<GameStore>()(
 
       // Auto-save unless game just ended
       if (result.newState.phase.type !== 'game_over' && gameId) {
-        saveGame(gameId, result.newState, rng.getState(), humanPlayer, player1DeckIds, player2DeckIds, aiConfig ?? undefined);
+        scheduleAutoSave({
+          gameId,
+          gameState: result.newState,
+          rngState: rng.getState(),
+          humanPlayer,
+          player1DeckIds,
+          player2DeckIds,
+          aiConfig: aiConfig ?? undefined,
+        });
+      } else {
+        cancelAutoSave();
       }
 
       return result.events;
     },
 
     suspend: () => {
+      cancelAutoSave();
       set({
         state: null,
         events: [],
@@ -123,6 +181,7 @@ export const useGameStore = create<GameStore>()(
 
     reset: () => {
       const { gameId } = get();
+      cancelAutoSave();
       clearSavedGame(gameId ?? undefined);
       set({
         state: null,
