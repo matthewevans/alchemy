@@ -1,124 +1,150 @@
 import { getAudioContext, getMusicGain } from './audioContext';
 
-// ─── Ambient State ───
+const BASE = import.meta.env.BASE_URL;
 
-let isPlaying = false;
-let cleanupFn: (() => void) | null = null;
-
-// Pentatonic-friendly chord sequence — gentle, kid-appropriate
-const CHORD_SEQUENCE: number[][] = [
-  [130.8, 196.0, 261.6], // C3 / G3 / C4
-  [146.8, 220.0, 293.7], // D3 / A3 / D4
-  [110.0, 164.8, 220.0], // A2 / E3 / A3
-  [123.5, 185.0, 246.9], // B2 / F#3 / B3
+const TRACK_POOL = [
+  `${BASE}audio/music/background/bgm_01.mp3`,
+  `${BASE}audio/music/background/bgm_02.mp3`,
+  `${BASE}audio/music/background/bgm_03.mp3`,
+  `${BASE}audio/music/background/bgm_04.mp3`,
+  `${BASE}audio/music/background/bgm_05.mp3`,
+  `${BASE}audio/music/background/bgm_06.mp3`,
+  `${BASE}audio/music/background/bgm_07.mp3`,
+  `${BASE}audio/music/background/bgm_08.mp3`,
+  `${BASE}audio/music/background/bgm_09.mp3`,
+  `${BASE}audio/music/background/bgm_10.mp3`,
+  `${BASE}audio/music/background/bgm_11.mp3`,
+  `${BASE}audio/music/background/bgm_12.mp3`,
+  `${BASE}audio/music/background/bgm_13.mp3`,
+  `${BASE}audio/music/background/bgm_14.mp3`,
 ];
 
-const CHORD_DURATION_MS = 8000;
+const BATTLEFIELD_TRACKS: Record<string, string[]> = {
+  fire_molten: TRACK_POOL,
+  water_moonlit_ocean_temple: TRACK_POOL,
+  water_frozen_aurora: TRACK_POOL,
+  earth_jurassic: TRACK_POOL,
+  earth_snowy_forest: TRACK_POOL,
+  air_angelic_sky: TRACK_POOL,
+  shadow_haunted_graveyard: TRACK_POOL,
+  shadow_ruined_archway: TRACK_POOL,
+};
 
-// ─── Public API ───
+let isPlaying = false;
+let currentBattlefieldId: string | null = null;
+let currentSource: AudioBufferSourceNode | null = null;
+let currentGain: GainNode | null = null;
+let loadToken = 0;
+
+const decodedTrackCache = new Map<string, AudioBuffer>();
+const lastTrackByBattlefield = new Map<string, string>();
+
+function getTracksForBattlefield(battlefieldId: string | null): string[] {
+  if (!battlefieldId) return TRACK_POOL;
+  return BATTLEFIELD_TRACKS[battlefieldId] ?? TRACK_POOL;
+}
+
+function pickRandomTrack(battlefieldId: string | null): string {
+  const tracks = getTracksForBattlefield(battlefieldId);
+  if (tracks.length === 0) throw new Error('No ambient music tracks configured.');
+
+  if (!battlefieldId || tracks.length === 1) {
+    return tracks[Math.floor(Math.random() * tracks.length)];
+  }
+
+  const lastTrack = lastTrackByBattlefield.get(battlefieldId);
+  const candidates = lastTrack ? tracks.filter((t) => t !== lastTrack) : tracks;
+  const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+  lastTrackByBattlefield.set(battlefieldId, chosen);
+  return chosen;
+}
+
+async function decodeTrack(ctx: AudioContext, trackUrl: string): Promise<AudioBuffer> {
+  const cached = decodedTrackCache.get(trackUrl);
+  if (cached) return cached;
+
+  const res = await fetch(trackUrl);
+  if (!res.ok) throw new Error(`Failed to load ambient track: ${trackUrl}`);
+  const data = await res.arrayBuffer();
+  const decoded = await ctx.decodeAudioData(data);
+  decodedTrackCache.set(trackUrl, decoded);
+  return decoded;
+}
+
+function fadeOutAndStop(source: AudioBufferSourceNode, gain: GainNode, ctx: AudioContext): void {
+  gain.gain.cancelScheduledValues(ctx.currentTime);
+  gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.6);
+
+  setTimeout(() => {
+    try { source.stop(); } catch { /* already stopped */ }
+    try { source.disconnect(); } catch { /* already disconnected */ }
+    try { gain.disconnect(); } catch { /* already disconnected */ }
+  }, 700);
+}
+
+function stopCurrentTrack(): void {
+  if (!currentSource || !currentGain) return;
+  const ctx = getAudioContext();
+  fadeOutAndStop(currentSource, currentGain, ctx);
+  currentSource = null;
+  currentGain = null;
+}
+
+async function playRandomTrackForCurrentBattlefield(token: number): Promise<void> {
+  const ctx = getAudioContext();
+  const trackUrl = pickRandomTrack(currentBattlefieldId);
+
+  try {
+    const decoded = await decodeTrack(ctx, trackUrl);
+    if (!isPlaying || token !== loadToken) return;
+
+    const source = ctx.createBufferSource();
+    source.buffer = decoded;
+    source.loop = true;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.9);
+
+    source.connect(gain).connect(getMusicGain());
+    source.start();
+
+    const previousSource = currentSource;
+    const previousGain = currentGain;
+    currentSource = source;
+    currentGain = gain;
+
+    if (previousSource && previousGain) {
+      fadeOutAndStop(previousSource, previousGain, ctx);
+    }
+  } catch (err) {
+    if (token !== loadToken) return;
+    console.warn('[Alchemy] Ambient music track failed to play.', err);
+  }
+}
+
+function restartAmbientTrack(): void {
+  loadToken += 1;
+  const token = loadToken;
+  void playRandomTrackForCurrentBattlefield(token);
+}
+
+export function setAmbientMusicBattlefield(battlefieldId: string | null): void {
+  if (currentBattlefieldId === battlefieldId) return;
+  currentBattlefieldId = battlefieldId;
+  if (isPlaying) restartAmbientTrack();
+}
 
 export function startAmbientMusic(): void {
   if (isPlaying) return;
   isPlaying = true;
-
-  const ctx = getAudioContext();
-  const masterDest = getMusicGain();
-  const allNodes: AudioNode[] = [];
-  let chordIndex = 0;
-  let currentOscillators: OscillatorNode[] = [];
-  let currentChordGain: GainNode | null = null;
-  let crossfadeTimeout: ReturnType<typeof setTimeout> | null = null;
-
-  function buildChord(freqs: number[]): { oscillators: OscillatorNode[]; gain: GainNode } {
-    const chordGain = ctx.createGain();
-    chordGain.gain.setValueAtTime(0.001, ctx.currentTime);
-    chordGain.gain.linearRampToValueAtTime(0.33, ctx.currentTime + 2);
-    chordGain.connect(masterDest);
-    allNodes.push(chordGain);
-
-    const oscillators: OscillatorNode[] = [];
-    for (const freq of freqs) {
-      // 3 detuned sines per note for warmth
-      for (const detune of [-4, 0, 4]) {
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        osc.detune.value = detune;
-        osc.connect(chordGain);
-        osc.start();
-        oscillators.push(osc);
-        allNodes.push(osc);
-      }
-    }
-    return { oscillators, gain: chordGain };
-  }
-
-  function advanceChord() {
-    // Fade out previous chord
-    if (currentChordGain) {
-      const oldGain = currentChordGain;
-      const oldOscs = currentOscillators;
-      oldGain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 2);
-      crossfadeTimeout = setTimeout(() => {
-        crossfadeTimeout = null;
-        oldOscs.forEach((o) => { try { o.stop(); } catch { /* already stopped */ } });
-        oldGain.disconnect();
-      }, 2500);
-    }
-
-    chordIndex = (chordIndex + 1) % CHORD_SEQUENCE.length;
-    const result = buildChord(CHORD_SEQUENCE[chordIndex]);
-    currentOscillators = result.oscillators;
-    currentChordGain = result.gain;
-  }
-
-  // Start first chord
-  const initial = buildChord(CHORD_SEQUENCE[0]);
-  currentOscillators = initial.oscillators;
-  currentChordGain = initial.gain;
-
-  const chordInterval = setInterval(advanceChord, CHORD_DURATION_MS);
-
-  // Texture layer: filtered noise for atmosphere
-  const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-  const noiseData = noiseBuffer.getChannelData(0);
-  for (let i = 0; i < noiseData.length; i++) noiseData[i] = Math.random() * 2 - 1;
-
-  const noiseSrc = ctx.createBufferSource();
-  noiseSrc.buffer = noiseBuffer;
-  noiseSrc.loop = true;
-
-  const lpf = ctx.createBiquadFilter();
-  lpf.type = 'lowpass';
-  lpf.frequency.value = 300;
-  lpf.Q.value = 1;
-
-  const noiseGain = ctx.createGain();
-  noiseGain.gain.value = 0.06;
-
-  noiseSrc.connect(lpf).connect(noiseGain).connect(masterDest);
-  noiseSrc.start();
-  allNodes.push(noiseSrc, lpf, noiseGain);
-
-  cleanupFn = () => {
-    clearInterval(chordInterval);
-    if (crossfadeTimeout) clearTimeout(crossfadeTimeout);
-    allNodes.forEach((node) => {
-      try {
-        if ('stop' in node && typeof node.stop === 'function') {
-          (node as OscillatorNode | AudioBufferSourceNode).stop();
-        }
-      } catch { /* already stopped */ }
-      try { node.disconnect(); } catch { /* already disconnected */ }
-    });
-    currentOscillators = [];
-    currentChordGain = null;
-  };
+  restartAmbientTrack();
 }
 
 export function stopAmbientMusic(): void {
   if (!isPlaying) return;
   isPlaying = false;
-  cleanupFn?.();
-  cleanupFn = null;
+  loadToken += 1;
+  stopCurrentTrack();
 }

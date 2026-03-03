@@ -9,6 +9,7 @@ import { CARD_REGISTRY } from '@engine/cards';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { useScreenShake } from '@hooks/useScreenShake';
 import { getDeckPrimaryElement, getDeckAvatarPath } from '@components/card/cardUtils';
+import { setAmbientMusicBattlefield } from '@audio/ambientMusic';
 import { BATTLEFIELD_MAP, getRandomBattlefield } from './battlefields';
 import { PlayerInfo } from './PlayerInfo';
 import { HeroHUD } from './HeroHUD';
@@ -66,7 +67,13 @@ export function GameBoard() {
   const battlefield = battlefieldPref !== 'auto'
     ? BATTLEFIELD_MAP[battlefieldPref] ?? null
     : autoBattlefieldRef.current;
+  const battlefieldId = battlefield?.id ?? null;
   const battlefieldBg = battlefield?.image;
+
+  useEffect(() => {
+    setAmbientMusicBattlefield(battlefieldId);
+  }, [battlefieldId]);
+
   const humanAvatar = useMemo(() => getDeckAvatarPath(humanDeckIds), [humanDeckIds]);
   const opponentAvatar = useMemo(() => getDeckAvatarPath(opponentDeckIds), [opponentDeckIds]);
 
