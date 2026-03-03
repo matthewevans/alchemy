@@ -74,7 +74,7 @@ function loadPersistedPreferences(): PersistedPreferences {
         battlefieldAmbience: typeof parsed.battlefieldAmbience === 'boolean' ? parsed.battlefieldAmbience : true,
         battlefield: typeof parsed.battlefield === 'string' ? parsed.battlefield : 'auto',
         easyReadMode: typeof parsed.easyReadMode === 'boolean' ? parsed.easyReadMode : true,
-        narrationEnabled: typeof parsed.narrationEnabled === 'boolean' ? parsed.narrationEnabled : true,
+        narrationEnabled: typeof parsed.narrationEnabled === 'boolean' ? parsed.narrationEnabled : false,
         tutorialEnabled: typeof parsed.tutorialEnabled === 'boolean' ? parsed.tutorialEnabled : true,
         combatMathEnabled: typeof parsed.combatMathEnabled === 'boolean' ? parsed.combatMathEnabled : true,
         autoUpdateEnabled: typeof parsed.autoUpdateEnabled === 'boolean' ? parsed.autoUpdateEnabled : true,
@@ -83,7 +83,7 @@ function loadPersistedPreferences(): PersistedPreferences {
   } catch {
     // corrupt data — fall through to defaults
   }
-  return { uiScale: DEFAULT_UI_SCALE, boardScale: DEFAULT_BOARD_SCALE, tier: DEFAULT_TIER, difficulty: DEFAULT_DIFFICULTY, battlefieldAmbience: true, battlefield: 'auto', easyReadMode: true, narrationEnabled: true, tutorialEnabled: true, combatMathEnabled: true, autoUpdateEnabled: true };
+  return { uiScale: DEFAULT_UI_SCALE, boardScale: DEFAULT_BOARD_SCALE, tier: DEFAULT_TIER, difficulty: DEFAULT_DIFFICULTY, battlefieldAmbience: true, battlefield: 'auto', easyReadMode: true, narrationEnabled: false, tutorialEnabled: true, combatMathEnabled: true, autoUpdateEnabled: true };
 }
 
 function persistPreferences(prefs: PersistedPreferences) {

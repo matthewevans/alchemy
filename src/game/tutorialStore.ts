@@ -54,6 +54,7 @@ export const useTutorialStore = create<TutorialState>()((set, get) => ({
   shownThisGame: new Set(),
 
   showTip: (stepId) => {
+    if (!usePreferencesStore.getState().tutorialEnabled) return;
     const { currentTip, shownThisGame } = get();
     if (currentTip || shownThisGame.has(stepId)) return;
     const next = new Set(shownThisGame);
