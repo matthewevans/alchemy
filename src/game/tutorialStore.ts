@@ -28,12 +28,12 @@ export const TUTORIAL_STEPS: Record<TutorialStepId, TutorialStepDef> = {
   },
   first_battle: {
     id: 'first_battle',
-    message: 'Time to fight! Tap your creatures to choose who attacks.',
+    message: 'Time to fight! Select your creatures to choose who attacks.',
     anchorSelector: '[data-testid="phase-strip"]',
   },
   first_block: {
     id: 'first_block',
-    message: 'The bad guys are attacking! Tap your creatures to block them.',
+    message: 'The bad guys are attacking! Select your creatures to block them.',
     anchorSelector: '[data-testid="phase-strip"]',
   },
 };

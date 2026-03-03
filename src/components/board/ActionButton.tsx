@@ -91,7 +91,7 @@ export function ActionButton() {
                 data-testid="skip-attack-btn"
                 onClick={() => dispatch({ type: 'CONFIRM_ATTACKERS' }, humanPlayer)}
               >
-                {hasTentativeAttackers ? 'Attack!' : 'Skip'}
+                {hasTentativeAttackers ? 'Attack!' : 'No Attacks'}
               </motion.button>
             </motion.div>
           )}
@@ -116,7 +116,7 @@ export function ActionButton() {
                 whileTap={{ scale: 0.95 }}
                 onClick={() => dispatch({ type: 'CONFIRM_BLOCKERS' }, humanPlayer)}
               >
-                Done
+                {Object.keys(phase.tentativeBlockers).length > 0 ? 'Block!' : 'No Blocks'}
               </motion.button>
             </motion.div>
           )}

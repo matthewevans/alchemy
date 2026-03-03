@@ -14,6 +14,16 @@ export function cancelNarration(): void {
   }
 }
 
+/** Speak arbitrary text aloud (e.g. tutorial tips). */
+export function narrateText(text: string): void {
+  if (!isTTSAvailable()) return;
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.9;
+  utterance.pitch = 1.1;
+  speechSynthesis.speak(utterance);
+}
+
 /** Speak a card's name, stats, and abilities aloud. */
 export function narrateCard(cardId: string, useEasyRead: boolean): void {
   if (!isTTSAvailable()) return;
