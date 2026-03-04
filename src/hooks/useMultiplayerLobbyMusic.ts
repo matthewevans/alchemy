@@ -3,25 +3,25 @@ import { useAudioStore } from '@audio/audioStore';
 import { setMusicVolume } from '@audio/audioContext';
 import { stopAmbientMusic } from '@audio/ambientMusic';
 import { stopDeckSelectMusic } from '@audio/deckSelectMusic';
-import { stopMultiplayerLobbyMusic } from '@audio/multiplayerLobbyMusic';
-import { startTitleMusic, stopTitleMusic } from '@audio/titleMusic';
+import { stopTitleMusic } from '@audio/titleMusic';
+import { startMultiplayerLobbyMusic, stopMultiplayerLobbyMusic } from '@audio/multiplayerLobbyMusic';
 
-/** Plays title-screen music while enabled and stops it when disabled/unmounted. */
-export function useTitleMusic(enabled: boolean): void {
+/** Plays multiplayer-lobby music while enabled and stops it when disabled/unmounted. */
+export function useMultiplayerLobbyMusic(enabled: boolean): void {
   useEffect(() => {
     const initialVolume = useAudioStore.getState().musicVolume;
     setMusicVolume(initialVolume);
 
     if (enabled && initialVolume > 0) {
       stopAmbientMusic();
-      stopDeckSelectMusic();
-      stopMultiplayerLobbyMusic();
-      startTitleMusic();
-    } else {
       stopTitleMusic();
+      stopDeckSelectMusic();
+      startMultiplayerLobbyMusic();
+    } else {
+      stopMultiplayerLobbyMusic();
     }
 
-    return () => stopTitleMusic();
+    return () => stopMultiplayerLobbyMusic();
   }, [enabled]);
 
   useEffect(() => {
@@ -30,13 +30,13 @@ export function useTitleMusic(enabled: boolean): void {
       (vol) => {
         setMusicVolume(vol);
         if (!enabled || vol <= 0) {
-          stopTitleMusic();
+          stopMultiplayerLobbyMusic();
           return;
         }
         stopAmbientMusic();
+        stopTitleMusic();
         stopDeckSelectMusic();
-        stopMultiplayerLobbyMusic();
-        startTitleMusic();
+        startMultiplayerLobbyMusic();
       },
     );
   }, [enabled]);

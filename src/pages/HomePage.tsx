@@ -12,6 +12,7 @@ import { clearSavedGame, loadActiveGameId, loadGame } from '@storage/persistence
 import type { PeerSession } from '@network/peer';
 import { setPendingSession } from '@network/sessionTransfer';
 import { useDeckSelectMusic } from '@hooks/useDeckSelectMusic';
+import { useMultiplayerLobbyMusic } from '@hooks/useMultiplayerLobbyMusic';
 import { useTitleMusic } from '@hooks/useTitleMusic';
 import { TitleScreen } from '@components/ui';
 import type { InitialDeck } from '@components/ui/DeckBuilder';
@@ -50,7 +51,8 @@ export function HomePage() {
   const locationState = location.state as HomeLocationState | null;
   const [subScreen, setSubScreen] = useState<SubScreen>(locationState?.initialScreen ?? 'title');
   useTitleMusic(subScreen === 'title');
-  useDeckSelectMusic(subScreen === 'deck_select' || subScreen === 'multiplayer_lobby');
+  useDeckSelectMusic(subScreen === 'deck_select');
+  useMultiplayerLobbyMusic(subScreen === 'multiplayer_lobby');
   const selectedTier = usePreferencesStore((s) => s.tier);
   const setSelectedTier = usePreferencesStore((s) => s.setTier);
   const selectedDifficulty = usePreferencesStore((s) => s.difficulty);

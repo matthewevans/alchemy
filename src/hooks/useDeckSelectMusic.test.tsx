@@ -6,6 +6,7 @@ import { setMusicVolume } from '@audio/audioContext';
 import { stopAmbientMusic } from '@audio/ambientMusic';
 import { stopTitleMusic } from '@audio/titleMusic';
 import { startDeckSelectMusic, stopDeckSelectMusic } from '@audio/deckSelectMusic';
+import { stopMultiplayerLobbyMusic } from '@audio/multiplayerLobbyMusic';
 
 vi.mock('@audio/audioContext', () => ({
   setSfxVolume: vi.fn(),
@@ -27,6 +28,10 @@ vi.mock('@audio/deckSelectMusic', () => ({
   stopDeckSelectMusic: vi.fn(),
 }));
 
+vi.mock('@audio/multiplayerLobbyMusic', () => ({
+  stopMultiplayerLobbyMusic: vi.fn(),
+}));
+
 function DeckSelectHarness({ enabled }: { enabled: boolean }) {
   useDeckSelectMusic(enabled);
   return null;
@@ -44,6 +49,7 @@ describe('useDeckSelectMusic', () => {
     expect(setMusicVolume).toHaveBeenCalledWith(0.3);
     expect(stopAmbientMusic).toHaveBeenCalledTimes(1);
     expect(stopTitleMusic).toHaveBeenCalledTimes(1);
+    expect(stopMultiplayerLobbyMusic).toHaveBeenCalledTimes(1);
     expect(startDeckSelectMusic).toHaveBeenCalledTimes(1);
 
     unmount();
@@ -57,6 +63,7 @@ describe('useDeckSelectMusic', () => {
     expect(startDeckSelectMusic).not.toHaveBeenCalled();
     expect(stopAmbientMusic).not.toHaveBeenCalled();
     expect(stopTitleMusic).not.toHaveBeenCalled();
+    expect(stopMultiplayerLobbyMusic).not.toHaveBeenCalled();
     expect(stopDeckSelectMusic).toHaveBeenCalled();
   });
 
@@ -73,6 +80,7 @@ describe('useDeckSelectMusic', () => {
     expect(setMusicVolume).toHaveBeenLastCalledWith(0.5);
     expect(stopAmbientMusic).toHaveBeenCalledTimes(1);
     expect(stopTitleMusic).toHaveBeenCalledTimes(1);
+    expect(stopMultiplayerLobbyMusic).toHaveBeenCalledTimes(1);
     expect(startDeckSelectMusic).toHaveBeenCalledTimes(1);
 
     act(() => {

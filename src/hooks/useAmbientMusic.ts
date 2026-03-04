@@ -3,6 +3,7 @@ import { startAmbientMusic, stopAmbientMusic } from '@audio/ambientMusic';
 import { useAudioStore } from '@audio/audioStore';
 import { setMusicVolume } from '@audio/audioContext';
 import { stopDeckSelectMusic } from '@audio/deckSelectMusic';
+import { stopMultiplayerLobbyMusic } from '@audio/multiplayerLobbyMusic';
 import { stopTitleMusic } from '@audio/titleMusic';
 
 /** Starts ambient music when mounted, stops on unmount. */
@@ -12,6 +13,7 @@ export function useAmbientMusic(): void {
     if (initialVolume > 0) {
       stopTitleMusic();
       stopDeckSelectMusic();
+      stopMultiplayerLobbyMusic();
       startAmbientMusic();
     }
 
@@ -30,6 +32,7 @@ export function useAmbientMusic(): void {
         if (vol > 0) {
           stopTitleMusic();
           stopDeckSelectMusic();
+          stopMultiplayerLobbyMusic();
           startAmbientMusic();
         }
         else stopAmbientMusic();

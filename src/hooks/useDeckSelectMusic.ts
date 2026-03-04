@@ -4,6 +4,7 @@ import { setMusicVolume } from '@audio/audioContext';
 import { stopAmbientMusic } from '@audio/ambientMusic';
 import { stopTitleMusic } from '@audio/titleMusic';
 import { startDeckSelectMusic, stopDeckSelectMusic } from '@audio/deckSelectMusic';
+import { stopMultiplayerLobbyMusic } from '@audio/multiplayerLobbyMusic';
 
 /** Plays deck-select music while enabled and stops it when disabled/unmounted. */
 export function useDeckSelectMusic(enabled: boolean): void {
@@ -14,6 +15,7 @@ export function useDeckSelectMusic(enabled: boolean): void {
     if (enabled && initialVolume > 0) {
       stopAmbientMusic();
       stopTitleMusic();
+      stopMultiplayerLobbyMusic();
       startDeckSelectMusic();
     } else {
       stopDeckSelectMusic();
@@ -33,6 +35,7 @@ export function useDeckSelectMusic(enabled: boolean): void {
         }
         stopAmbientMusic();
         stopTitleMusic();
+        stopMultiplayerLobbyMusic();
         startDeckSelectMusic();
       },
     );

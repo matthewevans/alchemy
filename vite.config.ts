@@ -22,7 +22,11 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['**/*.{webp,png,mp3,m4a,json}'],
+      includeAssets: [
+        '**/*.{webp,png,mp3,m4a,json}',
+        'audio/music/title/title_theme.mp3',
+        'audio/music/menu/multiplayer_lobby.mp3',
+      ],
       workbox: {
         clientsClaim: true,
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,

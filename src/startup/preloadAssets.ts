@@ -5,6 +5,7 @@ import { getAvatarPath, getCardArtPath, getElementIconPath } from '@components/c
 import { AMBIENT_TRACK_POOL } from '@audio/ambientMusic';
 import { TITLE_TRACK_URL } from '@audio/titleMusic';
 import { DECK_SELECT_TRACK_URL } from '@audio/deckSelectMusic';
+import { MULTIPLAYER_LOBBY_TRACK_URL } from '@audio/multiplayerLobbyMusic';
 
 type StartupPhase = 'discovering' | 'loading' | 'complete';
 
@@ -141,6 +142,7 @@ function listPriorityAssets(): string[] {
   return [
     TITLE_TRACK_URL,
     DECK_SELECT_TRACK_URL,
+    MULTIPLAYER_LOBBY_TRACK_URL,
     ...AMBIENT_TRACK_POOL,
   ];
 }
