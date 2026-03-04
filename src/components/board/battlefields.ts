@@ -165,6 +165,7 @@ export const BATTLEFIELDS: BattlefieldConfig[] = [
   { id: 'air_angelic_sky',            label: 'Angelic Sky',      element: 'air',    image: img('air_angelic_sky'),            particles: AIR_WISPS },
   { id: 'shadow_haunted_graveyard',   label: 'Haunted Graveyard', element: 'shadow', image: img('shadow_haunted_graveyard'),  particles: SHADOW_FLAMES },
   { id: 'shadow_ruined_archway',      label: 'Ruined Archway',  element: 'shadow', image: img('shadow_ruined_archway'),      particles: SHADOW_MOTES },
+  { id: 'shadow_moon_coven_sanctum',  label: 'Moon Coven Sanctum', element: 'shadow', image: img('shadow_moon_coven_sanctum'), particles: SHADOW_MOTES },
 ];
 
 export const BATTLEFIELD_MAP: Record<string, BattlefieldConfig> = Object.fromEntries(
