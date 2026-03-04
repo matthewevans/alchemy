@@ -11,6 +11,9 @@ interface LearningPolicyPrefs {
   readingLevel: ReadingLevel;
   mathLevel: MathLevel;
   learningFrequency: LearningFrequency;
+  readingChallengeWeight: number;
+  wordChallengeWeight: number;
+  mathChallengeWeight: number;
 }
 
 interface LearningPolicyInput {
@@ -26,21 +29,40 @@ type LearningGateAction =
   | Extract<GameAction, { type: 'CONFIRM_ATTACKERS' }>
   | Extract<GameAction, { type: 'CONFIRM_BLOCKERS' }>;
 
+type LearningPromptBucket = 'reading' | 'word' | 'math';
+
 function isLearningGateAction(action: GameAction): action is LearningGateAction {
   return action.type === 'CONFIRM_ATTACKERS' || action.type === 'CONFIRM_BLOCKERS';
 }
 
-function chooseDomain(
-  readingEnabled: boolean,
-  mathEnabled: boolean,
-  challengeIndex: number,
-): LearningDomain | null {
-  if (readingEnabled && mathEnabled) {
-    return challengeIndex % 2 === 0 ? 'math' : 'reading';
+function sanitizeWeight(weight: number): number {
+  if (!Number.isFinite(weight)) return 0;
+  return Math.max(0, Math.round(weight));
+}
+
+function choosePromptBucket(
+  prefs: LearningPolicyPrefs,
+  selectionSeed: number,
+): LearningPromptBucket | null {
+  const choices: Array<{ bucket: LearningPromptBucket; weight: number }> = [];
+
+  if (prefs.mathChallengesEnabled) {
+    choices.push({ bucket: 'math', weight: sanitizeWeight(prefs.mathChallengeWeight) });
   }
-  if (readingEnabled) return 'reading';
-  if (mathEnabled) return 'math';
-  return null;
+  if (prefs.readingChallengesEnabled) {
+    choices.push({ bucket: 'reading', weight: sanitizeWeight(prefs.readingChallengeWeight) });
+    choices.push({ bucket: 'word', weight: sanitizeWeight(prefs.wordChallengeWeight) });
+  }
+
+  const totalWeight = choices.reduce((sum, choice) => sum + choice.weight, 0);
+  if (totalWeight <= 0) return null;
+
+  let roll = selectionSeed % totalWeight;
+  for (const choice of choices) {
+    roll -= choice.weight;
+    if (roll < 0) return choice.bucket;
+  }
+  return choices[choices.length - 1]?.bucket ?? null;
 }
 
 function chooseReward(
@@ -63,11 +85,30 @@ function chooseReward(
 function buildPromptSeed(
   state: GameState,
   action: LearningGateAction,
-  domain: LearningDomain,
+  bucket: LearningPromptBucket,
+  opportunityIndex: number,
+): number {
+  const domain: LearningDomain = bucket === 'math' ? 'math' : 'reading';
+  const signature = [
+    bucket,
+    domain,
+    action.type,
+    String(opportunityIndex),
+    String(state.turn),
+    state.activePlayer,
+    String(state.players.player1.health),
+    String(state.players.player2.health),
+    state.phase.type,
+  ].join('|');
+  return hashStringToSeed(signature);
+}
+
+function buildSelectionSeed(
+  state: GameState,
+  action: LearningGateAction,
   opportunityIndex: number,
 ): number {
   const signature = [
-    domain,
     action.type,
     String(opportunityIndex),
     String(state.turn),
@@ -90,22 +131,21 @@ export function maybeBuildLearningChallengeAction(
 
   const interval = LEARNING_FREQUENCY_INTERVAL[prefs.learningFrequency];
   if (opportunityIndex % interval !== 0) return null;
-  const challengeIndex = opportunityIndex / interval;
-
-  const domain = chooseDomain(
-    prefs.readingChallengesEnabled,
-    prefs.mathChallengesEnabled,
-    challengeIndex,
-  );
-  if (!domain) return null;
+  const selectionSeed = buildSelectionSeed(state, action, opportunityIndex);
+  const promptBucket = choosePromptBucket(prefs, selectionSeed);
+  if (!promptBucket) return null;
 
   const reward = chooseReward(state, action);
   if (!reward) return null;
 
-  const promptSeed = buildPromptSeed(state, action, domain, opportunityIndex);
-  const prompt = domain === 'reading'
-    ? buildReadingPrompt(prefs.readingLevel, promptSeed)
-    : buildMathPrompt(prefs.mathLevel, promptSeed);
+  const promptSeed = buildPromptSeed(state, action, promptBucket, opportunityIndex);
+  const prompt = promptBucket === 'math'
+    ? buildMathPrompt(prefs.mathLevel, promptSeed)
+    : buildReadingPrompt(
+      prefs.readingLevel,
+      promptSeed,
+      promptBucket === 'word' ? 'word_to_picture' : 'missing_letter',
+    );
 
   return {
     type: 'START_LEARNING_CHALLENGE',

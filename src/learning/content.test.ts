@@ -9,6 +9,13 @@ describe('learning content', () => {
     expect(first).toEqual(second);
   });
 
+  it('supports forcing missing-letter or word-to-picture reading prompts', () => {
+    const missingLetter = buildReadingPrompt('r2', 4242, 'missing_letter');
+    const wordToPicture = buildReadingPrompt('r2', 4242, 'word_to_picture');
+    expect(missingLetter.kind).toBe('missing_letter');
+    expect(wordToPicture.kind).toBe('word_to_picture');
+  });
+
   it('builds deterministic math prompts for the same seed', () => {
     const first = buildMathPrompt('m2', 9911);
     const second = buildMathPrompt('m2', 9911);

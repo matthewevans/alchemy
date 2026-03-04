@@ -15,6 +15,9 @@ export const DEFAULT_UI_SCALE = 1;
 export const DEFAULT_BOARD_SCALE = 0.85;
 const DEFAULT_TIER: Tier = 'apprentice';
 const DEFAULT_DIFFICULTY: AIDifficulty = 'medium';
+const DEFAULT_READING_CHALLENGE_WEIGHT = 5;
+const DEFAULT_WORD_CHALLENGE_WEIGHT = 3;
+const DEFAULT_MATH_CHALLENGE_WEIGHT = 5;
 
 interface PreferencesState {
   uiScale: number;
@@ -35,6 +38,9 @@ interface PreferencesState {
   readingLevel: ReadingLevel;
   mathLevel: MathLevel;
   learningFrequency: LearningFrequency;
+  readingChallengeWeight: number;
+  wordChallengeWeight: number;
+  mathChallengeWeight: number;
   autoUpdateEnabled: boolean;
   setStatLayout: (layout: StatLayout) => void;
   setUIScale: (scale: number) => void;
@@ -56,6 +62,9 @@ interface PreferencesState {
   setReadingLevel: (level: ReadingLevel) => void;
   setMathLevel: (level: MathLevel) => void;
   setLearningFrequency: (frequency: LearningFrequency) => void;
+  setReadingChallengeWeight: (weight: number) => void;
+  setWordChallengeWeight: (weight: number) => void;
+  setMathChallengeWeight: (weight: number) => void;
   setAutoUpdateEnabled: (enabled: boolean) => void;
 }
 
@@ -86,7 +95,15 @@ interface PersistedPreferences {
   readingLevel: ReadingLevel;
   mathLevel: MathLevel;
   learningFrequency: LearningFrequency;
+  readingChallengeWeight: number;
+  wordChallengeWeight: number;
+  mathChallengeWeight: number;
   autoUpdateEnabled: boolean;
+}
+
+function sanitizeChallengeWeight(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  return Math.max(0, Math.min(10, Math.round(value)));
 }
 
 function loadPersistedPreferences(): PersistedPreferences {
@@ -113,6 +130,18 @@ function loadPersistedPreferences(): PersistedPreferences {
         readingLevel: ['r0', 'r1', 'r2', 'r3'].includes(parsed.readingLevel) ? parsed.readingLevel : 'r1',
         mathLevel: ['m0', 'm1', 'm2', 'm3'].includes(parsed.mathLevel) ? parsed.mathLevel : 'm1',
         learningFrequency: ['low', 'medium', 'high'].includes(parsed.learningFrequency) ? parsed.learningFrequency : 'medium',
+        readingChallengeWeight: sanitizeChallengeWeight(
+          parsed.readingChallengeWeight,
+          DEFAULT_READING_CHALLENGE_WEIGHT,
+        ),
+        wordChallengeWeight: sanitizeChallengeWeight(
+          parsed.wordChallengeWeight,
+          DEFAULT_WORD_CHALLENGE_WEIGHT,
+        ),
+        mathChallengeWeight: sanitizeChallengeWeight(
+          parsed.mathChallengeWeight,
+          DEFAULT_MATH_CHALLENGE_WEIGHT,
+        ),
         autoUpdateEnabled: typeof parsed.autoUpdateEnabled === 'boolean' ? parsed.autoUpdateEnabled : true,
       };
     }
@@ -138,6 +167,9 @@ function loadPersistedPreferences(): PersistedPreferences {
     readingLevel: 'r1',
     mathLevel: 'm1',
     learningFrequency: 'medium',
+    readingChallengeWeight: DEFAULT_READING_CHALLENGE_WEIGHT,
+    wordChallengeWeight: DEFAULT_WORD_CHALLENGE_WEIGHT,
+    mathChallengeWeight: DEFAULT_MATH_CHALLENGE_WEIGHT,
     autoUpdateEnabled: true,
   };
 }
@@ -170,6 +202,9 @@ export const usePreferencesStore = create<PreferencesState>()(
     readingLevel: initial.readingLevel,
     mathLevel: initial.mathLevel,
     learningFrequency: initial.learningFrequency,
+    readingChallengeWeight: initial.readingChallengeWeight,
+    wordChallengeWeight: initial.wordChallengeWeight,
+    mathChallengeWeight: initial.mathChallengeWeight,
     autoUpdateEnabled: initial.autoUpdateEnabled,
 
     setStatLayout: (statLayout) => {
@@ -276,6 +311,33 @@ export const usePreferencesStore = create<PreferencesState>()(
     setLearningFrequency: (learningFrequency) => {
       persistPreferences({ ...get(), learningFrequency });
       set({ learningFrequency });
+    },
+
+    setReadingChallengeWeight: (readingChallengeWeight) => {
+      const clamped = sanitizeChallengeWeight(
+        readingChallengeWeight,
+        DEFAULT_READING_CHALLENGE_WEIGHT,
+      );
+      persistPreferences({ ...get(), readingChallengeWeight: clamped });
+      set({ readingChallengeWeight: clamped });
+    },
+
+    setWordChallengeWeight: (wordChallengeWeight) => {
+      const clamped = sanitizeChallengeWeight(
+        wordChallengeWeight,
+        DEFAULT_WORD_CHALLENGE_WEIGHT,
+      );
+      persistPreferences({ ...get(), wordChallengeWeight: clamped });
+      set({ wordChallengeWeight: clamped });
+    },
+
+    setMathChallengeWeight: (mathChallengeWeight) => {
+      const clamped = sanitizeChallengeWeight(
+        mathChallengeWeight,
+        DEFAULT_MATH_CHALLENGE_WEIGHT,
+      );
+      persistPreferences({ ...get(), mathChallengeWeight: clamped });
+      set({ mathChallengeWeight: clamped });
     },
 
     setAutoUpdateEnabled: (autoUpdateEnabled) => {

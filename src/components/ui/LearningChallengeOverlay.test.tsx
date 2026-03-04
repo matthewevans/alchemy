@@ -74,10 +74,87 @@ describe('LearningChallengeOverlay', () => {
   it('shows reward details for the target creature', () => {
     render(<LearningChallengeOverlay />);
 
-    expect(screen.getByText('Reward Target')).toBeInTheDocument();
+    expect(screen.getByText('Bonus Locked On')).toBeInTheDocument();
     expect(screen.getByText('Lava Hound')).toBeInTheDocument();
     expect(screen.getByText('+1 ATK')).toBeInTheDocument();
     expect(screen.getByText('+0 HP')).toBeInTheDocument();
+  });
+
+  it('renders the redesigned math prompt card', () => {
+    useGameStore.setState((current) => {
+      if (!current.state || current.state.phase.type !== 'learning') return current;
+      return {
+        ...current,
+        state: {
+          ...current.state,
+          phase: {
+            ...current.state.phase,
+            prompt: {
+              id: 'prompt-ui-test-math',
+              domain: 'math',
+              kind: 'addition',
+              prompt: '7 + ? = 10',
+              options: [
+                { id: 'math:2', text: '2' },
+                { id: 'math:3', text: '3' },
+                { id: 'math:4', text: '4' },
+                { id: 'math:5', text: '5' },
+              ],
+              correctOptionId: 'math:3',
+            },
+          },
+        },
+        legalActions: [
+          { type: 'ANSWER_LEARNING_CHALLENGE', optionId: 'math:2' },
+          { type: 'ANSWER_LEARNING_CHALLENGE', optionId: 'math:3' },
+          { type: 'ANSWER_LEARNING_CHALLENGE', optionId: 'math:4' },
+          { type: 'ANSWER_LEARNING_CHALLENGE', optionId: 'math:5' },
+        ],
+      };
+    });
+
+    render(<LearningChallengeOverlay />);
+    expect(screen.getByText('Solve this math problem')).toBeInTheDocument();
+    expect(screen.getByText('Equation')).toBeInTheDocument();
+  });
+
+  it('renders the redesigned word-to-picture prompt card', () => {
+    useGameStore.setState((current) => {
+      if (!current.state || current.state.phase.type !== 'learning') return current;
+      return {
+        ...current,
+        state: {
+          ...current.state,
+          phase: {
+            ...current.state.phase,
+            prompt: {
+              id: 'prompt-ui-test-word',
+              domain: 'reading',
+              kind: 'word_to_picture',
+              prompt: 'Pick the picture for: cat',
+              options: [
+                { id: 'picture:cat', text: 'Picture 1', imageId: '/img/cat.webp' },
+                { id: 'picture:dog', text: 'Picture 2', imageId: '/img/dog.webp' },
+                { id: 'picture:hat', text: 'Picture 3', imageId: '/img/hat.webp' },
+                { id: 'picture:bat', text: 'Picture 4', imageId: '/img/bat.webp' },
+              ],
+              correctOptionId: 'picture:cat',
+            },
+          },
+        },
+        legalActions: [
+          { type: 'ANSWER_LEARNING_CHALLENGE', optionId: 'picture:cat' },
+          { type: 'ANSWER_LEARNING_CHALLENGE', optionId: 'picture:dog' },
+          { type: 'ANSWER_LEARNING_CHALLENGE', optionId: 'picture:hat' },
+          { type: 'ANSWER_LEARNING_CHALLENGE', optionId: 'picture:bat' },
+        ],
+      };
+    });
+
+    render(<LearningChallengeOverlay />);
+    expect(screen.getByText('Find the matching picture')).toBeInTheDocument();
+    expect(screen.getByText('Target Word')).toBeInTheDocument();
+    expect(screen.getByText('CAT')).toBeInTheDocument();
   });
 
   it('shows immediate success feedback and dispatches after one second', () => {

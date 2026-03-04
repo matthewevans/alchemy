@@ -28,6 +28,9 @@ describe('learning policy', () => {
         readingLevel: 'r1' as const,
         mathLevel: 'm1' as const,
         learningFrequency: 'high' as const,
+        readingChallengeWeight: 10,
+        wordChallengeWeight: 0,
+        mathChallengeWeight: 0,
       },
     };
 
@@ -38,7 +41,7 @@ describe('learning policy', () => {
     expect(first?.reward.permanentId).toBe(attacker.permanentId);
   });
 
-  it('alternates reading/math by triggered challenge count at medium frequency', () => {
+  it('routes challenge type using explicit weights', () => {
     resetTestCounters();
     const attacker = makePermanent('fire_lava_hound', 'player1', { summonedThisTurn: false });
     const state = createTestGameState({
@@ -62,20 +65,40 @@ describe('learning policy', () => {
         mathChallengesEnabled: true,
         readingLevel: 'r1' as const,
         mathLevel: 'm1' as const,
-        learningFrequency: 'medium' as const,
+        learningFrequency: 'high' as const,
+        readingChallengeWeight: 0,
+        wordChallengeWeight: 10,
+        mathChallengeWeight: 0,
       },
     };
 
-    const firstTriggered = maybeBuildLearningChallengeAction({
+    const wordOnly = maybeBuildLearningChallengeAction({
       ...baseInput,
-      opportunityIndex: 2,
+      opportunityIndex: 1,
     });
-    const secondTriggered = maybeBuildLearningChallengeAction({
+    const readingOnly = maybeBuildLearningChallengeAction({
       ...baseInput,
-      opportunityIndex: 4,
+      opportunityIndex: 1,
+      prefs: {
+        ...baseInput.prefs,
+        readingChallengeWeight: 10,
+        wordChallengeWeight: 0,
+        mathChallengeWeight: 0,
+      },
+    });
+    const mathOnly = maybeBuildLearningChallengeAction({
+      ...baseInput,
+      opportunityIndex: 1,
+      prefs: {
+        ...baseInput.prefs,
+        readingChallengeWeight: 0,
+        wordChallengeWeight: 0,
+        mathChallengeWeight: 10,
+      },
     });
 
-    expect(firstTriggered?.prompt.domain).toBe('reading');
-    expect(secondTriggered?.prompt.domain).toBe('math');
+    expect(wordOnly?.prompt.kind).toBe('word_to_picture');
+    expect(readingOnly?.prompt.kind).toBe('missing_letter');
+    expect(mathOnly?.prompt.domain).toBe('math');
   });
 });

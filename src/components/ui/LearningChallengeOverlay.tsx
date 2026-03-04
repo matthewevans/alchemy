@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { CARD_REGISTRY } from '@engine/cards';
+import { getPositions, type ElementPosition } from '@game/animationStore';
 import { gameButtonClass } from './buttonStyles';
 
 const ANSWER_FEEDBACK_MS = 1000;
@@ -45,6 +46,12 @@ function getMathTokens(promptText: string): string[] | null {
   return hasOperator && hasEquals ? tokens : null;
 }
 
+function samePosition(a: ElementPosition | null, b: ElementPosition | null): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
 export function LearningChallengeOverlay() {
   const state = useGameStore((s) => s.state);
   const legalActions = useGameStore((s) => s.legalActions);
@@ -53,6 +60,7 @@ export function LearningChallengeOverlay() {
   const phase = state?.phase;
   const [answerFeedback, setAnswerFeedback] = useState<AnswerFeedbackState | null>(null);
   const [resolvingPromptId, setResolvingPromptId] = useState<string | null>(null);
+  const [rewardPosition, setRewardPosition] = useState<ElementPosition | null>(null);
   const resolveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -68,6 +76,10 @@ export function LearningChallengeOverlay() {
     phase && phase.type === 'learning' && phase.player === humanPlayer
       ? phase.prompt.id
       : null;
+  const rewardPermanentId =
+    phase && phase.type === 'learning' && phase.player === humanPlayer
+      ? phase.reward.permanentId
+      : null;
 
   useEffect(() => {
     if (resolveTimerRef.current) {
@@ -75,6 +87,26 @@ export function LearningChallengeOverlay() {
       resolveTimerRef.current = null;
     }
   }, [promptId]);
+
+  useEffect(() => {
+    if (!rewardPermanentId) return undefined;
+
+    const syncPosition = () => {
+      const next = getPositions().get(rewardPermanentId);
+      const nextPosition = next ? { ...next } : null;
+      setRewardPosition((prev) => (samePosition(prev, nextPosition) ? prev : nextPosition));
+    };
+
+    const frameId = window.requestAnimationFrame(syncPosition);
+    const intervalId = window.setInterval(syncPosition, 120);
+    window.addEventListener('resize', syncPosition);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearInterval(intervalId);
+      window.removeEventListener('resize', syncPosition);
+    };
+  }, [rewardPermanentId]);
 
   if (!state || !phase || phase.type !== 'learning' || phase.player !== humanPlayer) {
     return null;
@@ -133,20 +165,58 @@ export function LearningChallengeOverlay() {
     : phase.prompt.domain === 'math'
       ? 'grid grid-cols-2 gap-2 mt-4'
       : 'grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4';
+  const activeRewardPosition = rewardPermanentId ? rewardPosition : null;
+  const rewardRingStyle = activeRewardPosition
+    ? {
+      left: activeRewardPosition.x - 6,
+      top: activeRewardPosition.y - 6,
+      width: activeRewardPosition.width + 12,
+      height: activeRewardPosition.height + 12,
+    }
+    : null;
+  const rewardBadgeStyle = activeRewardPosition
+    ? {
+      left: activeRewardPosition.x + activeRewardPosition.width / 2,
+      top: activeRewardPosition.y - 12,
+    }
+    : null;
 
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 sm:items-start sm:justify-start sm:bg-transparent sm:backdrop-blur-none sm:p-0 sm:pointer-events-none"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
+        {rewardRingStyle && (
+          <motion.div
+            className="pointer-events-none fixed z-[61] hidden rounded-2xl border-2 border-emerald-300/80 bg-emerald-400/10 shadow-[0_0_20px_rgba(74,222,128,0.35)] sm:block"
+            style={rewardRingStyle}
+            animate={{ opacity: [0.45, 0.9, 0.45] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        )}
+        {rewardBadgeStyle && (
+          <motion.div
+            className="pointer-events-none fixed z-[62] hidden sm:block"
+            style={rewardBadgeStyle}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+          >
+            <div className="translate-x-[-50%] translate-y-[-100%] rounded-lg border border-emerald-300/70 bg-slate-950/88 px-3 py-1.5 text-xs font-bold text-emerald-100 shadow-xl backdrop-blur-sm">
+              <span>{formatSigned(phase.reward.attackBonus)} ATK</span>
+              <span className="mx-2 text-emerald-200/65">•</span>
+              <span>{formatSigned(phase.reward.healthBonus)} HP</span>
+            </div>
+          </motion.div>
+        )}
         <motion.div
-          className="w-full max-w-xl rounded-2xl border border-amber-400/35 bg-slate-900/95 p-5 shadow-2xl"
-          initial={{ opacity: 0, scale: 0.92, y: 16 }}
+          className="w-full max-w-xl rounded-2xl border border-amber-400/35 bg-slate-900/95 p-5 shadow-2xl sm:pointer-events-auto sm:ml-3 sm:mt-[calc(env(safe-area-inset-top)+0.75rem)] sm:max-w-md"
+          initial={{ opacity: 0, scale: 0.95, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92, y: 16 }}
+          exit={{ opacity: 0, scale: 0.95, y: 16 }}
           transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="flex items-start justify-between gap-3">
@@ -165,7 +235,7 @@ export function LearningChallengeOverlay() {
 
           <div className="mt-3 rounded-xl border border-emerald-300/35 bg-emerald-900/20 p-3">
             <p className="text-emerald-100/85 text-xs font-semibold uppercase tracking-[0.08em]">
-              Reward Target
+              Bonus Locked On
             </p>
             <div className="mt-1 flex items-center justify-between gap-3">
               <p className="text-white text-sm font-semibold">{rewardTargetName}</p>
@@ -254,13 +324,8 @@ export function LearningChallengeOverlay() {
             </p>
           )}
           <p className="text-white/60 text-sm mt-2">
-            Answer correctly for a temporary combat bonus.
+            Answer correctly to empower the highlighted creature.
           </p>
-          {!singleLetterChoices && phase.prompt.domain !== 'math' && (
-            <p className="text-emerald-200/95 text-sm mt-2 font-semibold">
-              Reward: {rewardText}
-            </p>
-          )}
 
           <div className={optionGridClass}>
             {phase.prompt.options.map((option) => {

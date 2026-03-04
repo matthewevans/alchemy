@@ -40,7 +40,10 @@ export function dispatchWithAnimations(
 
   if (state && (action.type === 'CONFIRM_ATTACKERS' || action.type === 'CONFIRM_BLOCKERS')) {
     const prefs = usePreferencesStore.getState();
-    const hasEnabledDomain = prefs.readingChallengesEnabled || prefs.mathChallengesEnabled;
+    const hasReadingWeight = prefs.readingChallengeWeight > 0 || prefs.wordChallengeWeight > 0;
+    const hasMathWeight = prefs.mathChallengeWeight > 0;
+    const hasEnabledDomain = (prefs.readingChallengesEnabled && hasReadingWeight)
+      || (prefs.mathChallengesEnabled && hasMathWeight);
     if (
       prefs.learningChallengesEnabled
       && hasEnabledDomain
@@ -60,6 +63,9 @@ export function dispatchWithAnimations(
           readingLevel: prefs.readingLevel,
           mathLevel: prefs.mathLevel,
           learningFrequency: prefs.learningFrequency,
+          readingChallengeWeight: prefs.readingChallengeWeight,
+          wordChallengeWeight: prefs.wordChallengeWeight,
+          mathChallengeWeight: prefs.mathChallengeWeight,
         },
       });
 

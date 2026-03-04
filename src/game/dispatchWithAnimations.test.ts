@@ -26,6 +26,9 @@ describe('dispatchWithAnimations', () => {
       readingLevel: 'r1',
       mathLevel: 'm1',
       learningFrequency: 'medium',
+      readingChallengeWeight: 5,
+      wordChallengeWeight: 3,
+      mathChallengeWeight: 5,
     });
   });
 
@@ -101,6 +104,9 @@ describe('dispatchWithAnimations', () => {
       mathChallengesEnabled: false,
       readingLevel: 'r1',
       learningFrequency: 'high',
+      readingChallengeWeight: 10,
+      wordChallengeWeight: 0,
+      mathChallengeWeight: 0,
     });
 
     const attacker = makePermanent('fire_lava_hound', 'player1', {

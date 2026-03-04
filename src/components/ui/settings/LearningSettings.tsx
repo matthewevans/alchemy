@@ -1,5 +1,5 @@
 import { usePreferencesStore } from '@game/preferencesStore';
-import { SettingsSelect, SettingsToggle } from './SettingsControls';
+import { SettingsSelect, SettingsSlider, SettingsToggle } from './SettingsControls';
 import type { LearningFrequency, MathLevel, ReadingLevel } from '../../../learning/config';
 
 export function LearningSettings() {
@@ -16,6 +16,12 @@ export function LearningSettings() {
     setMathLevel,
     learningFrequency,
     setLearningFrequency,
+    readingChallengeWeight,
+    setReadingChallengeWeight,
+    wordChallengeWeight,
+    setWordChallengeWeight,
+    mathChallengeWeight,
+    setMathChallengeWeight,
   } = usePreferencesStore();
 
   return (
@@ -78,6 +84,42 @@ export function LearningSettings() {
           { value: 'high', label: 'High - every chance' },
         ]}
         onChange={(value) => setLearningFrequency(value as LearningFrequency)}
+      />
+      <SettingsSlider
+        id="reading-challenge-weight"
+        label="Reading Weight (Missing Letter)"
+        description="Higher values show more missing-letter prompts when learning challenges trigger."
+        value={readingChallengeWeight}
+        displayValue={`${readingChallengeWeight}`}
+        min={0}
+        max={10}
+        step={1}
+        accentColor="#22d3ee"
+        onChange={setReadingChallengeWeight}
+      />
+      <SettingsSlider
+        id="word-challenge-weight"
+        label="Word Weight (Picture Match)"
+        description="Higher values show more word-to-picture prompts; set to 0 to disable this type."
+        value={wordChallengeWeight}
+        displayValue={`${wordChallengeWeight}`}
+        min={0}
+        max={10}
+        step={1}
+        accentColor="#34d399"
+        onChange={setWordChallengeWeight}
+      />
+      <SettingsSlider
+        id="math-challenge-weight"
+        label="Math Weight"
+        description="Higher values show more math prompts when learning challenges trigger."
+        value={mathChallengeWeight}
+        displayValue={`${mathChallengeWeight}`}
+        min={0}
+        max={10}
+        step={1}
+        accentColor="#60a5fa"
+        onChange={setMathChallengeWeight}
       />
     </>
   );

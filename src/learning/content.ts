@@ -159,6 +159,8 @@ function buildWordToPicturePrompt(level: ReadingLevel, random: LearningRandom): 
   };
 }
 
+export type ReadingPromptMode = 'mixed' | 'missing_letter' | 'word_to_picture';
+
 function buildMathOptions(
   level: MathLevel,
   answer: number,
@@ -189,8 +191,15 @@ function buildMathOptions(
 export function buildReadingPrompt(
   level: ReadingLevel,
   seed?: number,
+  mode: ReadingPromptMode = 'mixed',
 ): LearningPrompt {
   const random = getRandom(seed, 'reading');
+  if (mode === 'missing_letter') {
+    return buildMissingLetterPrompt(level, random);
+  }
+  if (mode === 'word_to_picture') {
+    return buildWordToPicturePrompt(level, random);
+  }
   const shouldUsePictures = random.chance(READING_CURRICULUM[level].wordToPictureChance);
   if (shouldUsePictures) {
     return buildWordToPicturePrompt(level, random);
