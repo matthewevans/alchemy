@@ -23,7 +23,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       includeAssets: [
-        '**/*.{webp,png,mp3,m4a,json}',
+        '**/*.{webp,mp3,m4a,json}',
         'audio/music/title/title_theme.mp3',
         'audio/music/menu/multiplayer_lobby.mp3',
       ],

@@ -1,7 +1,14 @@
 import { registerSW } from 'virtual:pwa-register';
 import { usePreferencesStore } from '@game/preferencesStore';
 import { markPendingAutoUpdate } from './updateMarker';
-import { setUpdateStatus, getUpdateStatus, setDownloadProgress } from './updateStatus';
+import {
+  setUpdateStatus,
+  getUpdateStatus,
+  setDownloadProgress,
+  pushUpdateDebug,
+  setUpdateError,
+  clearUpdateError,
+} from './updateStatus';
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const ACTIVATION_TIMEOUT_MS = 20 * 1000;
@@ -16,6 +23,12 @@ let manualCheckForUpdate: (() => Promise<void>) | null = null;
 let progressIntervalId: number | null = null;
 let activationTimeoutId: number | null = null;
 let simulatedProgress = 0;
+
+function formatError(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error) return error;
+  return 'Unknown error';
+}
 
 function startProgressSimulation() {
   stopProgressSimulation();
@@ -49,31 +62,37 @@ function clearActivationTimeout(): void {
 function setActivatingStatus(): void {
   completeProgress();
   setUpdateStatus('activating');
+  pushUpdateDebug('Service worker is activating.');
   clearActivationTimeout();
   activationTimeoutId = window.setTimeout(() => {
     if (getUpdateStatus() !== 'activating') return;
     setUpdateStatus('idle');
     setDownloadProgress(0);
+    setUpdateError('Service worker activation timed out after 20s.');
     console.warn('[Alchemy] Service worker activation timed out; reset update indicator to idle.');
   }, ACTIVATION_TIMEOUT_MS);
 }
 
 export function checkForServiceWorkerUpdate(): boolean {
   if (import.meta.env.DEV || !('serviceWorker' in navigator) || !manualCheckForUpdate) {
+    pushUpdateDebug('Manual update check ignored (no service worker support or updater not ready).', 'warn');
     return false;
   }
 
   setUpdateStatus('checking');
+  pushUpdateDebug('Manual update check started.');
   manualCheckForUpdate()
     .then(() => {
       // If status is still 'checking' after update() resolves,
       // no new SW was found — reset to idle.
       if (getUpdateStatus() === 'checking') {
         setUpdateStatus('idle');
+        pushUpdateDebug('Manual update check finished with no new version.');
       }
     })
     .catch((error: unknown) => {
       setUpdateStatus('idle');
+      setUpdateError(`Manual update check failed: ${formatError(error)}`);
       console.warn('[Alchemy] Manual service worker update check failed.', error);
     });
   return true;
@@ -85,11 +104,13 @@ export function registerServiceWorker() {
   }
 
   isRegistered = true;
+  pushUpdateDebug('Registering service worker updater.');
   let hasReloadedOnControllerChange = false;
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (hasReloadedOnControllerChange) return;
     clearActivationTimeout();
+    pushUpdateDebug('Service worker controller changed; reloading.');
     hasReloadedOnControllerChange = true;
     window.location.reload();
   });
@@ -97,6 +118,7 @@ export function registerServiceWorker() {
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
+      pushUpdateDebug('Service worker reported update ready; applying update.');
       markPendingAutoUpdate();
       setActivatingStatus();
       void updateSW(true).catch((error: unknown) => {
@@ -105,11 +127,13 @@ export function registerServiceWorker() {
           setUpdateStatus('idle');
           setDownloadProgress(0);
         }
+        setUpdateError(`Failed to apply service worker update: ${formatError(error)}`);
         console.warn('[Alchemy] Failed to apply service worker update.', error);
       });
     },
     onRegisteredSW(swUrl, swRegistration) {
       if (!swRegistration) return;
+      pushUpdateDebug(`Service worker registered: ${swUrl}`);
 
       // Surface the download phase — fires when a new SW starts installing
       swRegistration.addEventListener('updatefound', () => {
@@ -118,9 +142,11 @@ export function registerServiceWorker() {
         const newWorker = swRegistration.installing;
         if (!newWorker) return;
         setUpdateStatus('downloading');
+        pushUpdateDebug('Service worker download started.');
         startProgressSimulation();
 
         newWorker.addEventListener('statechange', () => {
+          pushUpdateDebug(`Service worker state changed: ${newWorker.state}`);
           if (newWorker.state === 'installed') {
             setActivatingStatus();
             return;
@@ -128,9 +154,11 @@ export function registerServiceWorker() {
 
           if (newWorker.state === 'activated') {
             clearActivationTimeout();
+            clearUpdateError();
             if (getUpdateStatus() === 'activating') {
               setUpdateStatus('idle');
               setDownloadProgress(0);
+              pushUpdateDebug('Service worker activated successfully.');
             }
             return;
           }
@@ -138,6 +166,7 @@ export function registerServiceWorker() {
           if (newWorker.state === 'redundant') {
             stopProgressSimulation();
             clearActivationTimeout();
+            setUpdateError('Service worker became redundant before activation.');
             if (getUpdateStatus() !== 'checking') {
               setUpdateStatus('idle');
               setDownloadProgress(0);
@@ -160,19 +189,25 @@ export function registerServiceWorker() {
                 'cache-control': 'no-cache',
               },
             });
-            if (response.status !== 200) return;
+            if (response.status !== 200) {
+              setUpdateError(`SW script probe returned HTTP ${response.status}.`);
+              return;
+            }
           } catch {
+            setUpdateError('SW script probe failed before update check.');
             return;
           }
         }
 
         await swRegistration.update();
+        clearUpdateError();
       };
       const autoCheck = async () => {
         if (!usePreferencesStore.getState().autoUpdateEnabled) return Promise.resolve();
         try {
           await doUpdate(true);
         } catch (error: unknown) {
+          setUpdateError(`Automatic update check failed: ${formatError(error)}`);
           console.warn('[Alchemy] Automatic service worker update check failed.', error);
         }
       };
@@ -202,6 +237,7 @@ export function registerServiceWorker() {
       );
     },
     onRegisterError(error) {
+      setUpdateError(`Service worker registration failed: ${formatError(error)}`);
       console.error('Service worker registration failed', error);
     },
   });

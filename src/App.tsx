@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { checkForServiceWorkerUpdate } from './pwa/registerServiceWorker';
 import { consumeRecentAutoUpdateMarker } from './pwa/updateMarker';
-import { useUpdateStatus, useDownloadProgress } from './pwa/updateStatus';
+import {
+  useUpdateStatus,
+  useDownloadProgress,
+  useUpdateError,
+  getUpdateDebugReport,
+} from './pwa/updateStatus';
 import {
   ensureStartupAssetsPreloaded,
   subscribeStartupPreload,
@@ -32,6 +37,7 @@ function App() {
   const [startupProgress, setStartupProgress] = useState<StartupPreloadProgress>(INITIAL_STARTUP_PROGRESS);
   const updateStatus = useUpdateStatus();
   const downloadProgress = useDownloadProgress();
+  const updateError = useUpdateError();
 
   useEffect(() => {
     if (!showUpdatedLabel) return;
@@ -64,6 +70,13 @@ function App() {
   const isActive = updateStatus !== 'idle';
   const isDownloading = updateStatus === 'downloading';
   const isPreloading = startupProgress.phase !== 'complete';
+  const hasUpdateIssue = Boolean(updateError);
+
+  const handleShowUpdateDebug = () => {
+    const report = getUpdateDebugReport();
+    window.alert(report);
+  };
+
   return (
     <>
       <RouterProvider router={router} />
@@ -80,7 +93,19 @@ function App() {
           >
             ↻
           </button>
+          {hasUpdateIssue && (
+            <button
+              type="button"
+              onClick={handleShowUpdateDebug}
+              className="ml-1 rounded px-1 text-[11px] font-semibold text-rose-300 hover:text-rose-100 hover:bg-rose-600/25 transition-colors cursor-pointer"
+              aria-label="Updater debug info"
+              title={`Updater issue: ${updateError}`}
+            >
+              x
+            </button>
+          )}
           {statusLabel && <span className="ml-1 text-cyan-300">{statusLabel}</span>}
+          {hasUpdateIssue && <span className="ml-1 text-rose-300">update issue</span>}
           {preloadLabel && <span className="ml-1 text-amber-300">{preloadLabel}</span>}
           {showUpdatedLabel && !statusLabel && <span className="ml-1 text-emerald-300">updated</span>}
           {isDownloading && (
