@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { chooseAction, runAITurn } from '../ai';
 import { createRNG } from '../prng';
 import { enumerateLegalActions } from '../validation';
+import type { AIConfig } from '../aiConfig';
 import {
   createTestGameState,
   makeCardInstance,
@@ -413,6 +414,75 @@ describe('discard phase', () => {
     if (action.type === 'DISCARD_CARD') {
       expect(action.cardIndex).toBe(1); // dragon whelp is the most expensive
     }
+  });
+});
+
+// ─── Tree Search Policy ───
+
+describe('tree search policy', () => {
+  const treeSearchConfig: AIConfig = {
+    difficulty: 'very_hard',
+    personality: 'balanced',
+    policy: 'tree_search',
+    temperature: 0.15,
+    playLookahead: true,
+    combatLookahead: true,
+    search: {
+      enabled: true,
+      maxDepth: 2,
+      maxNodes: 64,
+      maxBranching: 6,
+      rolloutDepth: 1,
+      useTransposition: true,
+    },
+    weights: {
+      health: 1.0,
+      aggression: 1.0,
+      boardPresence: 1.0,
+      boardPower: 1.0,
+      boardDurability: 1.0,
+      handSize: 0.8,
+    },
+  };
+
+  it('returns a legal non-concede action when tree search is enabled', () => {
+    const state = createTestGameState({
+      phase: { type: 'play' },
+      activePlayer: 'player2',
+      player2: {
+        currentEnergy: 3,
+        maxEnergy: 3,
+        hand: [
+          makeCardInstance('fire_ember_sprite'),
+          makeCardInstance('fire_lava_hound'),
+          makeCardInstance('fire_magma_golem'),
+        ],
+      },
+    });
+
+    const action = chooseAction(state, 'player2', createRNG(99), treeSearchConfig);
+    const legal = enumerateLegalActions(state, 'player2').filter((a) => a.type !== 'CONCEDE');
+    expect(legal).toContainEqual(action);
+  });
+
+  it('falls back to heuristic path when rng is not stateful', () => {
+    const state = createTestGameState({
+      phase: { type: 'play' },
+      activePlayer: 'player2',
+      player2: {
+        currentEnergy: 2,
+        maxEnergy: 2,
+        hand: [
+          makeCardInstance('fire_ember_sprite'),
+          makeCardInstance('fire_lava_hound'),
+        ],
+      },
+    });
+
+    const nonSeededRng = () => 0.42;
+    const action = chooseAction(state, 'player2', nonSeededRng, treeSearchConfig);
+    const legal = enumerateLegalActions(state, 'player2').filter((a) => a.type !== 'CONCEDE');
+    expect(legal).toContainEqual(action);
   });
 });
 

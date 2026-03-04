@@ -8,6 +8,7 @@ import type { SeededRNG } from './prng';
 import { restoreRNG } from './prng';
 import type { AIConfig } from './aiConfig';
 import { evaluateState, softmaxSelect } from './aiEval';
+import { chooseActionByTreeSearch } from './aiSearch';
 
 // ─── Core AI Function ───
 
@@ -26,6 +27,11 @@ export function chooseAction(
   const actions = legalActions.filter((a) => a.type !== 'CONCEDE');
   if (actions.length === 0) {
     return legalActions[0];
+  }
+
+  const searchAction = chooseActionByTreeSearch(state, aiPlayer, rng, config, actions);
+  if (searchAction) {
+    return searchAction;
   }
 
   const { phase } = state;

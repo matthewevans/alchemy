@@ -181,6 +181,8 @@ describe('createAIConfig', () => {
     const config = createAIConfig('very_easy', createRNG(42));
     expect(config.playLookahead).toBe(false);
     expect(config.combatLookahead).toBe(false);
+    expect(config.search.enabled).toBe(true);
+    expect(config.search.rolloutDepth).toBe(0);
   });
 
   it('hard has full lookahead', () => {
@@ -206,5 +208,7 @@ describe('createAIConfig', () => {
     const config2 = createAIConfig('medium', createRNG(42));
     config1.weights.health = 999;
     expect(config2.weights.health).not.toBe(999);
+    config1.search.maxNodes = 999;
+    expect(config2.search.maxNodes).not.toBe(999);
   });
 });

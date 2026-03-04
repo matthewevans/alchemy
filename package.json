@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "balance:gate": "vitest run src/engine/__tests__/balanceDeckMatrix.apprentice.test.ts src/engine/__tests__/balanceDeckMatrix.alchemist.test.ts src/engine/__tests__/balanceDeckMatrix.archmage.test.ts --maxWorkers=3",
     "test:watch": "vitest",
     "cy:open": "cypress open",
     "cy:run": "cypress run",

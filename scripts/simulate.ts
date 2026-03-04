@@ -20,9 +20,18 @@ import type { Tier } from '../src/engine/types';
 const SIM_AI_CONFIG: AIConfig = {
   difficulty: 'hard',
   personality: 'balanced',
+  policy: 'heuristic',
   temperature: 0.5,
   playLookahead: true,
   combatLookahead: true,
+  search: {
+    enabled: false,
+    maxDepth: 1,
+    maxNodes: 1,
+    maxBranching: 1,
+    rolloutDepth: 0,
+    useTransposition: true,
+  },
   weights: {
     health: 1.0,
     aggression: 1.0,

@@ -4,6 +4,7 @@ import type { RNG } from './types';
 
 export type AIDifficulty = 'very_easy' | 'easy' | 'medium' | 'hard' | 'very_hard';
 export type AIPersonality = 'aggressive' | 'defensive' | 'balanced';
+export type AIPolicy = 'heuristic' | 'tree_search';
 
 export interface EvalWeights {
   /** Value of own health advantage. */
@@ -20,15 +21,27 @@ export interface EvalWeights {
   handSize: number;
 }
 
+export interface AISearchConfig {
+  enabled: boolean;
+  maxDepth: number;
+  maxNodes: number;
+  maxBranching: number;
+  rolloutDepth: number;
+  useTransposition: boolean;
+}
+
 export interface AIConfig {
   difficulty: AIDifficulty;
   personality: AIPersonality;
+  policy: AIPolicy;
   /** Softmax temperature — lower = more deterministic, higher = more random. */
   temperature: number;
   /** Use 1-ply lookahead for play-phase card selection. */
   playLookahead: boolean;
   /** Use scored evaluation for combat decisions (attackers/blockers). */
   combatLookahead: boolean;
+  /** Optional bounded tree-search on top of the heuristic policy. */
+  search: AISearchConfig;
   /** Board evaluation weights (personality-adjusted). */
   weights: EvalWeights;
 }
@@ -65,17 +78,84 @@ const PERSONALITY_WEIGHTS: Record<AIPersonality, EvalWeights> = {
 // ─── Difficulty Presets ───
 
 interface DifficultyPreset {
+  policy: AIPolicy;
   temperature: number;
   playLookahead: boolean;
   combatLookahead: boolean;
+  search: AISearchConfig;
 }
 
 const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
-  very_easy: { temperature: 4.0, playLookahead: false, combatLookahead: false },
-  easy: { temperature: 2.0, playLookahead: true, combatLookahead: false },
-  medium: { temperature: 1.0, playLookahead: true, combatLookahead: true },
-  hard: { temperature: 0.5, playLookahead: true, combatLookahead: true },
-  very_hard: { temperature: 0.15, playLookahead: true, combatLookahead: true },
+  very_easy: {
+    policy: 'tree_search',
+    temperature: 4.0,
+    playLookahead: false,
+    combatLookahead: false,
+    search: {
+      enabled: true,
+      maxDepth: 1,
+      maxNodes: 4,
+      maxBranching: 2,
+      rolloutDepth: 0,
+      useTransposition: true,
+    },
+  },
+  easy: {
+    policy: 'tree_search',
+    temperature: 2.0,
+    playLookahead: true,
+    combatLookahead: false,
+    search: {
+      enabled: true,
+      maxDepth: 1,
+      maxNodes: 8,
+      maxBranching: 3,
+      rolloutDepth: 0,
+      useTransposition: true,
+    },
+  },
+  medium: {
+    policy: 'tree_search',
+    temperature: 1.0,
+    playLookahead: true,
+    combatLookahead: true,
+    search: {
+      enabled: true,
+      maxDepth: 1,
+      maxNodes: 12,
+      maxBranching: 4,
+      rolloutDepth: 0,
+      useTransposition: true,
+    },
+  },
+  hard: {
+    policy: 'tree_search',
+    temperature: 0.5,
+    playLookahead: true,
+    combatLookahead: true,
+    search: {
+      enabled: true,
+      maxDepth: 2,
+      maxNodes: 24,
+      maxBranching: 4,
+      rolloutDepth: 1,
+      useTransposition: true,
+    },
+  },
+  very_hard: {
+    policy: 'tree_search',
+    temperature: 0.15,
+    playLookahead: true,
+    combatLookahead: true,
+    search: {
+      enabled: true,
+      maxDepth: 2,
+      maxNodes: 32,
+      maxBranching: 5,
+      rolloutDepth: 1,
+      useTransposition: true,
+    },
+  },
 };
 
 // ─── Factory ───
@@ -88,9 +168,11 @@ export function createAIConfig(difficulty: AIDifficulty, rng: RNG): AIConfig {
   return {
     difficulty,
     personality,
+    policy: preset.policy,
     temperature: preset.temperature,
     playLookahead: preset.playLookahead,
     combatLookahead: preset.combatLookahead,
+    search: { ...preset.search },
     weights: { ...PERSONALITY_WEIGHTS[personality] },
   };
 }

@@ -7,7 +7,7 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'fire_flame_fox', name: 'Flame Fox', type: 'creature', element: 'fire', cost: 1, attack: 2, health: 1, creatureType: 'beast', keywords: [], tier: 'apprentice', flavor: 'It leaves little embers wherever it steps.' },
   { id: 'fire_lava_hound', name: 'Lava Hound', type: 'creature', element: 'fire', cost: 2, attack: 2, health: 3, creatureType: 'beast', keywords: [], tier: 'apprentice', flavor: 'Good boy. Very hot boy.' },
   { id: 'fire_fire_dancer', name: 'Fire Dancer', type: 'creature', element: 'fire', cost: 2, attack: 2, health: 2, creatureType: 'human', keywords: ['blast'], tier: 'apprentice', flavor: 'Every step is a spark, every spin an inferno.' },
-  { id: 'fire_magma_golem', name: 'Magma Golem', type: 'creature', element: 'fire', cost: 3, attack: 3, health: 4, creatureType: 'golem', keywords: ['blast'], tier: 'apprentice', flavor: 'Slow to anger, impossible to stop.' },
+  { id: 'fire_magma_golem', name: 'Magma Golem', type: 'creature', element: 'fire', cost: 3, attack: 3, health: 3, creatureType: 'golem', keywords: ['blast'], tier: 'apprentice', flavor: 'Slow to anger, impossible to stop.' },
   { id: 'fire_phoenix_chick', name: 'Phoenix Chick', type: 'creature', element: 'fire', cost: 4, attack: 3, health: 3, creatureType: 'elemental', keywords: ['swift'], tier: 'apprentice', flavor: '"It hatched again?!" —Every alchemist, eventually' },
   { id: 'fire_dragon_whelp', name: 'Dragon Whelp', type: 'creature', element: 'fire', cost: 5, attack: 5, health: 4, creatureType: 'dragon', keywords: ['blast'], tier: 'apprentice', flavor: 'Small for a dragon. Big for a problem.' },
 
@@ -33,10 +33,10 @@ export const ALL_CARDS: CardDefinition[] = [
   // ─── Water Creatures ───
   { id: 'water_tide_sprite', name: 'Tide Sprite', type: 'creature', element: 'water', cost: 1, attack: 1, health: 2, creatureType: 'elemental', keywords: ['draw'], tier: 'apprentice', flavor: 'It carries secrets from the deep in every droplet.' },
   { id: 'water_shell_crab', name: 'Shell Crab', type: 'creature', element: 'water', cost: 1, attack: 0, health: 4, creatureType: 'beast', keywords: [], tier: 'apprentice', flavor: 'All defense, no apologies.' },
-  { id: 'water_river_otter', name: 'River Otter', type: 'creature', element: 'water', cost: 2, attack: 2, health: 2, creatureType: 'beast', keywords: ['draw'], tier: 'apprentice', flavor: 'Playful, curious, and surprisingly clever.' },
+  { id: 'water_river_otter', name: 'River Otter', type: 'creature', element: 'water', cost: 2, attack: 2, health: 1, creatureType: 'beast', keywords: ['draw'], tier: 'apprentice', flavor: 'Playful, curious, and surprisingly clever.' },
   { id: 'water_coral_guardian', name: 'Coral Guardian', type: 'creature', element: 'water', cost: 2, attack: 1, health: 4, creatureType: 'elemental', keywords: [], tier: 'apprentice', flavor: 'The reef protects those who protect the reef.' },
   { id: 'water_storm_turtle', name: 'Storm Turtle', type: 'creature', element: 'water', cost: 3, attack: 2, health: 5, creatureType: 'beast', keywords: ['heal'], tier: 'apprentice', flavor: 'It has weathered every storm since the first rain.' },
-  { id: 'water_frost_serpent', name: 'Frost Serpent', type: 'creature', element: 'water', cost: 4, attack: 4, health: 3, creatureType: 'beast', keywords: [], tier: 'apprentice', flavor: 'Where it swims, rivers freeze mid-current.' },
+  { id: 'water_frost_serpent', name: 'Frost Serpent', type: 'creature', element: 'water', cost: 4, attack: 4, health: 2, creatureType: 'beast', keywords: [], tier: 'apprentice', flavor: 'Where it swims, rivers freeze mid-current.' },
   { id: 'water_tidal_whale', name: 'Tidal Whale', type: 'creature', element: 'water', cost: 5, attack: 3, health: 6, creatureType: 'beast', keywords: ['heal'], tier: 'apprentice', flavor: 'Its song can calm the wildest seas.' },
 
   // ─── Water Spells ───
@@ -90,7 +90,7 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'shadow_sneaky_cat', name: 'Sneaky Cat', type: 'creature', element: 'shadow', cost: 1, attack: 2, health: 1, creatureType: 'beast', keywords: ['swift'], tier: 'apprentice', flavor: 'You never see it coming. That\'s the point.' },
   { id: 'shadow_bat_swarm', name: 'Bat Swarm', type: 'creature', element: 'shadow', cost: 2, attack: 2, health: 2, creatureType: 'beast', keywords: ['blast'], tier: 'apprentice', flavor: 'One bat is harmless. A thousand is a storm.' },
   { id: 'shadow_shade_wolf', name: 'Shade Wolf', type: 'creature', element: 'shadow', cost: 2, attack: 3, health: 1, creatureType: 'beast', keywords: [], tier: 'apprentice', flavor: 'It hunts what light cannot reach.' },
-  { id: 'shadow_ghost_knight', name: 'Ghost Knight', type: 'creature', element: 'shadow', cost: 3, attack: 3, health: 3, creatureType: 'undead', keywords: [], tier: 'apprentice', effectId: 'ghost_knight_etb', flavor: 'Still loyal. Still fighting. Still lost.' },
+  { id: 'shadow_ghost_knight', name: 'Ghost Knight', type: 'creature', element: 'shadow', cost: 3, attack: 3, health: 4, creatureType: 'undead', keywords: [], tier: 'apprentice', effectId: 'ghost_knight_etb', flavor: 'Still loyal. Still fighting. Still lost.' },
   { id: 'shadow_nightmare_steed', name: 'Nightmare Steed', type: 'creature', element: 'shadow', cost: 3, attack: 2, health: 4, creatureType: 'undead', keywords: [], tier: 'apprentice', flavor: 'Its hoofbeats echo only in dreams.' },
   { id: 'shadow_vampire_lord', name: 'Vampire Lord', type: 'creature', element: 'shadow', cost: 4, attack: 4, health: 3, creatureType: 'undead', keywords: ['lifesteal'], tier: 'apprentice', flavor: '"Your strength becomes my strength."' },
   { id: 'shadow_shadow_dragon', name: 'Shadow Dragon', type: 'creature', element: 'shadow', cost: 5, attack: 5, health: 5, creatureType: 'dragon', keywords: [], tier: 'apprentice', effectId: 'shadow_dragon_etb', flavor: 'It doesn\'t breathe fire. It breathes fear.' },
@@ -119,9 +119,9 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'air_temple_dove', name: 'Temple Dove', type: 'creature', element: 'air', cost: 1, attack: 0, health: 3, creatureType: 'beast', keywords: ['draw'], tier: 'apprentice', flavor: 'It coos a soft lullaby that mends scraped knees.' },
   { id: 'air_priestess_of_light', name: 'Priestess of Light', type: 'creature', element: 'air', cost: 2, attack: 1, health: 4, creatureType: 'human', keywords: ['heal'], tier: 'apprentice', flavor: 'Her lantern has never gone out. Not even once.' },
   { id: 'air_angelic_scribe', name: 'Angelic Scribe', type: 'creature', element: 'air', cost: 2, attack: 1, health: 3, creatureType: 'angel', keywords: ['draw'], tier: 'apprentice', flavor: 'Writes down every spell it sees. Very nosy.' },
-  { id: 'air_celestial_monk', name: 'Celestial Monk', type: 'creature', element: 'air', cost: 3, attack: 1, health: 6, creatureType: 'human', keywords: [], tier: 'apprentice', flavor: 'Has meditated so long, moss grows on his shoulders.' },
+  { id: 'air_celestial_monk', name: 'Celestial Monk', type: 'creature', element: 'air', cost: 3, attack: 2, health: 6, creatureType: 'human', keywords: [], tier: 'apprentice', flavor: 'Has meditated so long, moss grows on his shoulders.' },
   { id: 'air_archangel', name: 'Archangel', type: 'creature', element: 'air', cost: 4, attack: 2, health: 6, creatureType: 'angel', keywords: ['heal'], tier: 'apprentice', flavor: 'When she spreads her wings, even the shadows feel warm.' },
-  { id: 'air_seraph', name: 'Seraph', type: 'creature', element: 'air', cost: 5, attack: 4, health: 5, creatureType: 'angel', keywords: ['heal'], tier: 'apprentice', flavor: 'Six wings, zero worries.' },
+  { id: 'air_seraph', name: 'Seraph', type: 'creature', element: 'air', cost: 5, attack: 5, health: 5, creatureType: 'angel', keywords: ['heal'], tier: 'apprentice', flavor: 'Six wings, zero worries.' },
 
   // ─── Air Spells (Angels / Priests) ───
   { id: 'air_soothe', name: 'Soothe', type: 'spell', element: 'air', cost: 1, keywords: [], tier: 'apprentice', effectId: 'soothe', flavor: 'Like a warm blanket made of starlight.' },
