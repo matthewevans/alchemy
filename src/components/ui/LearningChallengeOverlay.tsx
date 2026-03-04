@@ -49,7 +49,10 @@ function formatSigned(value: number): string {
 function getMathTokens(promptText: string): string[] | null {
   const tokens = promptText.trim().split(/\s+/).filter(Boolean);
   if (tokens.length < 3) return null;
-  const hasOperator = tokens.includes('+') || tokens.includes('-');
+  const hasOperator = tokens.includes('+')
+    || tokens.includes('-')
+    || tokens.includes('×')
+    || tokens.includes('÷');
   const hasEquals = tokens.includes('=');
   return hasOperator && hasEquals ? tokens : null;
 }
@@ -344,7 +347,11 @@ export function LearningChallengeOverlay() {
                     const tokenClass =
                       token === '?'
                         ? 'border-amber-300/80 bg-amber-400/15 text-amber-100'
-                        : token === '+' || token === '-' || token === '='
+                        : token === '+'
+                          || token === '-'
+                          || token === '×'
+                          || token === '÷'
+                          || token === '='
                           ? 'border-blue-300/70 bg-blue-500/20 text-blue-100'
                           : 'border-white/25 bg-white/8 text-white';
                     return (

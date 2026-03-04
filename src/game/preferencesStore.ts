@@ -127,8 +127,8 @@ function loadPersistedPreferences(): PersistedPreferences {
         learningChallengesEnabled: typeof parsed.learningChallengesEnabled === 'boolean' ? parsed.learningChallengesEnabled : false,
         readingChallengesEnabled: typeof parsed.readingChallengesEnabled === 'boolean' ? parsed.readingChallengesEnabled : true,
         mathChallengesEnabled: typeof parsed.mathChallengesEnabled === 'boolean' ? parsed.mathChallengesEnabled : true,
-        readingLevel: ['r0', 'r1', 'r2', 'r3'].includes(parsed.readingLevel) ? parsed.readingLevel : 'r1',
-        mathLevel: ['m0', 'm1', 'm2', 'm3'].includes(parsed.mathLevel) ? parsed.mathLevel : 'm1',
+        readingLevel: ['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6'].includes(parsed.readingLevel) ? parsed.readingLevel : 'r1',
+        mathLevel: ['m0', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6'].includes(parsed.mathLevel) ? parsed.mathLevel : 'm1',
         learningFrequency: ['low', 'medium', 'high'].includes(parsed.learningFrequency) ? parsed.learningFrequency : 'medium',
         readingChallengeWeight: sanitizeChallengeWeight(
           parsed.readingChallengeWeight,

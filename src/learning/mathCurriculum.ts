@@ -24,6 +24,14 @@ interface MathLevelCurriculum {
    * - CCSS 2.OA.B.2: fluency with add/subtract within 20.
    *   https://www.thecorestandards.org/Math/Content/2/OA/B/2/
    * - Grade 2-3 bridge: two-digit + one-digit and subtraction decomposition.
+   * - CCSS 3.OA.C.7: multiplication/division fluency within 100.
+   *   https://www.thecorestandards.org/Math/Content/3/OA/C/7/
+   * - CCSS 4.NBT.B.5-6: multi-digit multiplication and division with one-digit divisors.
+   *   https://www.thecorestandards.org/Math/Content/4/NBT/B/5/
+   *   https://www.thecorestandards.org/Math/Content/4/NBT/B/6/
+   * - CCSS 5.NBT.B.5-6: larger whole-number multiplication and division.
+   *   https://www.thecorestandards.org/Math/Content/5/NBT/B/5/
+   *   https://www.thecorestandards.org/Math/Content/5/NBT/B/6/
    */
   templates: readonly MathTemplate[];
   minAnswer: number;
@@ -44,6 +52,22 @@ function subtraction(left: number, right: number): MathPromptBlueprint {
     kind: 'subtraction',
     promptText: `${left} - ${right} = ?`,
     answer: left - right,
+  };
+}
+
+function multiplication(left: number, right: number): MathPromptBlueprint {
+  return {
+    kind: 'multiplication',
+    promptText: `${left} × ${right} = ?`,
+    answer: left * right,
+  };
+}
+
+function division(dividend: number, divisor: number): MathPromptBlueprint {
+  return {
+    kind: 'division',
+    promptText: `${dividend} ÷ ${divisor} = ?`,
+    answer: dividend / divisor,
   };
 }
 
@@ -243,6 +267,159 @@ const CURRICULUM: Record<MathLevel, MathLevelCurriculum> = {
     minAnswer: 0,
     maxAnswer: 50,
     distractorDeltas: [-6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6],
+  },
+  m4: {
+    templates: [
+      {
+        id: 'multiply-facts-within-100',
+        weight: 5,
+        build: (random) => {
+          const left = randomInRange(random, 2, 10);
+          const right = randomInRange(random, 2, Math.min(10, Math.floor(100 / left)));
+          return multiplication(left, right);
+        },
+      },
+      {
+        id: 'divide-facts-within-100',
+        weight: 5,
+        build: (random) => {
+          const divisor = randomInRange(random, 2, 10);
+          const quotient = randomInRange(random, 2, Math.min(10, Math.floor(100 / divisor)));
+          return division(divisor * quotient, divisor);
+        },
+      },
+      {
+        id: 'missing-factor-within-100',
+        weight: 3,
+        build: (random) => {
+          const known = randomInRange(random, 2, 10);
+          const answer = randomInRange(random, 2, Math.min(10, Math.floor(100 / known)));
+          return {
+            kind: 'multiplication',
+            promptText: `${known} × ? = ${known * answer}`,
+            answer,
+          };
+        },
+      },
+      {
+        id: 'missing-divisor-within-100',
+        weight: 2,
+        build: (random) => {
+          const answer = randomInRange(random, 2, 10);
+          const quotient = randomInRange(random, 2, Math.min(10, Math.floor(100 / answer)));
+          return {
+            kind: 'division',
+            promptText: `${answer * quotient} ÷ ? = ${quotient}`,
+            answer,
+          };
+        },
+      },
+    ],
+    minAnswer: 0,
+    maxAnswer: 100,
+    distractorDeltas: [-12, -10, -8, -6, -4, -3, -2, -1, 1, 2, 3, 4, 6, 8, 10, 12],
+  },
+  m5: {
+    templates: [
+      {
+        id: 'multiply-two-digit-by-one-digit',
+        weight: 5,
+        build: (random) => {
+          const right = randomInRange(random, 2, 6);
+          const left = randomInRange(random, 12, Math.floor(200 / right));
+          return multiplication(left, right);
+        },
+      },
+      {
+        id: 'divide-by-one-digit-two-digit-quotient',
+        weight: 5,
+        build: (random) => {
+          const divisor = randomInRange(random, 2, 9);
+          const quotient = randomInRange(random, 10, Math.floor(200 / divisor));
+          return division(divisor * quotient, divisor);
+        },
+      },
+      {
+        id: 'missing-factor-two-digit-by-one-digit',
+        weight: 3,
+        build: (random) => {
+          const factor = randomInRange(random, 2, 9);
+          const answer = randomInRange(random, 10, Math.floor(200 / factor));
+          return {
+            kind: 'multiplication',
+            promptText: `? × ${factor} = ${answer * factor}`,
+            answer,
+          };
+        },
+      },
+      {
+        id: 'missing-divisor-two-digit-quotient',
+        weight: 2,
+        build: (random) => {
+          const answer = randomInRange(random, 2, 9);
+          const quotient = randomInRange(random, 10, Math.floor(200 / answer));
+          return {
+            kind: 'division',
+            promptText: `${answer * quotient} ÷ ? = ${quotient}`,
+            answer,
+          };
+        },
+      },
+    ],
+    minAnswer: 0,
+    maxAnswer: 200,
+    distractorDeltas: [-20, -15, -12, -10, -8, -6, -4, -3, -2, -1, 1, 2, 3, 4, 6, 8, 10, 12, 15, 20],
+  },
+  m6: {
+    templates: [
+      {
+        id: 'multiply-two-digit-by-two-digit',
+        weight: 5,
+        build: (random) => {
+          const left = randomInRange(random, 12, 49);
+          const right = randomInRange(random, 11, 29);
+          return multiplication(left, right);
+        },
+      },
+      {
+        id: 'divide-four-digit-by-two-digit-exact',
+        weight: 5,
+        build: (random) => {
+          const divisor = randomInRange(random, 11, 29);
+          const quotient = randomInRange(random, 6, 49);
+          return division(divisor * quotient, divisor);
+        },
+      },
+      {
+        id: 'missing-factor-two-digit-pair',
+        weight: 3,
+        build: (random) => {
+          const factor = randomInRange(random, 12, 29);
+          const answer = randomInRange(random, 6, 49);
+          return {
+            kind: 'multiplication',
+            promptText: `? × ${factor} = ${answer * factor}`,
+            answer,
+          };
+        },
+      },
+      {
+        id: 'missing-divisor-two-digit-pair',
+        weight: 2,
+        build: (random) => {
+          const answer = randomInRange(random, 11, 29);
+          const quotient = randomInRange(random, 6, 49);
+          return {
+            kind: 'division',
+            promptText: `${answer * quotient} ÷ ? = ${quotient}`,
+            answer,
+          };
+        },
+      },
+    ],
+    minAnswer: 0,
+    maxAnswer: 2000,
+    distractorDeltas: [-120, -100, -80, -60, -40, -30, -20, -12, -10, -8, -6, -4, -3, -2, -1, 1, 2, 3, 4, 6, 8, 10, 12, 20, 30, 40, 60, 80, 100, 120],
   },
 };
 

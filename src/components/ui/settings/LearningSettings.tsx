@@ -50,26 +50,32 @@ export function LearningSettings() {
       <SettingsSelect
         id="reading-level"
         label="Reading Level"
-        description="Progresses from CVC decoding to multisyllable words."
+        description="Progresses from CVC decoding to multisyllable and morphology-rich words."
         value={readingLevel}
         options={[
           { value: 'r0', label: 'R0 - CVC / K' },
           { value: 'r1', label: 'R1 - Digraphs + Blends / 1' },
           { value: 'r2', label: 'R2 - Long Vowels / 1-2' },
           { value: 'r3', label: 'R3 - Multisyllable / 2-3' },
+          { value: 'r4', label: 'R4 - Prefix/Suffix + Multisyllable / 3-4' },
+          { value: 'r5', label: 'R5 - Morphology + Advanced Vocabulary / 4-5' },
+          { value: 'r6', label: 'R6 - Academic + Domain Vocabulary / 5-6' },
         ]}
         onChange={(value) => setReadingLevel(value as ReadingLevel)}
       />
       <SettingsSelect
         id="math-level"
         label="Math Level"
-        description="Progresses from within 5 facts to two-digit strategy work."
+        description="Progresses from within-5 facts to multiplication/division and multi-digit fluency."
         value={mathLevel}
         options={[
           { value: 'm0', label: 'M0 - Within 5 / K' },
           { value: 'm1', label: 'M1 - Within 10 / 1' },
           { value: 'm2', label: 'M2 - Within 20 / 2' },
           { value: 'm3', label: 'M3 - Two-digit + one-digit / 2-3' },
+          { value: 'm4', label: 'M4 - Multiplication + Division Facts / 3' },
+          { value: 'm5', label: 'M5 - Multi-digit ×/÷ One-digit / 4' },
+          { value: 'm6', label: 'M6 - Multi-digit ×/÷ Strategy / 5' },
         ]}
         onChange={(value) => setMathLevel(value as MathLevel)}
       />

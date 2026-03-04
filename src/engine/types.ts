@@ -68,7 +68,13 @@ export interface Permanent {
 // ─── Learning ───
 
 export type LearningDomain = 'reading' | 'math';
-export type LearningPromptKind = 'missing_letter' | 'word_to_picture' | 'addition' | 'subtraction';
+export type LearningPromptKind =
+  | 'missing_letter'
+  | 'word_to_picture'
+  | 'addition'
+  | 'subtraction'
+  | 'multiplication'
+  | 'division';
 
 export interface LearningPromptOption {
   id: string;

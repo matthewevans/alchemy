@@ -37,7 +37,7 @@ describe('learning content', () => {
   });
 
   it('keeps math answers in options for each level', () => {
-    for (const level of ['m0', 'm1', 'm2', 'm3'] as const) {
+    for (const level of ['m0', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6'] as const) {
       for (let seed = 1; seed <= 80; seed += 1) {
         const prompt = buildMathPrompt(level, seed * 17);
         expect(prompt.options.length).toBe(4);
@@ -46,8 +46,27 @@ describe('learning content', () => {
     }
   });
 
+  it('emits multiplication and division prompts at higher math levels', () => {
+    const m4Kinds = new Set<string>();
+    const m5Kinds = new Set<string>();
+    const m6Kinds = new Set<string>();
+
+    for (let seed = 1; seed <= 220; seed += 1) {
+      m4Kinds.add(buildMathPrompt('m4', seed * 13).kind);
+      m5Kinds.add(buildMathPrompt('m5', seed * 17).kind);
+      m6Kinds.add(buildMathPrompt('m6', seed * 19).kind);
+    }
+
+    expect(m4Kinds.has('multiplication')).toBe(true);
+    expect(m4Kinds.has('division')).toBe(true);
+    expect(m5Kinds.has('multiplication')).toBe(true);
+    expect(m5Kinds.has('division')).toBe(true);
+    expect(m6Kinds.has('multiplication')).toBe(true);
+    expect(m6Kinds.has('division')).toBe(true);
+  });
+
   it('builds missing-letter prompts with unique completions', () => {
-    for (const level of ['r0', 'r1', 'r2', 'r3'] as const) {
+    for (const level of ['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6'] as const) {
       const bank = [...new Set(READING_CURRICULUM[level].missingLetterWords.map((word) => word.toLowerCase()))];
 
       for (let seed = 1; seed <= 240; seed += 1) {
