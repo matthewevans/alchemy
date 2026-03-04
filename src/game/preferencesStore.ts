@@ -3,6 +3,11 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import type { Tier } from '@engine/types';
 import type { AIDifficulty } from '@engine/aiConfig';
 import type { LearningFrequency, MathLevel, ReadingLevel } from '../learning/config';
+import {
+  getLearningOnboardingPreset,
+  isLearningAgeRange,
+  type LearningAgeRange,
+} from '../learning/onboarding';
 
 /** Battlefield ID (e.g. 'fire_molten', 'shadow_haunted_graveyard') or 'auto'. */
 export type BattlefieldPreference = string;
@@ -41,6 +46,8 @@ interface PreferencesState {
   readingChallengeWeight: number;
   wordChallengeWeight: number;
   mathChallengeWeight: number;
+  learningOnboardingCompleted: boolean;
+  learningAgeRange: LearningAgeRange | null;
   autoUpdateEnabled: boolean;
   setStatLayout: (layout: StatLayout) => void;
   setUIScale: (scale: number) => void;
@@ -65,6 +72,9 @@ interface PreferencesState {
   setReadingChallengeWeight: (weight: number) => void;
   setWordChallengeWeight: (weight: number) => void;
   setMathChallengeWeight: (weight: number) => void;
+  applyLearningPreset: (ageRange: LearningAgeRange) => void;
+  clearLearningPreset: () => void;
+  completeLearningOnboarding: (enabled: boolean, ageRange: LearningAgeRange) => void;
   setAutoUpdateEnabled: (enabled: boolean) => void;
 }
 
@@ -98,12 +108,42 @@ interface PersistedPreferences {
   readingChallengeWeight: number;
   wordChallengeWeight: number;
   mathChallengeWeight: number;
+  learningOnboardingCompleted: boolean;
+  learningAgeRange: LearningAgeRange | null;
   autoUpdateEnabled: boolean;
 }
 
 function sanitizeChallengeWeight(value: unknown, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
   return Math.max(0, Math.min(10, Math.round(value)));
+}
+
+function buildLearningPreset(
+  ageRange: LearningAgeRange,
+): Pick<
+  PersistedPreferences,
+  | 'readingChallengesEnabled'
+  | 'mathChallengesEnabled'
+  | 'readingLevel'
+  | 'mathLevel'
+  | 'learningFrequency'
+  | 'readingChallengeWeight'
+  | 'wordChallengeWeight'
+  | 'mathChallengeWeight'
+  | 'learningAgeRange'
+> {
+  const preset = getLearningOnboardingPreset(ageRange);
+  return {
+    readingChallengesEnabled: true,
+    mathChallengesEnabled: true,
+    readingLevel: preset.readingLevel,
+    mathLevel: preset.mathLevel,
+    learningFrequency: preset.learningFrequency,
+    readingChallengeWeight: preset.readingChallengeWeight,
+    wordChallengeWeight: preset.wordChallengeWeight,
+    mathChallengeWeight: preset.mathChallengeWeight,
+    learningAgeRange: ageRange,
+  };
 }
 
 function loadPersistedPreferences(): PersistedPreferences {
@@ -142,6 +182,12 @@ function loadPersistedPreferences(): PersistedPreferences {
           parsed.mathChallengeWeight,
           DEFAULT_MATH_CHALLENGE_WEIGHT,
         ),
+        learningOnboardingCompleted: typeof parsed.learningOnboardingCompleted === 'boolean'
+          ? parsed.learningOnboardingCompleted
+          : true,
+        learningAgeRange: isLearningAgeRange(parsed.learningAgeRange)
+          ? parsed.learningAgeRange
+          : null,
         autoUpdateEnabled: typeof parsed.autoUpdateEnabled === 'boolean' ? parsed.autoUpdateEnabled : true,
       };
     }
@@ -170,6 +216,8 @@ function loadPersistedPreferences(): PersistedPreferences {
     readingChallengeWeight: DEFAULT_READING_CHALLENGE_WEIGHT,
     wordChallengeWeight: DEFAULT_WORD_CHALLENGE_WEIGHT,
     mathChallengeWeight: DEFAULT_MATH_CHALLENGE_WEIGHT,
+    learningOnboardingCompleted: false,
+    learningAgeRange: null,
     autoUpdateEnabled: true,
   };
 }
@@ -205,6 +253,8 @@ export const usePreferencesStore = create<PreferencesState>()(
     readingChallengeWeight: initial.readingChallengeWeight,
     wordChallengeWeight: initial.wordChallengeWeight,
     mathChallengeWeight: initial.mathChallengeWeight,
+    learningOnboardingCompleted: initial.learningOnboardingCompleted,
+    learningAgeRange: initial.learningAgeRange,
     autoUpdateEnabled: initial.autoUpdateEnabled,
 
     setStatLayout: (statLayout) => {
@@ -289,28 +339,28 @@ export const usePreferencesStore = create<PreferencesState>()(
     },
 
     setReadingChallengesEnabled: (readingChallengesEnabled) => {
-      persistPreferences({ ...get(), readingChallengesEnabled });
-      set({ readingChallengesEnabled });
+      persistPreferences({ ...get(), readingChallengesEnabled, learningAgeRange: null });
+      set({ readingChallengesEnabled, learningAgeRange: null });
     },
 
     setMathChallengesEnabled: (mathChallengesEnabled) => {
-      persistPreferences({ ...get(), mathChallengesEnabled });
-      set({ mathChallengesEnabled });
+      persistPreferences({ ...get(), mathChallengesEnabled, learningAgeRange: null });
+      set({ mathChallengesEnabled, learningAgeRange: null });
     },
 
     setReadingLevel: (readingLevel) => {
-      persistPreferences({ ...get(), readingLevel });
-      set({ readingLevel });
+      persistPreferences({ ...get(), readingLevel, learningAgeRange: null });
+      set({ readingLevel, learningAgeRange: null });
     },
 
     setMathLevel: (mathLevel) => {
-      persistPreferences({ ...get(), mathLevel });
-      set({ mathLevel });
+      persistPreferences({ ...get(), mathLevel, learningAgeRange: null });
+      set({ mathLevel, learningAgeRange: null });
     },
 
     setLearningFrequency: (learningFrequency) => {
-      persistPreferences({ ...get(), learningFrequency });
-      set({ learningFrequency });
+      persistPreferences({ ...get(), learningFrequency, learningAgeRange: null });
+      set({ learningFrequency, learningAgeRange: null });
     },
 
     setReadingChallengeWeight: (readingChallengeWeight) => {
@@ -318,8 +368,8 @@ export const usePreferencesStore = create<PreferencesState>()(
         readingChallengeWeight,
         DEFAULT_READING_CHALLENGE_WEIGHT,
       );
-      persistPreferences({ ...get(), readingChallengeWeight: clamped });
-      set({ readingChallengeWeight: clamped });
+      persistPreferences({ ...get(), readingChallengeWeight: clamped, learningAgeRange: null });
+      set({ readingChallengeWeight: clamped, learningAgeRange: null });
     },
 
     setWordChallengeWeight: (wordChallengeWeight) => {
@@ -327,8 +377,8 @@ export const usePreferencesStore = create<PreferencesState>()(
         wordChallengeWeight,
         DEFAULT_WORD_CHALLENGE_WEIGHT,
       );
-      persistPreferences({ ...get(), wordChallengeWeight: clamped });
-      set({ wordChallengeWeight: clamped });
+      persistPreferences({ ...get(), wordChallengeWeight: clamped, learningAgeRange: null });
+      set({ wordChallengeWeight: clamped, learningAgeRange: null });
     },
 
     setMathChallengeWeight: (mathChallengeWeight) => {
@@ -336,8 +386,49 @@ export const usePreferencesStore = create<PreferencesState>()(
         mathChallengeWeight,
         DEFAULT_MATH_CHALLENGE_WEIGHT,
       );
-      persistPreferences({ ...get(), mathChallengeWeight: clamped });
-      set({ mathChallengeWeight: clamped });
+      persistPreferences({ ...get(), mathChallengeWeight: clamped, learningAgeRange: null });
+      set({ mathChallengeWeight: clamped, learningAgeRange: null });
+    },
+
+    applyLearningPreset: (ageRange) => {
+      const patch = buildLearningPreset(ageRange);
+      persistPreferences({ ...get(), ...patch });
+      set(patch);
+    },
+
+    clearLearningPreset: () => {
+      persistPreferences({ ...get(), learningAgeRange: null });
+      set({ learningAgeRange: null });
+    },
+
+    completeLearningOnboarding: (enabled, ageRange) => {
+      if (!enabled) {
+        persistPreferences({
+          ...get(),
+          learningChallengesEnabled: false,
+          learningOnboardingCompleted: true,
+          learningAgeRange: null,
+        });
+        set({
+          learningChallengesEnabled: false,
+          learningOnboardingCompleted: true,
+          learningAgeRange: null,
+        });
+        return;
+      }
+
+      const patch = buildLearningPreset(ageRange);
+      persistPreferences({
+        ...get(),
+        learningChallengesEnabled: true,
+        ...patch,
+        learningOnboardingCompleted: true,
+      });
+      set({
+        learningChallengesEnabled: true,
+        ...patch,
+        learningOnboardingCompleted: true,
+      });
     },
 
     setAutoUpdateEnabled: (autoUpdateEnabled) => {

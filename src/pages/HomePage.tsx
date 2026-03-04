@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useCallback, useRef, lazy, Suspense, type ReactElement } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import type { PlayerId } from '@engine/types';
 import { createRNG } from '@engine/prng';
@@ -14,7 +14,7 @@ import { setPendingSession } from '@network/sessionTransfer';
 import { useDeckSelectMusic } from '@hooks/useDeckSelectMusic';
 import { useMultiplayerLobbyMusic } from '@hooks/useMultiplayerLobbyMusic';
 import { useTitleMusic } from '@hooks/useTitleMusic';
-import { TitleScreen } from '@components/ui';
+import { LearningOnboardingModal, TitleScreen } from '@components/ui';
 import type { InitialDeck } from '@components/ui/DeckBuilder';
 
 type SubScreen = 'title' | 'deck_select' | 'deck_builder' | 'multiplayer_lobby';
@@ -57,6 +57,8 @@ export function HomePage() {
   const setSelectedTier = usePreferencesStore((s) => s.setTier);
   const selectedDifficulty = usePreferencesStore((s) => s.difficulty);
   const setSelectedDifficulty = usePreferencesStore((s) => s.setDifficulty);
+  const learningOnboardingCompleted = usePreferencesStore((s) => s.learningOnboardingCompleted);
+  const completeLearningOnboarding = usePreferencesStore((s) => s.completeLearningOnboarding);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initGame = useGameStore((s) => s.initGame);
@@ -165,26 +167,50 @@ export function HomePage() {
     [initGame, navigate],
   );
 
+  const showLearningOnboarding = subScreen === 'title' && !learningOnboardingCompleted;
+  let screen: ReactElement;
+
   switch (subScreen) {
     case 'title':
-      return <TitleScreen onPlay={handlePlay} onMultiplayer={handleMultiplayer} onDeckBuilder={handleDeckBuilder} onResume={hasSavedGame ? handleResume : undefined} />;
+      screen = (
+        <TitleScreen
+          onPlay={handlePlay}
+          onMultiplayer={handleMultiplayer}
+          onDeckBuilder={handleDeckBuilder}
+          onResume={hasSavedGame ? handleResume : undefined}
+        />
+      );
+      break;
     case 'deck_select':
-      return (
+      screen = (
         <Suspense fallback={<HomeLoading label="Loading decks..." />}>
           <DeckSelectorScreen onSelectDeck={handleSelectDeck} onBack={handleBack} onCloneToDeckBuilder={handleCloneToDeckBuilder} tier={selectedTier} onTierChange={setSelectedTier} difficulty={selectedDifficulty} onDifficultyChange={setSelectedDifficulty} />
         </Suspense>
       );
+      break;
     case 'deck_builder':
-      return (
+      screen = (
         <Suspense fallback={<HomeLoading label="Loading deck builder..." />}>
           <DeckBuilderScreen onSelectDeck={handleSelectDeck} onBack={handleBack} tier={selectedTier} onTierChange={setSelectedTier} initialDeck={initialDeckRef.current} />
         </Suspense>
       );
+      break;
     case 'multiplayer_lobby':
-      return (
+      screen = (
         <Suspense fallback={<HomeLoading label="Loading multiplayer..." />}>
           <MultiplayerLobbyScreen onStartGame={handleMultiplayerStart} onBack={handleBack} />
         </Suspense>
       );
+      break;
   }
+
+  return (
+    <>
+      {screen}
+      <LearningOnboardingModal
+        open={showLearningOnboarding}
+        onComplete={completeLearningOnboarding}
+      />
+    </>
+  );
 }
