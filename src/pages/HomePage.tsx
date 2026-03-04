@@ -50,7 +50,7 @@ export function HomePage() {
   const locationState = location.state as HomeLocationState | null;
   const [subScreen, setSubScreen] = useState<SubScreen>(locationState?.initialScreen ?? 'title');
   useTitleMusic(subScreen === 'title');
-  useDeckSelectMusic(subScreen === 'deck_select');
+  useDeckSelectMusic(subScreen === 'deck_select' || subScreen === 'multiplayer_lobby');
   const selectedTier = usePreferencesStore((s) => s.tier);
   const setSelectedTier = usePreferencesStore((s) => s.setTier);
   const selectedDifficulty = usePreferencesStore((s) => s.difficulty);

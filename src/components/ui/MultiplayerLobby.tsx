@@ -57,6 +57,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
   const sessionRef = useRef<PeerSession | null>(null);
   const shouldReduceMotion = useReducedMotion();
   const floatingIcons = useFloatingIcons(shouldReduceMotion ? 0 : 8);
+  const logoWordmarkSrc = `${import.meta.env.BASE_URL}logo_wordmark.webp`;
 
   useEffect(() => {
     return () => {
@@ -229,6 +230,19 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-950 text-white overflow-hidden relative pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      {/* Top-center Alchemy wordmark */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pt-[env(safe-area-inset-top)] pointer-events-none">
+        <motion.img
+          src={logoWordmarkSrc}
+          alt="Alchemy"
+          className="w-44 sm:w-52 object-contain"
+          style={{ filter: 'drop-shadow(0 4px 20px rgba(251, 191, 36, 0.28))' }}
+          initial={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.92, y: -8 }}
+          animate={shouldReduceMotion ? undefined : { opacity: 1, scale: 1, y: 0 }}
+          transition={shouldReduceMotion ? undefined : { duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </div>
+
       {/* Floating element icons */}
       {floatingIcons.map((icon) => (
         <motion.img
@@ -275,7 +289,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
       )}
 
       {/* Centered content */}
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center pt-24 sm:pt-28">
         <AnimatePresence mode="wait">
           {step.type === 'choose_role' && (
             <motion.div
