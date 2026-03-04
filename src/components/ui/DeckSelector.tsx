@@ -255,7 +255,7 @@ function DeckDetailPanel({ deck, tier, onPlay, onClone, onClose, onPreviewCard }
 
   return (
     <motion.div
-      className="fixed inset-0 z-40 bg-slate-900/98 border-t backdrop-blur-sm flex flex-col h-dvh max-h-dvh sm:inset-x-0 sm:bottom-0 sm:top-auto sm:h-auto sm:max-h-[60vh]"
+      className="fixed inset-0 z-40 bg-slate-900/98 border-t backdrop-blur-sm flex flex-col h-dvh max-h-dvh md:inset-x-0 md:bottom-0 md:top-auto md:h-auto md:max-h-[60vh]"
       style={{
         borderColor: `${primaryColor}44`,
       }}
