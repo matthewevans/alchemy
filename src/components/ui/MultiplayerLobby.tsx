@@ -230,19 +230,6 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-950 text-white overflow-hidden relative pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-      {/* Top-center Alchemy wordmark */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pt-[env(safe-area-inset-top)] pointer-events-none">
-        <motion.img
-          src={logoWordmarkSrc}
-          alt="Alchemy"
-          className="w-44 sm:w-52 object-contain"
-          style={{ filter: 'drop-shadow(0 4px 20px rgba(251, 191, 36, 0.28))' }}
-          initial={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.92, y: -8 }}
-          animate={shouldReduceMotion ? undefined : { opacity: 1, scale: 1, y: 0 }}
-          transition={shouldReduceMotion ? undefined : { duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        />
-      </div>
-
       {/* Floating element icons */}
       {floatingIcons.map((icon) => (
         <motion.img
@@ -289,7 +276,35 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
       )}
 
       {/* Centered content */}
-      <div className="flex-1 flex items-center justify-center pt-24 sm:pt-28">
+      <div className="flex-1 flex flex-col items-center justify-center px-4">
+        {/* Logo with glow */}
+        <div className="relative mb-8 flex items-center justify-center pointer-events-none">
+          {!shouldReduceMotion && (
+            <motion.div
+              className="absolute"
+              style={{
+                width: 400,
+                height: 200,
+                borderRadius: '50%',
+                background: 'radial-gradient(ellipse, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.05) 50%, transparent 70%)',
+                filter: 'blur(20px)',
+              }}
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: [0, 1, 0.7], scale: [0.5, 1.2, 1] }}
+              transition={{ duration: 1.2, ease: 'easeOut' }}
+            />
+          )}
+          <motion.img
+            src={logoWordmarkSrc}
+            alt="Alchemy"
+            className="relative w-80 max-w-[80vw]"
+            style={{ filter: 'drop-shadow(0 4px 20px rgba(251, 191, 36, 0.3))' }}
+            initial={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.7, y: 20 }}
+            animate={shouldReduceMotion ? undefined : { opacity: 1, scale: 1, y: 0 }}
+            transition={shouldReduceMotion ? undefined : { duration: 0.8, type: 'spring', stiffness: 200, damping: 15 }}
+          />
+        </div>
+
         <AnimatePresence mode="wait">
           {step.type === 'choose_role' && (
             <motion.div

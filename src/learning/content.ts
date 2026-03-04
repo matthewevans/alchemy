@@ -1,4 +1,4 @@
-import type { LearningDomain, LearningPrompt } from '@engine/types';
+import type { LearningDomain, LearningPrompt, LearningPromptOption } from '@engine/types';
 import type { MathLevel, ReadingLevel } from './config';
 import {
   buildMathBlueprint,
@@ -10,6 +10,7 @@ import { createLearningRandom, hashStringToSeed, type LearningRandom } from './r
 
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz'.split('');
 const VOWELS = new Set(['a', 'e', 'i', 'o', 'u']);
+const BASE = import.meta.env.BASE_URL;
 
 const LOOKALIKE_LETTERS: Record<string, readonly string[]> = {
   b: ['d', 'p', 'h', 'r'],
@@ -129,6 +130,35 @@ function buildMissingLetterPrompt(level: ReadingLevel, random: LearningRandom): 
   };
 }
 
+function toAssetUrl(path: string): string {
+  if (path.startsWith('/')) return `${BASE}${path.slice(1)}`;
+  return `${BASE}${path}`;
+}
+
+function buildWordToPicturePrompt(level: ReadingLevel, random: LearningRandom): LearningPrompt {
+  const vocab = READING_CURRICULUM[level].wordPictureVocab;
+  const target = random.pick(vocab);
+  const distractors = random
+    .shuffle(vocab.filter((item) => item.word !== target.word))
+    .slice(0, 3);
+  const options = random.shuffle([target, ...distractors]);
+
+  const promptOptions: LearningPromptOption[] = options.map((item, index) => ({
+    id: `picture:${item.word}`,
+    text: `Picture ${index + 1}`,
+    imageId: toAssetUrl(item.imagePath),
+  }));
+
+  return {
+    id: makePromptId('reading', random),
+    domain: 'reading',
+    kind: 'word_to_picture',
+    prompt: `Pick the picture for: ${target.word}`,
+    options: promptOptions,
+    correctOptionId: `picture:${target.word}`,
+  };
+}
+
 function buildMathOptions(
   level: MathLevel,
   answer: number,
@@ -161,6 +191,10 @@ export function buildReadingPrompt(
   seed?: number,
 ): LearningPrompt {
   const random = getRandom(seed, 'reading');
+  const shouldUsePictures = random.chance(READING_CURRICULUM[level].wordToPictureChance);
+  if (shouldUsePictures) {
+    return buildWordToPicturePrompt(level, random);
+  }
   return buildMissingLetterPrompt(level, random);
 }
 

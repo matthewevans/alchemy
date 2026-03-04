@@ -247,7 +247,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
               aria-modal="true"
               aria-label="Settings"
               tabIndex={-1}
-              className="settings-dialog bg-slate-800/95 rounded-2xl p-5 sm:p-7 flex flex-col items-stretch gap-4 w-[95vw] max-w-[720px] max-h-[88dvh] overflow-hidden shadow-2xl border border-slate-600/40"
+              className="settings-dialog bg-slate-800/95 flex flex-col items-stretch gap-4 w-screen h-[100dvh] max-w-none max-h-none rounded-none border-0 p-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-[calc(env(safe-area-inset-bottom)+0.75rem)] overflow-hidden shadow-2xl sm:w-[95vw] sm:h-[88dvh] sm:max-w-[720px] sm:max-h-[88dvh] sm:rounded-2xl sm:border sm:border-slate-600/40 sm:p-7"
               style={{
                 boxShadow: '0 0 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(0, 0, 0, 0.3)',
               }}

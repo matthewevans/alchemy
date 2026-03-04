@@ -30,7 +30,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const ActiveContent = activeTabDef.content;
 
   return (
-    <div className="flex flex-col gap-4 w-full min-h-0">
+    <div className="flex flex-col gap-4 w-full h-full min-h-0">
       <div className="flex flex-col md:flex-row gap-3 min-h-0">
         <nav
           role="tablist"
@@ -55,7 +55,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
         <div
           role="tabpanel"
-          className="flex-1 min-w-0 min-h-0 rounded-xl border border-slate-600/30 bg-slate-900/25 p-3 sm:p-4 flex flex-col h-[min(52dvh,430px)]"
+          className="flex-1 min-w-0 min-h-0 rounded-xl border border-slate-600/30 bg-slate-900/25 p-3 sm:p-4 flex flex-col"
         >
           <div className="mb-3 shrink-0">
             <h3 className="text-sm font-semibold text-white/90">{activeTabDef.label}</h3>

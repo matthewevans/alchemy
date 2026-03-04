@@ -61,7 +61,7 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
         tabIndex={-1}
         className={`bg-slate-800/95 rounded-2xl p-5 sm:p-8 flex flex-col gap-4 shadow-2xl border border-slate-600/40 ${
           view === 'settings'
-            ? 'settings-dialog items-stretch w-[95vw] max-w-[720px] max-h-[88dvh] overflow-hidden'
+            ? 'settings-dialog items-stretch w-screen h-[100dvh] max-w-none max-h-none rounded-none border-0 p-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-[calc(env(safe-area-inset-bottom)+0.75rem)] overflow-hidden sm:w-[95vw] sm:h-[88dvh] sm:max-w-[720px] sm:max-h-[88dvh] sm:rounded-2xl sm:border sm:border-slate-600/40 sm:p-8'
             : 'items-center min-w-[360px] max-w-[90vw]'
         }`}
         style={{
