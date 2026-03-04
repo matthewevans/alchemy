@@ -31,8 +31,10 @@ function getCardCenter(permanentId: string): { x: number; y: number } | null {
   return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
 }
 
-function findPermanent(board: (Permanent | null)[], id: string): Permanent | null {
-  return board.find((p) => p?.permanentId === id) ?? null;
+function serializeMatchups(matchups: MatchupMath[]): string {
+  return matchups
+    .map((matchup) => `${Math.round(matchup.midX)},${Math.round(matchup.midY)},${matchup.blockerHPLeft},${matchup.attackerHPLeft}`)
+    .join('|');
 }
 
 function computeMatchup(
@@ -105,31 +107,43 @@ export function CombatMathBubbles() {
       (phase.step !== 'declare_blockers' && phase.step !== 'order_blockers') ||
       !players
     ) {
-      setMatchups([]);
+      setMatchups((prev) => (prev.length === 0 ? prev : []));
       setExpanded(null);
       return;
     }
 
     let rafId: number;
     let stableCount = 0;
-    let lastKey = '';
+    let lastStableKey = '';
+    let lastRenderedKey = '';
 
     const blockerAssignments = phase.step === 'declare_blockers'
       ? phase.tentativeBlockers
       : phase.blockers;
     const currentPlayers = players;
+    const permanentById = new Map<string, Permanent>();
+    for (const permanent of [...currentPlayers.player1.board, ...currentPlayers.player2.board]) {
+      if (!permanent) continue;
+      permanentById.set(permanent.permanentId, permanent);
+    }
 
     function update() {
       const results: MatchupMath[] = [];
-      const allBoard = [...currentPlayers.player1.board, ...currentPlayers.player2.board];
+      const centerCache = new Map<string, { x: number; y: number } | null>();
+      const getCenter = (permanentId: string) => {
+        if (!centerCache.has(permanentId)) {
+          centerCache.set(permanentId, getCardCenter(permanentId));
+        }
+        return centerCache.get(permanentId) ?? null;
+      };
 
       for (const [blockerId, attackerId] of Object.entries(blockerAssignments)) {
-        const blocker = findPermanent(allBoard, blockerId);
-        const attacker = findPermanent(allBoard, attackerId);
+        const blocker = permanentById.get(blockerId);
+        const attacker = permanentById.get(attackerId);
         if (!blocker || !attacker) continue;
 
-        const from = getCardCenter(blockerId);
-        const to = getCardCenter(attackerId);
+        const from = getCenter(blockerId);
+        const to = getCenter(attackerId);
         if (!from || !to) continue;
 
         const midX = (from.x + to.x) / 2;
@@ -138,14 +152,17 @@ export function CombatMathBubbles() {
         results.push(computeMatchup(attacker, blocker, midX, midY));
       }
 
-      setMatchups(results);
+      const key = serializeMatchups(results);
+      if (key !== lastRenderedKey) {
+        setMatchups(results);
+        lastRenderedKey = key;
+      }
 
-      const key = results.map((r) => `${Math.round(r.midX)},${Math.round(r.midY)}`).join('|');
-      if (key === lastKey) {
+      if (key === lastStableKey) {
         stableCount++;
       } else {
         stableCount = 0;
-        lastKey = key;
+        lastStableKey = key;
       }
 
       if (stableCount < 10) {

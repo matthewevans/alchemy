@@ -268,7 +268,7 @@ function validateAssignBlocker(
   if (!state.phase.confirmedAttackers.includes(attackerPermanentId)) {
     return { valid: false, reason: 'Target is not a confirmed attacker' };
   }
-  const alreadyBlocking = Object.keys(state.phase.tentativeBlockers).includes(blockerPermanentId);
+  const alreadyBlocking = blockerPermanentId in state.phase.tentativeBlockers;
   if (alreadyBlocking) {
     return { valid: false, reason: 'Creature is already assigned as a blocker' };
   }
@@ -282,7 +282,7 @@ function validateRemoveBlocker(state: GameState, blockerPermanentId: string, act
   if (actingPlayer !== getOpponent(state.activePlayer)) {
     return { valid: false, reason: 'Only the defending player can remove blockers' };
   }
-  const isAssigned = Object.keys(state.phase.tentativeBlockers).includes(blockerPermanentId);
+  const isAssigned = blockerPermanentId in state.phase.tentativeBlockers;
   if (!isAssigned) {
     return { valid: false, reason: 'Creature is not currently assigned as a blocker' };
   }

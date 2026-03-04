@@ -1519,21 +1519,32 @@ function resolveMultiBlockCombat(
   const events: GameEvent[] = [];
   const players = clonePlayers(state.players);
   const mutableState: GameState = { ...state, players };
+  const attackerHasArmor = hasKeyword(attacker, 'armor') && !attacker.armorUsedThisTurn;
+  const attackerHasDeathtouch = hasKeyword(attacker, 'deathtouch');
+  const attackerHasLifesteal = hasKeyword(attacker, 'lifesteal');
+  const blockerRefs = blockerIds
+    .map((blockerId) => findPermanent(mutableState, blockerId))
+    .filter(
+      (ref): ref is { permanent: Permanent; owner: PlayerId; slotIndex: number } =>
+        ref !== null,
+    );
+  const attackerRef = findPermanent(mutableState, attacker.permanentId);
 
   let attackDamage = getEffectiveAttack(attacker);
   if (hasKeyword(attacker, 'fury')) attackDamage *= 2;
 
   // Distribute attacker damage among blockers in order
   let remainingDmg = attackDamage;
-  for (const blockerId of blockerIds) {
-    const bf = findPermanent(mutableState, blockerId);
-    if (!bf || remainingDmg <= 0) continue;
-    const blocker = bf.permanent;
+  for (const blockerRef of blockerRefs) {
+    if (remainingDmg <= 0) break;
+
+    const blocker = players[blockerRef.owner].board[blockerRef.slotIndex];
+    if (!blocker) continue;
 
     // With deathtouch, 1 damage is enough to kill any blocker
     const blockerHP = getCurrentHealth(blocker);
     let dmgToAssign: number;
-    if (hasKeyword(attacker, 'deathtouch')) {
+    if (attackerHasDeathtouch) {
       dmgToAssign = Math.min(remainingDmg, 1);
     } else {
       dmgToAssign = Math.min(remainingDmg, blockerHP);
@@ -1542,13 +1553,13 @@ function resolveMultiBlockCombat(
     // Blocker armor reduces incoming damage
     if (hasKeyword(blocker, 'armor') && !blocker.armorUsedThisTurn && dmgToAssign > 0) {
       dmgToAssign = Math.max(0, dmgToAssign - 1);
-      players[bf.owner].board[bf.slotIndex] = {
+      players[blockerRef.owner].board[blockerRef.slotIndex] = {
         ...blocker,
         damage: blocker.damage + dmgToAssign,
         armorUsedThisTurn: true,
       };
     } else {
-      players[bf.owner].board[bf.slotIndex] = {
+      players[blockerRef.owner].board[blockerRef.slotIndex] = {
         ...blocker,
         damage: blocker.damage + dmgToAssign,
       };
@@ -1566,16 +1577,15 @@ function resolveMultiBlockCombat(
   // All blockers deal damage to attacker simultaneously
   let totalBlockerDmg = 0;
   let attackerArmorUsed = false;
-  for (const blockerId of blockerIds) {
-    const bf = findPermanent(mutableState, blockerId);
-    if (!bf) continue;
-    const blocker = bf.permanent;
+  for (const blockerRef of blockerRefs) {
+    const blocker = players[blockerRef.owner].board[blockerRef.slotIndex];
+    if (!blocker) continue;
 
     let blockDmg = getEffectiveAttack(blocker);
     if (hasKeyword(blocker, 'fury')) blockDmg *= 2;
 
     // Attacker armor reduces the first source of blocker damage (once)
-    if (hasKeyword(attacker, 'armor') && !attacker.armorUsedThisTurn && !attackerArmorUsed && blockDmg > 0) {
+    if (attackerHasArmor && !attackerArmorUsed && blockDmg > 0) {
       blockDmg = Math.max(0, blockDmg - 1);
       attackerArmorUsed = true;
     }
@@ -1590,11 +1600,10 @@ function resolveMultiBlockCombat(
   }
 
   // Apply total blocker damage to attacker
-  const af = findPermanent(mutableState, attacker.permanentId);
-  if (af) {
-    const attackerNow = players[af.owner].board[af.slotIndex];
+  if (attackerRef) {
+    const attackerNow = players[attackerRef.owner].board[attackerRef.slotIndex];
     if (attackerNow) {
-      players[af.owner].board[af.slotIndex] = {
+      players[attackerRef.owner].board[attackerRef.slotIndex] = {
         ...attackerNow,
         damage: attackerNow.damage + totalBlockerDmg,
         armorUsedThisTurn: attackerNow.armorUsedThisTurn || attackerArmorUsed,
@@ -1603,27 +1612,21 @@ function resolveMultiBlockCombat(
   }
 
   // Deathtouch checks
-  if (hasKeyword(attacker, 'deathtouch') && attackDamage > 0) {
-    for (const blockerId of blockerIds) {
-      const bf = findPermanent(mutableState, blockerId);
-      if (bf) {
-        const dtPerm = players[bf.owner].board[bf.slotIndex];
-        if (dtPerm) {
-          players[bf.owner].board[bf.slotIndex] = {
-            ...dtPerm,
-            damage: dtPerm.health + dtPerm.temporaryHealthBonus,
-          };
-        }
+  if (attackerHasDeathtouch && attackDamage > 0) {
+    for (const blockerRef of blockerRefs) {
+      const dtPerm = players[blockerRef.owner].board[blockerRef.slotIndex];
+      if (dtPerm) {
+        players[blockerRef.owner].board[blockerRef.slotIndex] = {
+          ...dtPerm,
+          damage: dtPerm.health + dtPerm.temporaryHealthBonus,
+        };
       }
     }
   }
-  for (const blockerId of blockerIds) {
-    const bf = findPermanent(mutableState, blockerId);
-    if (!bf) continue;
-    const blocker = players[bf.owner].board[bf.slotIndex];
+  for (const blockerRef of blockerRefs) {
+    const blocker = players[blockerRef.owner].board[blockerRef.slotIndex];
     if (!blocker) continue;
     if (hasKeyword(blocker, 'deathtouch') && getEffectiveAttack(blocker) > 0) {
-      const attackerRef = findPermanent(mutableState, attacker.permanentId);
       if (attackerRef) {
         const dtPerm = players[attackerRef.owner].board[attackerRef.slotIndex];
         if (dtPerm) {
@@ -1638,15 +1641,13 @@ function resolveMultiBlockCombat(
   }
 
   // Lifesteal checks
-  if (hasKeyword(attacker, 'lifesteal') && attackDamage > 0) {
+  if (attackerHasLifesteal && attackDamage > 0) {
     const totalDealt = attackDamage - remainingDmg;
     players[attacker.ownerId].health += totalDealt;
     events.push({ type: 'PLAYER_HEALED', player: attacker.ownerId, amount: totalDealt });
   }
-  for (const blockerId of blockerIds) {
-    const bf = findPermanent(state, blockerId);
-    if (!bf) continue;
-    const blocker = bf.permanent;
+  for (const blockerRef of blockerRefs) {
+    const blocker = blockerRef.permanent;
     if (hasKeyword(blocker, 'lifesteal')) {
       let blockDmg = getEffectiveAttack(blocker);
       if (hasKeyword(blocker, 'fury')) blockDmg *= 2;

@@ -21,6 +21,10 @@ interface CreatureSlotsProps {
 const EMPTY_ATTACKER_IDS: string[] = [];
 const EMPTY_BLOCKERS: Record<string, string> = {};
 
+function blockerAssignmentKey(blockerId: string, attackerId: string): string {
+  return `${blockerId}::${attackerId}`;
+}
+
 /** Should this board fan out (show individual cards) rather than stacking? */
 function shouldFanOut(
   phase: Phase | undefined,
@@ -98,6 +102,14 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     () => [...tentativeAttackers, ...confirmedAttackers, ...resolvingAttackers],
     [tentativeAttackers, confirmedAttackers, resolvingAttackers],
   );
+  const allAttackerIds = useMemo(
+    () => new Set(allAttackers),
+    [allAttackers],
+  );
+  const confirmedAttackerIds = useMemo(
+    () => new Set(confirmedAttackers),
+    [confirmedAttackers],
+  );
 
   // During animation, only shift forward the creature whose combat_strike is playing
   const activeAttackerId = useAnimationStore((s) => {
@@ -129,44 +141,84 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     [allBlockers],
   );
 
-  // Determine valid attackers / blockers / targets from legal actions
-  const validAttackerIds = new Set(
-    legalActions
-      .filter((a): a is Extract<GameAction, { type: 'DECLARE_ATTACKER' }> => a.type === 'DECLARE_ATTACKER')
-      .map((a) => a.permanentId),
-  );
-  const undeclareAttackerIds = new Set(
-    legalActions
-      .filter((a): a is Extract<GameAction, { type: 'UNDECLARE_ATTACKER' }> => a.type === 'UNDECLARE_ATTACKER')
-      .map((a) => a.permanentId),
-  );
-  const validBlockerIds = new Set(
-    legalActions
-      .filter((a): a is Extract<GameAction, { type: 'ASSIGN_BLOCKER' }> => a.type === 'ASSIGN_BLOCKER')
-      .map((a) => a.blockerPermanentId),
-  );
-  const validOrderableBlockerIds = new Set(
-    legalActions
-      .filter((a): a is Extract<GameAction, { type: 'SET_BLOCKER_ORDER' }> => a.type === 'SET_BLOCKER_ORDER')
-      .map((a) => a.blockerPermanentIds[0]),
-  );
-  const validTargetActions = legalActions.filter(
-    (a): a is Extract<GameAction, { type: 'SELECT_TARGET' }> => a.type === 'SELECT_TARGET',
-  );
-  const validTargetPermanentIds = new Set(
-    validTargetActions
-      .filter((a) => a.targetRef.type === 'creature')
-      .map((a) => (a.targetRef as { type: 'creature'; permanentId: string }).permanentId),
-  );
+  // Determine valid attackers / blockers / targets and direct lookups from legal actions.
+  const actionIndex = useMemo(() => {
+    const validAttackerIds = new Set<string>();
+    const undeclareAttackerIds = new Set<string>();
+    const validBlockerIds = new Set<string>();
+    const validOrderableBlockerIds = new Set<string>();
+    const validTargetPermanentIds = new Set<string>();
+    const targetActionByPermanentId = new Map<string, Extract<GameAction, { type: 'SELECT_TARGET' }>>();
+    const assignActionByPair = new Map<string, Extract<GameAction, { type: 'ASSIGN_BLOCKER' }>>();
+    const removeActionByBlocker = new Map<string, Extract<GameAction, { type: 'REMOVE_BLOCKER' }>>();
+    const reorderActionByLeadingBlocker = new Map<string, Extract<GameAction, { type: 'SET_BLOCKER_ORDER' }>>();
+
+    for (const action of legalActions) {
+      switch (action.type) {
+        case 'DECLARE_ATTACKER':
+          validAttackerIds.add(action.permanentId);
+          break;
+        case 'UNDECLARE_ATTACKER':
+          undeclareAttackerIds.add(action.permanentId);
+          break;
+        case 'ASSIGN_BLOCKER':
+          validBlockerIds.add(action.blockerPermanentId);
+          assignActionByPair.set(
+            blockerAssignmentKey(action.blockerPermanentId, action.attackerPermanentId),
+            action,
+          );
+          break;
+        case 'REMOVE_BLOCKER':
+          removeActionByBlocker.set(action.blockerPermanentId, action);
+          break;
+        case 'SET_BLOCKER_ORDER': {
+          const leadingBlockerId = action.blockerPermanentIds[0];
+          if (!leadingBlockerId) break;
+          validOrderableBlockerIds.add(leadingBlockerId);
+          reorderActionByLeadingBlocker.set(leadingBlockerId, action);
+          break;
+        }
+        case 'SELECT_TARGET':
+          if (action.targetRef.type === 'creature') {
+            validTargetPermanentIds.add(action.targetRef.permanentId);
+            targetActionByPermanentId.set(action.targetRef.permanentId, action);
+          }
+          break;
+        default:
+          break;
+      }
+    }
+
+    return {
+      validAttackerIds,
+      undeclareAttackerIds,
+      validBlockerIds,
+      validOrderableBlockerIds,
+      validTargetPermanentIds,
+      targetActionByPermanentId,
+      assignActionByPair,
+      removeActionByBlocker,
+      reorderActionByLeadingBlocker,
+    };
+  }, [legalActions]);
+  const {
+    validAttackerIds,
+    undeclareAttackerIds,
+    validBlockerIds,
+    validOrderableBlockerIds,
+    validTargetPermanentIds,
+    targetActionByPermanentId,
+    assignActionByPair,
+    removeActionByBlocker,
+    reorderActionByLeadingBlocker,
+  } = actionIndex;
 
   const handleCreatureClick = (permanentId: string) => {
     if (!phase) return;
 
     // Targeting phase: click valid target creature
     if (phase.type === 'targeting') {
-      const targetAction = validTargetActions.find(
-        (a) => a.targetRef.type === 'creature' && a.targetRef.permanentId === permanentId,
-      );
+      const targetAction = targetActionByPermanentId.get(permanentId);
       if (targetAction) {
         dispatch(targetAction, humanPlayer);
       }
@@ -191,10 +243,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
       if (isPlayerBoard) {
         const isAssignedBlocker = permanentId in tentativeBlockers;
         if (isAssignedBlocker) {
-          const removeAction = legalActions.find(
-            (a): a is Extract<GameAction, { type: 'REMOVE_BLOCKER' }> =>
-              a.type === 'REMOVE_BLOCKER' && a.blockerPermanentId === permanentId,
-          );
+          const removeAction = removeActionByBlocker.get(permanentId);
           if (removeAction) {
             dispatch(removeAction, humanPlayer);
           }
@@ -204,12 +253,9 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
         }
 
         // If attacker is already selected, assign immediately.
-        if (selectedAttackerId && confirmedAttackers.includes(selectedAttackerId)) {
-          const assignAction = legalActions.find(
-            (a): a is Extract<GameAction, { type: 'ASSIGN_BLOCKER' }> =>
-              a.type === 'ASSIGN_BLOCKER'
-              && a.blockerPermanentId === permanentId
-              && a.attackerPermanentId === selectedAttackerId,
+        if (selectedAttackerId && confirmedAttackerIds.has(selectedAttackerId)) {
+          const assignAction = assignActionByPair.get(
+            blockerAssignmentKey(permanentId, selectedAttackerId),
           );
           if (assignAction) {
             dispatch(assignAction, humanPlayer);
@@ -222,11 +268,8 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
         // With one attacker, blocker click can auto-assign.
         if (confirmedAttackers.length === 1) {
           const loneAttackerId = confirmedAttackers[0];
-          const assignAction = legalActions.find(
-            (a): a is Extract<GameAction, { type: 'ASSIGN_BLOCKER' }> =>
-              a.type === 'ASSIGN_BLOCKER'
-              && a.blockerPermanentId === permanentId
-              && a.attackerPermanentId === loneAttackerId,
+          const assignAction = assignActionByPair.get(
+            blockerAssignmentKey(permanentId, loneAttackerId),
           );
           if (assignAction) {
             dispatch(assignAction, humanPlayer);
@@ -244,15 +287,12 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
           }
         }
       } else {
-        if (!confirmedAttackers.includes(permanentId)) return;
+        if (!confirmedAttackerIds.has(permanentId)) return;
 
         // Clicking opponent (attacker) creature: assign block if we have a blocker selected
-        if (selectedBlockerId && confirmedAttackers.includes(permanentId)) {
-          const assignAction = legalActions.find(
-            (a): a is Extract<GameAction, { type: 'ASSIGN_BLOCKER' }> =>
-              a.type === 'ASSIGN_BLOCKER' &&
-              a.blockerPermanentId === selectedBlockerId &&
-              a.attackerPermanentId === permanentId,
+        if (selectedBlockerId && confirmedAttackerIds.has(permanentId)) {
+          const assignAction = assignActionByPair.get(
+            blockerAssignmentKey(selectedBlockerId, permanentId),
           );
           if (assignAction) {
             dispatch(assignAction, humanPlayer);
@@ -275,13 +315,8 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
 
       const attackerId = phase.blockers[permanentId];
       if (!attackerId) return;
-      const reorderAction = legalActions.find(
-        (a): a is Extract<GameAction, { type: 'SET_BLOCKER_ORDER' }> =>
-          a.type === 'SET_BLOCKER_ORDER'
-          && a.attackerPermanentId === attackerId
-          && a.blockerPermanentIds[0] === permanentId,
-      );
-      if (reorderAction) {
+      const reorderAction = reorderActionByLeadingBlocker.get(permanentId);
+      if (reorderAction && reorderAction.attackerPermanentId === attackerId) {
         dispatch(reorderAction, humanPlayer);
       }
       return;
@@ -406,7 +441,7 @@ export function CreatureSlots({ playerId, isOpponent }: CreatureSlotsProps) {
     // During combat animation, only the creature currently striking shifts forward
     const isAttacking = activeAttackerId
       ? permanent.permanentId === activeAttackerId
-      : allAttackers.includes(permanent.permanentId);
+      : allAttackerIds.has(permanent.permanentId);
     const isBlocking = allBlockerIds.has(permanent.permanentId);
     const isValidTarget = validTargetPermanentIds.has(permanent.permanentId);
     const isValidAttacker = validAttackerIds.has(permanent.permanentId) || undeclareAttackerIds.has(permanent.permanentId);

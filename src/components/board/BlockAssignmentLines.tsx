@@ -11,6 +11,8 @@ interface BlockLink {
   toY: number;
 }
 
+const FULL_EFFECT_LINK_LIMIT = 3;
+
 /** Locate a board card's center by querying the DOM directly. */
 function getCardCenter(permanentId: string): { x: number; y: number } | null {
   // data-testid values are quoted in the selector, so : and # are literal
@@ -18,6 +20,32 @@ function getCardCenter(permanentId: string): { x: number; y: number } | null {
   if (!el) return null;
   const rect = el.getBoundingClientRect();
   return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+}
+
+function serializeLinks(links: BlockLink[]): string {
+  return links
+    .map((link) => `${Math.round(link.fromX)},${Math.round(link.fromY)},${Math.round(link.toX)},${Math.round(link.toY)}`)
+    .join('|');
+}
+
+function collectBlockLinks(blockerAssignments: Record<string, string>): BlockLink[] {
+  const centerCache = new Map<string, { x: number; y: number } | null>();
+  const getCenter = (permanentId: string) => {
+    if (!centerCache.has(permanentId)) {
+      centerCache.set(permanentId, getCardCenter(permanentId));
+    }
+    return centerCache.get(permanentId) ?? null;
+  };
+
+  const links: BlockLink[] = [];
+  for (const [blockerId, attackerId] of Object.entries(blockerAssignments)) {
+    const from = getCenter(blockerId);
+    const to = getCenter(attackerId);
+    if (!from || !to) continue;
+    links.push({ blockerId, attackerId, fromX: from.x, fromY: from.y, toX: to.x, toY: to.y });
+  }
+
+  return links;
 }
 
 export function BlockAssignmentLines() {
@@ -33,7 +61,7 @@ export function BlockAssignmentLines() {
       || phase.type !== 'battle'
       || (phase.step !== 'declare_blockers' && phase.step !== 'order_blockers')
     ) {
-      setLinks([]);
+      setLinks((prev) => (prev.length === 0 ? prev : []));
       return;
     }
 
@@ -42,29 +70,23 @@ export function BlockAssignmentLines() {
       : phase.blockers;
     let rafId: number;
     let stableCount = 0;
-    let lastKey = '';
+    let lastStableKey = '';
+    let lastRenderedKey = '';
 
     function updateLinks() {
-      const newLinks = Object.entries(blockerAssignments)
-        .map(([blockerId, attackerId]) => {
-          const from = getCardCenter(blockerId);
-          const to = getCardCenter(attackerId);
-          if (!from || !to) return null;
-          return { blockerId, attackerId, fromX: from.x, fromY: from.y, toX: to.x, toY: to.y };
-        })
-        .filter((link): link is BlockLink => link !== null);
+      const newLinks = collectBlockLinks(blockerAssignments);
+      const key = serializeLinks(newLinks);
 
-      setLinks(newLinks);
+      if (key !== lastRenderedKey) {
+        setLinks(newLinks);
+        lastRenderedKey = key;
+      }
 
-      const key = newLinks
-        .map((l) => `${Math.round(l.fromX)},${Math.round(l.fromY)},${Math.round(l.toX)},${Math.round(l.toY)}`)
-        .join('|');
-
-      if (key === lastKey) {
+      if (key === lastStableKey) {
         stableCount++;
       } else {
         stableCount = 0;
-        lastKey = key;
+        lastStableKey = key;
       }
 
       if (stableCount < 10) {
@@ -77,6 +99,7 @@ export function BlockAssignmentLines() {
   }, [phase]);
 
   if (links.length === 0) return null;
+  const fullEffects = links.length <= FULL_EFFECT_LINK_LIMIT;
 
   return createPortal(
     <svg
@@ -129,41 +152,41 @@ export function BlockAssignmentLines() {
             stroke="rgba(96, 165, 250, 0.25)"
             strokeWidth="8"
             strokeLinecap="round"
-            filter="url(#block-line-glow)"
+            filter={fullEffects ? 'url(#block-line-glow)' : undefined}
           />
 
           {/* Animated dashed line */}
           <line
             data-testid="block-assignment-line"
-            className="block-line-animated"
+            className={fullEffects ? 'block-line-animated' : undefined}
             x1={link.fromX}
             y1={link.fromY}
             x2={link.toX}
             y2={link.toY}
             stroke="rgba(96, 165, 250, 0.95)"
             strokeWidth="3"
-            strokeDasharray="10 8"
+            strokeDasharray={fullEffects ? '10 8' : undefined}
             strokeLinecap="round"
-            filter="url(#block-line-glow)"
+            filter={fullEffects ? 'url(#block-line-glow)' : undefined}
           />
 
           {/* Endpoint dots with pulse */}
           <circle
-            className="block-dot-pulse"
+            className={fullEffects ? 'block-dot-pulse' : undefined}
             cx={link.fromX}
             cy={link.fromY}
             r="5"
             fill="rgba(147, 197, 253, 0.9)"
-            filter="url(#block-dot-glow)"
+            filter={fullEffects ? 'url(#block-dot-glow)' : undefined}
           />
           <circle
-            className="block-dot-pulse"
+            className={fullEffects ? 'block-dot-pulse' : undefined}
             cx={link.toX}
             cy={link.toY}
             r="5"
             fill="rgba(96, 165, 250, 0.9)"
-            filter="url(#block-dot-glow)"
-            style={{ animationDelay: '0.6s' }}
+            filter={fullEffects ? 'url(#block-dot-glow)' : undefined}
+            style={fullEffects ? { animationDelay: '0.6s' } : undefined}
           />
         </g>
       ))}

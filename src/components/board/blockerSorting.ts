@@ -16,11 +16,21 @@ export function sortCreaturesForBlockers(
   attackerBlockerOrder?: Record<string, string[]>,
 ): Permanent[] {
   if (Object.keys(tentativeBlockers).length === 0) return defenderCreatures;
+  const confirmedAttackerSet = new Set(confirmedAttackers);
+  const blockerOrderIndex = new Map<string, Map<string, number>>();
+  if (attackerBlockerOrder) {
+    for (const [attackerId, order] of Object.entries(attackerBlockerOrder)) {
+      blockerOrderIndex.set(
+        attackerId,
+        new Map(order.map((blockerId, index) => [blockerId, index])),
+      );
+    }
+  }
 
   // Map each attacker to its visual column index in the opponent row
   const attackerColumn = new Map<string, number>();
   opponentCreatures.forEach((c, i) => {
-    if (confirmedAttackers.includes(c.permanentId)) {
+    if (confirmedAttackerSet.has(c.permanentId)) {
       attackerColumn.set(c.permanentId, i);
     }
   });
@@ -47,11 +57,11 @@ export function sortCreaturesForBlockers(
     if (
       attackerA
       && attackerA === attackerB
-      && attackerBlockerOrder
-      && attackerBlockerOrder[attackerA]
+      && blockerOrderIndex.has(attackerA)
     ) {
-      const order = attackerBlockerOrder[attackerA];
-      return order.indexOf(a.permanentId) - order.indexOf(b.permanentId);
+      const order = blockerOrderIndex.get(attackerA)!;
+      return (order.get(a.permanentId) ?? Number.MAX_SAFE_INTEGER)
+        - (order.get(b.permanentId) ?? Number.MAX_SAFE_INTEGER);
     }
 
     return 0;
