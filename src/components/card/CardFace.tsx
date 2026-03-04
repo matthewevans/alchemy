@@ -96,7 +96,11 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
       />
 
       {/* Card inner body */}
-      <div className="relative z-[2] flex flex-col m-[2px] rounded-[10px] overflow-hidden h-full bg-slate-900">
+      <div
+        className={`relative z-[2] flex flex-col m-[2px] rounded-[10px] h-full bg-slate-900 ${
+          viewLevel === 'compact' ? 'overflow-visible' : 'overflow-hidden'
+        }`}
+      >
         {/* ── Name bar ── */}
         <div
           data-testid="hand-card-header"
@@ -161,7 +165,11 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
 
         {/* ── Art area ── */}
         <div
-          className={`relative overflow-hidden ${viewLevel === 'compact' ? 'mx-[3px] mt-[3px] rounded' : 'mx-1 mt-1 rounded-md'}`}
+          className={`relative ${
+            viewLevel === 'compact'
+              ? 'mx-[3px] mt-[3px] rounded overflow-visible'
+              : 'mx-1 mt-1 rounded-md overflow-hidden'
+          }`}
           style={{
             flex: '1 1 0',
             minHeight: 0,
@@ -187,7 +195,7 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
           {/* Keyword icons on art (compact only) */}
           {config.keywordDisplay === 'icons' && card.keywords.length > 0 && (
             <div
-              className="absolute top-0.5 right-0.5 flex gap-0.5"
+              className="absolute top-0.5 right-0.5 z-20 flex gap-0.5"
               style={{ fontSize: 'calc(var(--card-font-scale) * 0.55rem)' }}
             >
               {card.keywords.map((kw) => (

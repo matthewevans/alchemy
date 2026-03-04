@@ -84,6 +84,9 @@ export function LearningChallengeOverlay() {
   const [answerFeedback, setAnswerFeedback] = useState<AnswerFeedbackState | null>(null);
   const [resolvingPromptId, setResolvingPromptId] = useState<string | null>(null);
   const [rewardPosition, setRewardPosition] = useState<ElementPosition | null>(null);
+  const [isShortViewport, setIsShortViewport] = useState(
+    () => typeof window !== 'undefined' && window.innerHeight < 500,
+  );
   const resolveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -130,6 +133,15 @@ export function LearningChallengeOverlay() {
     };
   }, [rewardPermanentId]);
 
+  useEffect(() => {
+    const updateViewportState = () => {
+      setIsShortViewport(window.innerHeight < 500);
+    };
+    updateViewportState();
+    window.addEventListener('resize', updateViewportState);
+    return () => window.removeEventListener('resize', updateViewportState);
+  }, []);
+
   if (!state || !phase || phase.type !== 'learning' || phase.player !== humanPlayer) {
     return null;
   }
@@ -161,6 +173,11 @@ export function LearningChallengeOverlay() {
       ? `Correct! ${rewardText}`
       : 'Not quite. No bonus this time.'
     : null;
+  const feedbackToneClass = activeFeedback?.correct
+    ? 'border-emerald-300/45 bg-emerald-900/25 text-emerald-100'
+    : 'border-red-300/45 bg-red-900/25 text-red-100';
+  const feedbackIcon = activeFeedback?.correct ? '✨' : '⚡';
+  const feedbackHeadline = activeFeedback?.correct ? 'Great answer!' : 'Close one!';
   const celebrationTone = activeFeedback?.correct ? 'success' : 'retry';
   const missingWord =
     phase.prompt.kind === 'missing_letter'
@@ -182,12 +199,15 @@ export function LearningChallengeOverlay() {
   const challengeLabel = phase.prompt.domain === 'reading' ? 'Reading Challenge' : 'Math Challenge';
   const challengeBadge = phase.prompt.domain === 'reading' ? 'READING' : 'MATH';
   const optionGridClass = singleLetterChoices
-    ? 'grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4'
+    ? 'grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mt-3 sm:mt-4'
     : hasImageChoices
-      ? 'grid grid-cols-2 gap-2 mt-4'
+      ? 'grid grid-cols-2 gap-1.5 sm:gap-2 mt-3 sm:mt-4'
     : phase.prompt.domain === 'math'
-      ? 'grid grid-cols-2 gap-2 mt-4'
-      : 'grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4';
+      ? 'grid grid-cols-2 gap-1.5 sm:gap-2 mt-3 sm:mt-4'
+      : 'grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 mt-3 sm:mt-4';
+  const optionGridSizeClass = hasImageChoices
+    ? 'learning-overlay-option-grid-image'
+    : 'learning-overlay-option-grid-text';
   const panelDesktopPlacementClass = rewardTarget?.ownerId === humanPlayer
     ? 'sm:self-start sm:mt-[calc(env(safe-area-inset-top)+0.75rem)]'
     : 'sm:self-end sm:mb-[calc(var(--card-height)*0.52+env(safe-area-inset-bottom)+0.5rem)]';
@@ -205,7 +225,7 @@ export function LearningChallengeOverlay() {
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 sm:items-start sm:justify-end sm:bg-transparent sm:backdrop-blur-none sm:p-0 sm:pointer-events-none"
+        className="learning-overlay-root fixed inset-0 z-[60] flex items-center justify-center bg-black/65 backdrop-blur-sm p-2 sm:items-start sm:justify-end sm:bg-transparent sm:backdrop-blur-none sm:p-0 sm:pointer-events-none"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -232,7 +252,7 @@ export function LearningChallengeOverlay() {
           </motion.div>
         )}
         <motion.div
-          className={`relative z-[3] w-full max-w-xl rounded-2xl border border-amber-300/45 bg-slate-900/95 p-5 shadow-2xl sm:pointer-events-auto sm:mr-[calc(var(--sidebar-w)+0.75rem)] sm:max-w-md ${panelDesktopPlacementClass}`}
+          className={`learning-overlay-dialog relative z-[3] w-full max-w-xl max-h-[calc(100dvh-0.75rem)] overflow-y-auto rounded-2xl border border-amber-300/45 bg-slate-900/95 p-3 shadow-2xl sm:pointer-events-auto sm:mr-[calc(var(--sidebar-w)+0.75rem)] sm:max-w-md sm:p-5 ${panelDesktopPlacementClass}`}
           initial={{ opacity: 0, scale: 0.95, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 16 }}
@@ -255,39 +275,39 @@ export function LearningChallengeOverlay() {
               <p className="text-amber-100 text-[11px] font-semibold tracking-[0.08em] uppercase">
                 Battle Challenge
               </p>
-              <p className="text-white text-xl font-bold mt-1">
+              <p className="learning-overlay-domain-title text-white text-lg sm:text-xl font-bold mt-1">
                 {challengeLabel}
               </p>
             </div>
-            <span className="inline-flex rounded-full border border-amber-300/55 bg-amber-400/20 px-3 py-1 text-xs font-bold tracking-[0.08em] text-amber-100">
+            <span className="learning-overlay-badge inline-flex rounded-full border border-amber-300/55 bg-amber-400/20 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold tracking-[0.08em] text-amber-100">
               {challengeBadge}
             </span>
           </div>
 
-          <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2">
-            <p className="text-center text-xs font-semibold uppercase tracking-[0.06em] text-slate-200">
+          <div className="learning-overlay-stepbar mt-2.5 sm:mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 sm:gap-2 rounded-xl border border-white/10 bg-slate-950/35 px-2.5 sm:px-3 py-1.5 sm:py-2">
+            <p className="text-center text-[11px] sm:text-xs font-semibold uppercase tracking-[0.06em] text-slate-200">
               1. Solve
             </p>
-            <span className="text-slate-400">→</span>
-            <p className="text-center text-xs font-semibold uppercase tracking-[0.06em] text-emerald-200">
+            <span className="text-slate-400 text-xs sm:text-sm">→</span>
+            <p className="text-center text-[11px] sm:text-xs font-semibold uppercase tracking-[0.06em] text-emerald-200">
               2. Power Up
             </p>
           </div>
 
-          <div className="mt-3 rounded-xl border border-emerald-300/35 bg-emerald-900/20 p-3">
-            <p className="text-emerald-100/85 text-xs font-semibold uppercase tracking-[0.08em]">
+          <div className="learning-overlay-reward mt-2.5 sm:mt-3 rounded-xl border border-emerald-300/35 bg-emerald-900/20 p-2.5 sm:p-3">
+            <p className="text-emerald-100/85 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.08em]">
               Bonus Locked On
             </p>
-            <div className="mt-1 flex items-center justify-between gap-3">
+            <div className="mt-1 flex items-center justify-between gap-2 sm:gap-3">
               <div>
-                <p className="text-white text-sm font-semibold">{rewardTargetName}</p>
-                <p className="text-xs text-emerald-100/75 mt-0.5">Look for the glowing ring on the battlefield.</p>
+                <p className="text-white text-xs sm:text-sm font-semibold">{rewardTargetName}</p>
+                <p className="learning-overlay-target-hint text-[11px] sm:text-xs text-emerald-100/75 mt-0.5">Look for the glowing ring on the battlefield.</p>
               </div>
-              <div className="flex items-center gap-2 text-xs font-bold">
-                <span className="rounded-md border border-rose-300/45 bg-rose-400/20 px-2 py-1 text-rose-100">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold">
+                <span className="rounded-md border border-rose-300/45 bg-rose-400/20 px-1.5 sm:px-2 py-0.5 sm:py-1 text-rose-100">
                   {formatSigned(phase.reward.attackBonus)} ATK
                 </span>
-                <span className="rounded-md border border-sky-300/45 bg-sky-400/20 px-2 py-1 text-sky-100">
+                <span className="rounded-md border border-sky-300/45 bg-sky-400/20 px-1.5 sm:px-2 py-0.5 sm:py-1 text-sky-100">
                   {formatSigned(phase.reward.healthBonus)} HP
                 </span>
               </div>
@@ -296,18 +316,18 @@ export function LearningChallengeOverlay() {
 
           {missingWord ? (
             <>
-              <p className="text-white text-lg font-bold mt-3">
+              <p className="text-white text-base sm:text-lg font-bold mt-2.5 sm:mt-3">
                 Pick the missing letter
               </p>
-              <div className="mt-2 rounded-xl border border-blue-300/35 bg-blue-950/35 p-3">
-                <p className="text-blue-100/90 text-xs font-semibold uppercase tracking-[0.08em]">
+              <div className="learning-overlay-prompt-card mt-1.5 sm:mt-2 rounded-xl border border-blue-300/35 bg-blue-950/35 p-2.5 sm:p-3">
+                <p className="text-blue-100/90 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.08em]">
                   Complete This Word
                 </p>
-                <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                <div className="mt-1.5 sm:mt-2 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
                   {missingWord.split('').map((character, index) => (
                     <span
                       key={`${character}-${index}`}
-                      className={`inline-flex h-11 w-9 items-center justify-center rounded-lg border text-lg font-black ${
+                      className={`inline-flex h-9 w-8 sm:h-11 sm:w-9 items-center justify-center rounded-lg border text-base sm:text-lg font-black ${
                         character === '_'
                           ? 'border-amber-300/80 bg-amber-400/15 text-amber-100'
                           : 'border-white/25 bg-white/8 text-white'
@@ -321,28 +341,28 @@ export function LearningChallengeOverlay() {
             </>
           ) : wordPictureTarget ? (
             <>
-              <p className="text-white text-lg font-bold mt-3">
+              <p className="text-white text-base sm:text-lg font-bold mt-2.5 sm:mt-3">
                 Find the matching picture
               </p>
-              <div className="mt-2 rounded-xl border border-cyan-300/35 bg-cyan-950/30 p-3">
-                <p className="text-cyan-100/90 text-xs font-semibold uppercase tracking-[0.08em]">
+              <div className="learning-overlay-prompt-card mt-1.5 sm:mt-2 rounded-xl border border-cyan-300/35 bg-cyan-950/30 p-2.5 sm:p-3">
+                <p className="text-cyan-100/90 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.08em]">
                   Target Word
                 </p>
-                <p className="mt-2 text-center text-3xl font-black tracking-[0.14em] text-white">
+                <p className="mt-1.5 sm:mt-2 text-center text-2xl sm:text-3xl font-black tracking-[0.14em] text-white">
                   {wordPictureTarget}
                 </p>
               </div>
             </>
           ) : mathTokens ? (
             <>
-              <p className="text-white text-lg font-bold mt-3">
+              <p className="text-white text-base sm:text-lg font-bold mt-2.5 sm:mt-3">
                 Solve this math problem
               </p>
-              <div className="mt-2 rounded-xl border border-blue-300/35 bg-blue-950/35 p-3">
-                <p className="text-blue-100/90 text-xs font-semibold uppercase tracking-[0.08em]">
+              <div className="learning-overlay-prompt-card mt-1.5 sm:mt-2 rounded-xl border border-blue-300/35 bg-blue-950/35 p-2.5 sm:p-3">
+                <p className="text-blue-100/90 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.08em]">
                   Equation
                 </p>
-                <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                <div className="mt-1.5 sm:mt-2 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
                   {mathTokens.map((token, index) => {
                     const tokenClass =
                       token === '?'
@@ -357,7 +377,7 @@ export function LearningChallengeOverlay() {
                     return (
                       <span
                         key={`${token}-${index}`}
-                        className={`inline-flex h-11 min-w-[2.25rem] items-center justify-center rounded-lg border px-2 text-2xl font-black tabular-nums ${tokenClass}`}
+                        className={`inline-flex h-9 min-w-[2rem] sm:h-11 sm:min-w-[2.25rem] items-center justify-center rounded-lg border px-1.5 sm:px-2 text-xl sm:text-2xl font-black tabular-nums ${tokenClass}`}
                       >
                         {token}
                       </span>
@@ -367,24 +387,24 @@ export function LearningChallengeOverlay() {
               </div>
             </>
           ) : (
-            <p className="text-white text-lg font-bold mt-1">
+            <p className="text-white text-base sm:text-lg font-bold mt-1">
               {phase.prompt.prompt}
             </p>
           )}
-          <p className="text-white/60 text-sm mt-2">
+          <p className="learning-overlay-instruction text-white/60 text-xs sm:text-sm mt-2">
             Answer correctly to empower the highlighted creature.
           </p>
 
-          <div className={optionGridClass}>
+          <div className={`learning-overlay-option-grid ${optionGridSizeClass} ${optionGridClass}`}>
             {phase.prompt.options.map((option) => {
               const action = answerActionsById.get(option.id);
               const isSelected = activeFeedback?.optionId === option.id;
               const tone = isSelected ? (activeFeedback?.correct ? 'emerald' : 'red') : 'blue';
               const isDisabled = isResolvingAnswer || !action;
               const optionLayoutClass = option.imageId
-                ? 'h-auto p-2 justify-center'
+                ? 'h-auto p-1.5 sm:p-2 justify-center'
                 : centeredAnswerChoices
-                  ? 'h-16 justify-center text-center'
+                  ? 'h-12 sm:h-16 justify-center text-center'
                   : 'text-left justify-start';
               return (
                 <button
@@ -393,7 +413,7 @@ export function LearningChallengeOverlay() {
                     tone,
                     size: 'md',
                     disabled: isDisabled,
-                    className: `relative w-full overflow-hidden ${optionLayoutClass} ${isResolvingAnswer && !isSelected ? 'opacity-80' : ''}`,
+                    className: `learning-overlay-option-btn relative w-full overflow-hidden ${optionLayoutClass} ${isResolvingAnswer && !isSelected ? 'opacity-80' : ''}`,
                   })}
                   disabled={isDisabled}
                   onClick={() => {
@@ -409,22 +429,22 @@ export function LearningChallengeOverlay() {
                   }}
                 >
                   {option.imageId ? (
-                    <span className="flex w-full flex-col items-center gap-2">
+                    <span className="learning-overlay-image-option relative flex w-full flex-col items-center gap-2">
                       <img
                         src={option.imageId}
                         alt={option.text}
-                        className="h-24 w-full rounded-lg object-cover"
+                        className="h-20 sm:h-24 w-full rounded-lg object-cover"
                       />
-                      <span className="rounded-md border border-slate-300/45 bg-slate-900/40 px-2 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-slate-100/90">
+                      <span className="learning-overlay-image-label absolute bottom-1 sm:bottom-1.5 left-1/2 -translate-x-1/2 rounded-md border border-slate-300/45 bg-slate-900/65 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-100/90">
                         {option.text}
                       </span>
                     </span>
                   ) : singleLetterChoices ? (
-                    <span className="text-2xl font-black tracking-[0.14em]">
+                    <span className="text-xl sm:text-2xl font-black tracking-[0.14em]">
                       {option.text}
                     </span>
                   ) : phase.prompt.domain === 'math' ? (
-                    <span className="text-2xl font-black tabular-nums">
+                    <span className="text-xl sm:text-2xl font-black tabular-nums">
                       {option.text}
                     </span>
                   ) : option.text}
@@ -463,34 +483,30 @@ export function LearningChallengeOverlay() {
               );
             })}
           </div>
-          {feedbackText && (
+          {feedbackText && !isShortViewport && (
             <motion.div
-              className={`mt-3 rounded-xl border px-3 py-3 ${
-                activeFeedback?.correct
-                  ? 'border-emerald-300/45 bg-emerald-900/25 text-emerald-100'
-                  : 'border-red-300/45 bg-red-900/25 text-red-100'
-              }`}
+              className={`learning-overlay-feedback learning-overlay-feedback-inline mt-2.5 sm:mt-3 rounded-xl border px-2.5 sm:px-3 py-2.5 sm:py-3 ${feedbackToneClass}`}
               initial={{ opacity: 0, scale: 0.92, y: 8 }}
               animate={{ opacity: 1, scale: [1, 1.03, 1], y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 8 }}
               transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className="flex items-center gap-2">
-                <span className="text-xl leading-none">
-                  {activeFeedback?.correct ? '✨' : '⚡'}
+                <span className="text-lg sm:text-xl leading-none">
+                  {feedbackIcon}
                 </span>
-                <p className="text-base font-black">
-                  {activeFeedback?.correct ? 'Great answer!' : 'Close one!'}
+                <p className="text-sm sm:text-base font-black">
+                  {feedbackHeadline}
                 </p>
               </div>
-              <p className="mt-1 text-sm font-semibold">
+              <p className="mt-1 text-xs sm:text-sm font-semibold">
                 {feedbackText}
               </p>
             </motion.div>
           )}
 
           {skipAction && (
-            <div className="mt-3 flex justify-end">
+            <div className="mt-2.5 sm:mt-3 flex justify-end">
               <button
                 className={gameButtonClass({
                   tone: 'slate',
@@ -509,6 +525,28 @@ export function LearningChallengeOverlay() {
             </div>
           )}
         </motion.div>
+        {feedbackText && isShortViewport && (
+          <motion.div
+            className="learning-overlay-feedback-floating pointer-events-none fixed inset-0 z-[80] hidden items-center justify-center px-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className={`learning-overlay-feedback ${feedbackToneClass} w-full max-w-[18.25rem] rounded-xl border px-3 py-3 shadow-2xl backdrop-blur-sm`}
+              initial={{ opacity: 0, scale: 0.88, y: 10 }}
+              animate={{ opacity: 1, scale: [1, 1.04, 1], y: 0 }}
+              exit={{ opacity: 0, scale: 0.88, y: 10 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xl leading-none">{feedbackIcon}</span>
+                <p className="text-base font-black">{feedbackHeadline}</p>
+              </div>
+              <p className="mt-1 text-sm font-semibold">{feedbackText}</p>
+            </motion.div>
+          </motion.div>
+        )}
       </motion.div>
     </AnimatePresence>
   );

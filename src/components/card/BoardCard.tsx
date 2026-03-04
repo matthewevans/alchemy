@@ -110,18 +110,39 @@ export function BoardCard({
   const attackFlashControls = useAnimationControls();
   const prevHealthRef = useRef(currentHealth);
   const prevAttackRef = useRef(effectiveAttack);
+  const prevDamageRef = useRef(activeDamage);
+  const prevTemporaryHealthBonusRef = useRef(permanent.temporaryHealthBonus);
 
   useEffect(() => {
     if (prevHealthRef.current !== currentHealth) {
       const lost = currentHealth < prevHealthRef.current;
+      const tookDamage = activeDamage > prevDamageRef.current;
+      const lostTemporaryHealthBonus = permanent.temporaryHealthBonus < prevTemporaryHealthBonusRef.current;
+      const flashColors = lost
+        ? tookDamage
+          ? ['#ff4444', '#fecaca']
+          : lostTemporaryHealthBonus
+            ? ['#fbbf24', '#fde68a']
+            : isDamaged
+              ? ['#ff4444', '#fecaca']
+              : ['#f59e0b', '#bbf7d0']
+        : ['#34d399', '#bbf7d0'];
       healthFlashControls.start({
         scale: [1.5, 1],
-        color: lost ? ['#ff4444', isDamaged ? '#fecaca' : '#bbf7d0'] : ['#34d399', '#bbf7d0'],
+        color: flashColors,
         transition: { duration: 0.4, ease: 'easeOut' },
       });
-      prevHealthRef.current = currentHealth;
     }
-  }, [currentHealth, isDamaged, healthFlashControls]);
+    prevHealthRef.current = currentHealth;
+    prevDamageRef.current = activeDamage;
+    prevTemporaryHealthBonusRef.current = permanent.temporaryHealthBonus;
+  }, [
+    activeDamage,
+    currentHealth,
+    healthFlashControls,
+    isDamaged,
+    permanent.temporaryHealthBonus,
+  ]);
 
   useEffect(() => {
     if (prevAttackRef.current !== effectiveAttack) {

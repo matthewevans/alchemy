@@ -272,3 +272,99 @@ a,
     scroll-behavior: auto !important;
   }
 }
+
+@media (max-height: 499px) {
+  .learning-overlay-root {
+    align-items: stretch !important;
+    justify-content: flex-end !important;
+    padding:
+      env(safe-area-inset-top)
+      env(safe-area-inset-right)
+      env(safe-area-inset-bottom)
+      env(safe-area-inset-left) !important;
+  }
+
+  .learning-overlay-dialog {
+    width: clamp(16.5rem, 36vw, 21rem) !important;
+    max-width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    align-self: stretch !important;
+    padding: 0.5rem !important;
+    touch-action: pan-y;
+  }
+
+  .learning-overlay-domain-title {
+    display: none !important;
+  }
+
+  .learning-overlay-badge {
+    font-size: 10px !important;
+    padding: 0.125rem 0.5rem !important;
+  }
+
+  .learning-overlay-reward {
+    margin-top: 0.4rem !important;
+    padding: 0.5rem !important;
+  }
+
+  .learning-overlay-prompt-card {
+    margin-top: 0.35rem !important;
+    padding: 0.45rem !important;
+  }
+
+  .learning-overlay-option-grid {
+    margin-top: 0.45rem !important;
+    gap: 0.35rem !important;
+  }
+
+  .learning-overlay-option-grid-text {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .learning-overlay-option-grid-image {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .learning-overlay-option-btn {
+    min-height: 2.3rem !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+
+  .learning-overlay-image-option {
+    gap: 0.25rem !important;
+  }
+
+  .learning-overlay-image-option img {
+    height: clamp(3.8rem, 18vh, 5.2rem) !important;
+  }
+
+  .learning-overlay-image-label {
+    bottom: 0.2rem !important;
+    font-size: 8px !important;
+    max-width: calc(100% - 0.35rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    backdrop-filter: blur(2px);
+  }
+
+  .learning-overlay-feedback {
+    margin-top: 0.45rem !important;
+    padding: 0.5rem !important;
+  }
+
+  .learning-overlay-feedback-inline {
+    display: none !important;
+  }
+
+  .learning-overlay-feedback-floating {
+    display: flex !important;
+  }
+}
