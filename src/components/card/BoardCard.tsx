@@ -31,6 +31,18 @@ interface StatusEffect {
   color: string;
 }
 
+const BUFF_PARTICLES = [
+  { left: '14%', top: '20%', color: 'rgba(253, 224, 71, 1)', driftX: -10, driftY: -18, delay: 0, duration: 1.3 },
+  { left: '36%', top: '14%', color: 'rgba(250, 204, 21, 1)', driftX: 12, driftY: -14, delay: 0.18, duration: 1.5 },
+  { left: '64%', top: '22%', color: 'rgba(52, 211, 153, 1)', driftX: -13, driftY: -12, delay: 0.32, duration: 1.4 },
+  { left: '82%', top: '28%', color: 'rgba(125, 211, 252, 1)', driftX: 11, driftY: -13, delay: 0.47, duration: 1.45 },
+  { left: '18%', top: '72%', color: 'rgba(192, 132, 252, 1)', driftX: -12, driftY: -11, delay: 0.61, duration: 1.35 },
+  { left: '46%', top: '80%', color: 'rgba(56, 189, 248, 1)', driftX: 10, driftY: -15, delay: 0.76, duration: 1.55 },
+  { left: '74%', top: '74%', color: 'rgba(251, 191, 36, 1)', driftX: -11, driftY: -14, delay: 0.89, duration: 1.5 },
+  { left: '86%', top: '52%', color: 'rgba(110, 231, 183, 1)', driftX: -10, driftY: -10, delay: 1.02, duration: 1.42 },
+  { left: '10%', top: '48%', color: 'rgba(250, 204, 21, 1)', driftX: 12, driftY: -12, delay: 1.12, duration: 1.46 },
+] as const;
+
 function getActiveStatusEffects(permanent: Permanent): StatusEffect[] {
   const effects: StatusEffect[] = [];
   if (permanent.cantAttackThisTurn) {
@@ -288,6 +300,54 @@ export function BoardCard({
             boxShadow: 'inset 0 0 8px rgba(250, 204, 21, 0.3)',
           }}
         />
+      )}
+
+      {/* Buff particles */}
+      {isBuffed && (
+        <div className="absolute inset-0 rounded-xl z-[13] pointer-events-none overflow-hidden" aria-hidden="true">
+          <motion.div
+            className="absolute -inset-[4px] rounded-xl"
+            style={{
+              background: 'conic-gradient(from 0deg, rgba(250,204,21,0.05), rgba(52,211,153,0.18), rgba(56,189,248,0.05), rgba(250,204,21,0.16), rgba(250,204,21,0.05))',
+              filter: 'blur(8px)',
+              mixBlendMode: 'screen',
+            }}
+            animate={{
+              rotate: [0, 360],
+              opacity: [0.35, 0.8, 0.35],
+            }}
+            transition={{
+              rotate: { duration: 3.2, repeat: Infinity, ease: 'linear' },
+              opacity: { duration: 1.4, repeat: Infinity, ease: 'easeInOut' },
+            }}
+          />
+          {BUFF_PARTICLES.map((particle, index) => (
+            <motion.span
+              key={`${permanent.permanentId}-buff-particle-${index}`}
+              className="absolute rounded-full"
+              style={{
+                left: particle.left,
+                top: particle.top,
+                width: '0.52rem',
+                height: '0.52rem',
+                background: particle.color,
+                boxShadow: `0 0 14px ${particle.color}, 0 0 24px ${particle.color.replace('1)', '0.45)')}`,
+              }}
+              animate={{
+                x: [0, particle.driftX, 0],
+                y: [0, particle.driftY, 0],
+                opacity: [0.24, 1, 0.24],
+                scale: [0.6, 1.3, 0.6],
+              }}
+              transition={{
+                duration: particle.duration,
+                delay: particle.delay,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+            />
+          ))}
+        </div>
       )}
 
       <CardFace
