@@ -6,3 +6,4 @@ export { MulliganOverlay } from './MulliganOverlay';
 export { MultiplayerLobby } from './MultiplayerLobby';
 export { GameMenu } from './GameMenu';
 export { SettingsPanel } from './settings/SettingsPanel';
+export { LearningChallengeOverlay } from './LearningChallengeOverlay';

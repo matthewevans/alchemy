@@ -3,6 +3,8 @@ import { createRNG } from '@engine/prng';
 import { createTestGameState, makeCardInstance, makePermanent, resetTestCounters } from '@engine/__tests__/__fixtures__/testHelpers';
 import { useAnimationStore, registerPosition, unregisterPosition } from './animationStore';
 import { useGameStore } from './gameStore';
+import { useLearningStore } from './learningStore';
+import { usePreferencesStore } from './preferencesStore';
 import { dispatchWithAnimations } from './dispatchWithAnimations';
 
 describe('dispatchWithAnimations', () => {
@@ -16,6 +18,15 @@ describe('dispatchWithAnimations', () => {
     // Clear any registered positions
     unregisterPosition('player:player1');
     unregisterPosition('player:player2');
+    useLearningStore.getState().reset();
+    usePreferencesStore.setState({
+      learningChallengesEnabled: false,
+      readingChallengesEnabled: true,
+      mathChallengesEnabled: true,
+      readingLevel: 'r1',
+      mathLevel: 'm1',
+      learningFrequency: 'medium',
+    });
   });
 
   it('enqueues animation steps for combat resolution actions', () => {
@@ -81,6 +92,57 @@ describe('dispatchWithAnimations', () => {
     const onLocalAction = vi.fn();
     dispatchWithAnimations({ type: 'ADVANCE_PHASE' }, 'player1', onLocalAction);
     expect(onLocalAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('intercepts confirm action into learning phase when challenges are enabled', () => {
+    usePreferencesStore.setState({
+      learningChallengesEnabled: true,
+      readingChallengesEnabled: true,
+      mathChallengesEnabled: false,
+      readingLevel: 'r1',
+      learningFrequency: 'high',
+    });
+
+    const attacker = makePermanent('fire_lava_hound', 'player1', {
+      attack: 2,
+      health: 3,
+      isTapped: false,
+      summonedThisTurn: false,
+    });
+    const defender = makePermanent('water_shell_crab', 'player2', {
+      attack: 0,
+      health: 4,
+      isTapped: false,
+    });
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_attackers',
+        tentativeAttackers: [attacker.permanentId],
+      },
+      player1: { board: [attacker, null, null, null, null, null] },
+      player2: { board: [defender, null, null, null, null, null] },
+    });
+
+    useGameStore.setState({
+      state,
+      rng: createRNG(9),
+      humanPlayer: 'player1',
+      gameId: 'game-learning',
+      player1DeckIds: [],
+      player2DeckIds: [],
+      legalActions: [],
+      events: [],
+    });
+
+    dispatchWithAnimations({ type: 'CONFIRM_ATTACKERS' }, 'player1');
+
+    const phase = useGameStore.getState().state?.phase;
+    expect(phase?.type).toBe('learning');
+    const { activeStep, queue } = useAnimationStore.getState();
+    expect(activeStep).toBeNull();
+    expect(queue).toHaveLength(0);
   });
 });
 

@@ -26,6 +26,7 @@ export const PHASE_ORDER: Record<string, number> = {
 
 /** Map raw phase to a display key that accounts for post-combat play. */
 export function getDisplayPhaseKey(phase: Phase): string {
+  if (phase.type === 'learning') return getDisplayPhaseKey(phase.suspendedPhase);
   if (phase.type === 'play' && phase.postCombat) return 'play2';
   if (phase.type === 'targeting' && phase.postCombat) return 'play2';
   return phase.type;

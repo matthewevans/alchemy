@@ -2,8 +2,9 @@ import { useState, type ComponentType } from 'react';
 import { GeneralSettings } from './GeneralSettings';
 import { DisplaySettings } from './DisplaySettings';
 import { AudioSettings } from './AudioSettings';
+import { LearningSettings } from './LearningSettings';
 
-type SettingsTabId = 'general' | 'display' | 'audio';
+type SettingsTabId = 'general' | 'display' | 'audio' | 'learning';
 
 interface TabDef {
   id: SettingsTabId;
@@ -14,6 +15,7 @@ interface TabDef {
 
 const SETTINGS_TABS: TabDef[] = [
   { id: 'general', label: 'Gameplay', description: 'Core readability and helper options.', content: GeneralSettings },
+  { id: 'learning', label: 'Learning', description: 'Adaptive reading and math challenge settings.', content: LearningSettings },
   { id: 'display', label: 'Display', description: 'Visual scale, board styling, and stat layout.', content: DisplaySettings },
   { id: 'audio', label: 'Audio', description: 'Volume and narration settings.', content: AudioSettings },
 ];

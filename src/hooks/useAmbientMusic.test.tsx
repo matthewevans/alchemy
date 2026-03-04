@@ -4,6 +4,7 @@ import { useAudioStore } from '@audio/audioStore';
 import { useAmbientMusic } from './useAmbientMusic';
 import { startAmbientMusic, stopAmbientMusic } from '@audio/ambientMusic';
 import { setMusicVolume } from '@audio/audioContext';
+import { stopDeckSelectMusic } from '@audio/deckSelectMusic';
 import { stopTitleMusic } from '@audio/titleMusic';
 
 vi.mock('@audio/ambientMusic', () => ({
@@ -14,6 +15,10 @@ vi.mock('@audio/ambientMusic', () => ({
 vi.mock('@audio/audioContext', () => ({
   setSfxVolume: vi.fn(),
   setMusicVolume: vi.fn(),
+}));
+
+vi.mock('@audio/deckSelectMusic', () => ({
+  stopDeckSelectMusic: vi.fn(),
 }));
 
 vi.mock('@audio/titleMusic', () => ({
@@ -43,6 +48,7 @@ describe('useAmbientMusic', () => {
     });
     expect(startAmbientMusic).toHaveBeenCalledTimes(1);
     expect(stopTitleMusic).toHaveBeenCalledTimes(1);
+    expect(stopDeckSelectMusic).toHaveBeenCalledTimes(1);
     expect(setMusicVolume).toHaveBeenLastCalledWith(0.5);
 
     act(() => {
@@ -60,6 +66,7 @@ describe('useAmbientMusic', () => {
 
     expect(startAmbientMusic).toHaveBeenCalledTimes(1);
     expect(stopTitleMusic).toHaveBeenCalledTimes(1);
+    expect(stopDeckSelectMusic).toHaveBeenCalledTimes(1);
     expect(setMusicVolume).toHaveBeenCalledWith(0.4);
 
     unmount();

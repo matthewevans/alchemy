@@ -25,6 +25,7 @@ import { AnimationOverlay } from '@components/animation';
 import { CardPreview } from '@components/card';
 import { ActionFeedbackToast } from '@components/ui/ActionFeedbackToast';
 import { CoachOverlay } from '@components/ui/CoachOverlay';
+import { LearningChallengeOverlay } from '@components/ui/LearningChallengeOverlay';
 import { TargetingPanel } from '@components/targeting/TargetingPanel';
 import { gameButtonClass } from '@components/ui/buttonStyles';
 
@@ -240,6 +241,7 @@ export function GameBoard() {
 
       {/* Fixed overlays */}
       <ActionButton />
+      <LearningChallengeOverlay />
 
       {/* Right sidebar — deck+discard only */}
       <div

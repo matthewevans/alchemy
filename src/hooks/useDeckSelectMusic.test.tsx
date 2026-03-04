@@ -1,11 +1,11 @@
 import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAudioStore } from '@audio/audioStore';
-import { useTitleMusic } from './useTitleMusic';
+import { useDeckSelectMusic } from './useDeckSelectMusic';
 import { setMusicVolume } from '@audio/audioContext';
 import { stopAmbientMusic } from '@audio/ambientMusic';
-import { stopDeckSelectMusic } from '@audio/deckSelectMusic';
-import { startTitleMusic, stopTitleMusic } from '@audio/titleMusic';
+import { stopTitleMusic } from '@audio/titleMusic';
+import { startDeckSelectMusic, stopDeckSelectMusic } from '@audio/deckSelectMusic';
 
 vi.mock('@audio/audioContext', () => ({
   setSfxVolume: vi.fn(),
@@ -17,53 +17,54 @@ vi.mock('@audio/ambientMusic', () => ({
   stopAmbientMusic: vi.fn(),
 }));
 
-vi.mock('@audio/deckSelectMusic', () => ({
-  stopDeckSelectMusic: vi.fn(),
-}));
-
 vi.mock('@audio/titleMusic', () => ({
   startTitleMusic: vi.fn(),
   stopTitleMusic: vi.fn(),
 }));
 
-function TitleHarness({ enabled }: { enabled: boolean }) {
-  useTitleMusic(enabled);
+vi.mock('@audio/deckSelectMusic', () => ({
+  startDeckSelectMusic: vi.fn(),
+  stopDeckSelectMusic: vi.fn(),
+}));
+
+function DeckSelectHarness({ enabled }: { enabled: boolean }) {
+  useDeckSelectMusic(enabled);
   return null;
 }
 
-describe('useTitleMusic', () => {
+describe('useDeckSelectMusic', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useAudioStore.setState({ musicVolume: 0.3, sfxVolume: 0.7 });
   });
 
-  it('starts title music when enabled and initial music volume is above 0', () => {
-    const { unmount } = render(<TitleHarness enabled />);
+  it('starts deck-select music when enabled and initial music volume is above 0', () => {
+    const { unmount } = render(<DeckSelectHarness enabled />);
 
     expect(setMusicVolume).toHaveBeenCalledWith(0.3);
     expect(stopAmbientMusic).toHaveBeenCalledTimes(1);
-    expect(stopDeckSelectMusic).toHaveBeenCalledTimes(1);
-    expect(startTitleMusic).toHaveBeenCalledTimes(1);
+    expect(stopTitleMusic).toHaveBeenCalledTimes(1);
+    expect(startDeckSelectMusic).toHaveBeenCalledTimes(1);
 
     unmount();
-    expect(stopTitleMusic).toHaveBeenCalled();
+    expect(stopDeckSelectMusic).toHaveBeenCalled();
   });
 
-  it('does not start title music when disabled', () => {
-    render(<TitleHarness enabled={false} />);
+  it('does not start deck-select music when disabled', () => {
+    render(<DeckSelectHarness enabled={false} />);
 
     expect(setMusicVolume).toHaveBeenCalledWith(0.3);
-    expect(startTitleMusic).not.toHaveBeenCalled();
+    expect(startDeckSelectMusic).not.toHaveBeenCalled();
     expect(stopAmbientMusic).not.toHaveBeenCalled();
-    expect(stopDeckSelectMusic).not.toHaveBeenCalled();
-    expect(stopTitleMusic).toHaveBeenCalled();
+    expect(stopTitleMusic).not.toHaveBeenCalled();
+    expect(stopDeckSelectMusic).toHaveBeenCalled();
   });
 
   it('reacts to music volume changes while enabled', () => {
     useAudioStore.setState({ musicVolume: 0 });
-    render(<TitleHarness enabled />);
+    render(<DeckSelectHarness enabled />);
 
-    expect(startTitleMusic).not.toHaveBeenCalled();
+    expect(startDeckSelectMusic).not.toHaveBeenCalled();
     expect(setMusicVolume).toHaveBeenCalledWith(0);
 
     act(() => {
@@ -71,12 +72,12 @@ describe('useTitleMusic', () => {
     });
     expect(setMusicVolume).toHaveBeenLastCalledWith(0.5);
     expect(stopAmbientMusic).toHaveBeenCalledTimes(1);
-    expect(stopDeckSelectMusic).toHaveBeenCalledTimes(1);
-    expect(startTitleMusic).toHaveBeenCalledTimes(1);
+    expect(stopTitleMusic).toHaveBeenCalledTimes(1);
+    expect(startDeckSelectMusic).toHaveBeenCalledTimes(1);
 
     act(() => {
       useAudioStore.setState({ musicVolume: 0 });
     });
-    expect(stopTitleMusic).toHaveBeenCalled();
+    expect(stopDeckSelectMusic).toHaveBeenCalled();
   });
 });

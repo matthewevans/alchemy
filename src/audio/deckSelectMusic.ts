@@ -1,6 +1,6 @@
 import { getAudioContext, getMusicGain } from './audioContext';
 
-export const TITLE_TRACK_URL = `${import.meta.env.BASE_URL}audio/music/title/title_theme.mp3`;
+export const DECK_SELECT_TRACK_URL = `${import.meta.env.BASE_URL}audio/music/menu/deck_select.mp3`;
 
 let isPlaying = false;
 let currentSource: AudioBufferSourceNode | null = null;
@@ -8,11 +8,11 @@ let currentGain: GainNode | null = null;
 let loadToken = 0;
 let decodedTrack: AudioBuffer | null = null;
 
-async function decodeTitleTrack(ctx: AudioContext): Promise<AudioBuffer> {
+async function decodeDeckSelectTrack(ctx: AudioContext): Promise<AudioBuffer> {
   if (decodedTrack) return decodedTrack;
 
-  const res = await fetch(TITLE_TRACK_URL);
-  if (!res.ok) throw new Error(`Failed to load title music track: ${TITLE_TRACK_URL}`);
+  const res = await fetch(DECK_SELECT_TRACK_URL);
+  if (!res.ok) throw new Error(`Failed to load deck-select music track: ${DECK_SELECT_TRACK_URL}`);
 
   const data = await res.arrayBuffer();
   decodedTrack = await ctx.decodeAudioData(data);
@@ -39,10 +39,10 @@ function stopCurrentTrack(): void {
   currentGain = null;
 }
 
-async function playTitleTrack(token: number): Promise<void> {
+async function playDeckSelectTrack(token: number): Promise<void> {
   const ctx = getAudioContext();
   try {
-    const decoded = await decodeTitleTrack(ctx);
+    const decoded = await decodeDeckSelectTrack(ctx);
     if (!isPlaying || token !== loadToken) return;
 
     const source = ctx.createBufferSource();
@@ -66,19 +66,19 @@ async function playTitleTrack(token: number): Promise<void> {
     }
   } catch (err) {
     if (token !== loadToken) return;
-    console.warn('[Alchemy] Title music track failed to play.', err);
+    console.warn('[Alchemy] Deck-select music track failed to play.', err);
   }
 }
 
-export function startTitleMusic(): void {
+export function startDeckSelectMusic(): void {
   if (isPlaying) return;
   isPlaying = true;
   loadToken += 1;
   const token = loadToken;
-  void playTitleTrack(token);
+  void playDeckSelectTrack(token);
 }
 
-export function stopTitleMusic(): void {
+export function stopDeckSelectMusic(): void {
   if (!isPlaying) return;
   isPlaying = false;
   loadToken += 1;

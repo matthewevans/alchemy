@@ -43,6 +43,8 @@ export function chooseAction(
       return chooseTargetingAction(state, aiPlayer, actions, rng, config);
     case 'battle':
       return chooseBattleAction(state, aiPlayer, actions, rng, config);
+    case 'learning':
+      return pickRandom(actions, rng);
     case 'discard':
       return chooseDiscardAction(state, aiPlayer, actions);
     default:

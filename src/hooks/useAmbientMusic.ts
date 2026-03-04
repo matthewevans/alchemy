@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { startAmbientMusic, stopAmbientMusic } from '@audio/ambientMusic';
 import { useAudioStore } from '@audio/audioStore';
 import { setMusicVolume } from '@audio/audioContext';
+import { stopDeckSelectMusic } from '@audio/deckSelectMusic';
 import { stopTitleMusic } from '@audio/titleMusic';
 
 /** Starts ambient music when mounted, stops on unmount. */
@@ -10,6 +11,7 @@ export function useAmbientMusic(): void {
     const initialVolume = useAudioStore.getState().musicVolume;
     if (initialVolume > 0) {
       stopTitleMusic();
+      stopDeckSelectMusic();
       startAmbientMusic();
     }
 
@@ -27,6 +29,7 @@ export function useAmbientMusic(): void {
         setMusicVolume(vol);
         if (vol > 0) {
           stopTitleMusic();
+          stopDeckSelectMusic();
           startAmbientMusic();
         }
         else stopAmbientMusic();

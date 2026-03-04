@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { Tier } from '@engine/types';
 import type { AIDifficulty } from '@engine/aiConfig';
+import type { LearningFrequency, MathLevel, ReadingLevel } from '../learning/config';
 
 /** Battlefield ID (e.g. 'fire_molten', 'shadow_haunted_graveyard') or 'auto'. */
 export type BattlefieldPreference = string;
@@ -28,6 +29,12 @@ interface PreferencesState {
   statLayout: StatLayout;
   combatMathEnabled: boolean;
   mathBreakdownEnabled: boolean;
+  learningChallengesEnabled: boolean;
+  readingChallengesEnabled: boolean;
+  mathChallengesEnabled: boolean;
+  readingLevel: ReadingLevel;
+  mathLevel: MathLevel;
+  learningFrequency: LearningFrequency;
   autoUpdateEnabled: boolean;
   setStatLayout: (layout: StatLayout) => void;
   setUIScale: (scale: number) => void;
@@ -43,6 +50,12 @@ interface PreferencesState {
   setTutorialEnabled: (enabled: boolean) => void;
   setCombatMathEnabled: (enabled: boolean) => void;
   setMathBreakdownEnabled: (enabled: boolean) => void;
+  setLearningChallengesEnabled: (enabled: boolean) => void;
+  setReadingChallengesEnabled: (enabled: boolean) => void;
+  setMathChallengesEnabled: (enabled: boolean) => void;
+  setReadingLevel: (level: ReadingLevel) => void;
+  setMathLevel: (level: MathLevel) => void;
+  setLearningFrequency: (frequency: LearningFrequency) => void;
   setAutoUpdateEnabled: (enabled: boolean) => void;
 }
 
@@ -67,6 +80,12 @@ interface PersistedPreferences {
   statLayout: StatLayout;
   combatMathEnabled: boolean;
   mathBreakdownEnabled: boolean;
+  learningChallengesEnabled: boolean;
+  readingChallengesEnabled: boolean;
+  mathChallengesEnabled: boolean;
+  readingLevel: ReadingLevel;
+  mathLevel: MathLevel;
+  learningFrequency: LearningFrequency;
   autoUpdateEnabled: boolean;
 }
 
@@ -88,13 +107,39 @@ function loadPersistedPreferences(): PersistedPreferences {
         statLayout: ['spread', 'center', 'right'].includes(parsed.statLayout) ? parsed.statLayout : 'center',
         combatMathEnabled: typeof parsed.combatMathEnabled === 'boolean' ? parsed.combatMathEnabled : true,
         mathBreakdownEnabled: typeof parsed.mathBreakdownEnabled === 'boolean' ? parsed.mathBreakdownEnabled : false,
+        learningChallengesEnabled: typeof parsed.learningChallengesEnabled === 'boolean' ? parsed.learningChallengesEnabled : false,
+        readingChallengesEnabled: typeof parsed.readingChallengesEnabled === 'boolean' ? parsed.readingChallengesEnabled : true,
+        mathChallengesEnabled: typeof parsed.mathChallengesEnabled === 'boolean' ? parsed.mathChallengesEnabled : true,
+        readingLevel: ['r0', 'r1', 'r2', 'r3'].includes(parsed.readingLevel) ? parsed.readingLevel : 'r1',
+        mathLevel: ['m0', 'm1', 'm2', 'm3'].includes(parsed.mathLevel) ? parsed.mathLevel : 'm1',
+        learningFrequency: ['low', 'medium', 'high'].includes(parsed.learningFrequency) ? parsed.learningFrequency : 'medium',
         autoUpdateEnabled: typeof parsed.autoUpdateEnabled === 'boolean' ? parsed.autoUpdateEnabled : true,
       };
     }
   } catch {
     // corrupt data — fall through to defaults
   }
-  return { uiScale: DEFAULT_UI_SCALE, boardScale: DEFAULT_BOARD_SCALE, tier: DEFAULT_TIER, difficulty: DEFAULT_DIFFICULTY, battlefieldAmbience: true, battlefield: 'auto', easyReadMode: true, narrationEnabled: false, tutorialEnabled: true, statLayout: 'center', combatMathEnabled: true, mathBreakdownEnabled: false, autoUpdateEnabled: true };
+  return {
+    uiScale: DEFAULT_UI_SCALE,
+    boardScale: DEFAULT_BOARD_SCALE,
+    tier: DEFAULT_TIER,
+    difficulty: DEFAULT_DIFFICULTY,
+    battlefieldAmbience: true,
+    battlefield: 'auto',
+    easyReadMode: true,
+    narrationEnabled: false,
+    tutorialEnabled: true,
+    statLayout: 'center',
+    combatMathEnabled: true,
+    mathBreakdownEnabled: false,
+    learningChallengesEnabled: false,
+    readingChallengesEnabled: true,
+    mathChallengesEnabled: true,
+    readingLevel: 'r1',
+    mathLevel: 'm1',
+    learningFrequency: 'medium',
+    autoUpdateEnabled: true,
+  };
 }
 
 function persistPreferences(prefs: PersistedPreferences) {
@@ -119,6 +164,12 @@ export const usePreferencesStore = create<PreferencesState>()(
     statLayout: initial.statLayout,
     combatMathEnabled: initial.combatMathEnabled,
     mathBreakdownEnabled: initial.mathBreakdownEnabled,
+    learningChallengesEnabled: initial.learningChallengesEnabled,
+    readingChallengesEnabled: initial.readingChallengesEnabled,
+    mathChallengesEnabled: initial.mathChallengesEnabled,
+    readingLevel: initial.readingLevel,
+    mathLevel: initial.mathLevel,
+    learningFrequency: initial.learningFrequency,
     autoUpdateEnabled: initial.autoUpdateEnabled,
 
     setStatLayout: (statLayout) => {
@@ -195,6 +246,36 @@ export const usePreferencesStore = create<PreferencesState>()(
     setMathBreakdownEnabled: (mathBreakdownEnabled) => {
       persistPreferences({ ...get(), mathBreakdownEnabled });
       set({ mathBreakdownEnabled });
+    },
+
+    setLearningChallengesEnabled: (learningChallengesEnabled) => {
+      persistPreferences({ ...get(), learningChallengesEnabled });
+      set({ learningChallengesEnabled });
+    },
+
+    setReadingChallengesEnabled: (readingChallengesEnabled) => {
+      persistPreferences({ ...get(), readingChallengesEnabled });
+      set({ readingChallengesEnabled });
+    },
+
+    setMathChallengesEnabled: (mathChallengesEnabled) => {
+      persistPreferences({ ...get(), mathChallengesEnabled });
+      set({ mathChallengesEnabled });
+    },
+
+    setReadingLevel: (readingLevel) => {
+      persistPreferences({ ...get(), readingLevel });
+      set({ readingLevel });
+    },
+
+    setMathLevel: (mathLevel) => {
+      persistPreferences({ ...get(), mathLevel });
+      set({ mathLevel });
+    },
+
+    setLearningFrequency: (learningFrequency) => {
+      persistPreferences({ ...get(), learningFrequency });
+      set({ learningFrequency });
     },
 
     setAutoUpdateEnabled: (autoUpdateEnabled) => {

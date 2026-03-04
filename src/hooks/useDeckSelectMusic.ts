@@ -2,24 +2,24 @@ import { useEffect } from 'react';
 import { useAudioStore } from '@audio/audioStore';
 import { setMusicVolume } from '@audio/audioContext';
 import { stopAmbientMusic } from '@audio/ambientMusic';
-import { stopDeckSelectMusic } from '@audio/deckSelectMusic';
-import { startTitleMusic, stopTitleMusic } from '@audio/titleMusic';
+import { stopTitleMusic } from '@audio/titleMusic';
+import { startDeckSelectMusic, stopDeckSelectMusic } from '@audio/deckSelectMusic';
 
-/** Plays title-screen music while enabled and stops it when disabled/unmounted. */
-export function useTitleMusic(enabled: boolean): void {
+/** Plays deck-select music while enabled and stops it when disabled/unmounted. */
+export function useDeckSelectMusic(enabled: boolean): void {
   useEffect(() => {
     const initialVolume = useAudioStore.getState().musicVolume;
     setMusicVolume(initialVolume);
 
     if (enabled && initialVolume > 0) {
       stopAmbientMusic();
-      stopDeckSelectMusic();
-      startTitleMusic();
-    } else {
       stopTitleMusic();
+      startDeckSelectMusic();
+    } else {
+      stopDeckSelectMusic();
     }
 
-    return () => stopTitleMusic();
+    return () => stopDeckSelectMusic();
   }, [enabled]);
 
   useEffect(() => {
@@ -28,12 +28,12 @@ export function useTitleMusic(enabled: boolean): void {
       (vol) => {
         setMusicVolume(vol);
         if (!enabled || vol <= 0) {
-          stopTitleMusic();
+          stopDeckSelectMusic();
           return;
         }
         stopAmbientMusic();
-        stopDeckSelectMusic();
-        startTitleMusic();
+        stopTitleMusic();
+        startDeckSelectMusic();
       },
     );
   }, [enabled]);

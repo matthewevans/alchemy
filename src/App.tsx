@@ -3,6 +3,12 @@ import { RouterProvider } from 'react-router-dom';
 import { checkForServiceWorkerUpdate } from './pwa/registerServiceWorker';
 import { consumeRecentAutoUpdateMarker } from './pwa/updateMarker';
 import { useUpdateStatus, useDownloadProgress } from './pwa/updateStatus';
+import { StartupLoadingOverlay } from '@components/ui/StartupLoadingOverlay';
+import {
+  ensureStartupAssetsPreloaded,
+  subscribeStartupPreload,
+  type StartupPreloadProgress,
+} from './startup/preloadAssets';
 import { router } from './router';
 import './index.css';
 
@@ -14,8 +20,17 @@ const UPDATE_STATUS_LABELS: Record<string, string> = {
   activating: 'updating…',
 };
 
+const INITIAL_STARTUP_PROGRESS: StartupPreloadProgress = {
+  phase: 'discovering',
+  loaded: 0,
+  failed: 0,
+  total: 0,
+  percent: 0,
+};
+
 function App() {
   const [showUpdatedLabel, setShowUpdatedLabel] = useState(didAutoUpdate);
+  const [startupProgress, setStartupProgress] = useState<StartupPreloadProgress>(INITIAL_STARTUP_PROGRESS);
   const updateStatus = useUpdateStatus();
   const downloadProgress = useDownloadProgress();
 
@@ -31,15 +46,36 @@ function App() {
     };
   }, [showUpdatedLabel]);
 
+  useEffect(() => {
+    const unsubscribe = subscribeStartupPreload((progress) => {
+      setStartupProgress(progress);
+    });
+    void ensureStartupAssetsPreloaded();
+    return unsubscribe;
+  }, []);
+
   const statusLabel = updateStatus === 'downloading'
     ? `downloading… ${downloadProgress}%`
     : (UPDATE_STATUS_LABELS[updateStatus] ?? null);
   const isActive = updateStatus !== 'idle';
   const isDownloading = updateStatus === 'downloading';
+  const showStartupOverlay = startupProgress.phase !== 'complete';
+  const startupLabel = startupProgress.phase === 'discovering'
+    ? 'indexing assets...'
+    : `loading assets... ${startupProgress.percent}%`;
 
   return (
     <>
       <RouterProvider router={router} />
+      {showStartupOverlay && (
+        <StartupLoadingOverlay
+          label={startupLabel}
+          loaded={startupProgress.loaded}
+          total={startupProgress.total}
+          failed={startupProgress.failed}
+          percent={startupProgress.percent}
+        />
+      )}
       <div className="version-badge fixed left-2 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-[1]">
         <div className="relative rounded-md border border-slate-600/60 bg-slate-950/75 px-2 py-1 text-[10px] text-slate-300 shadow-lg shadow-black/40 backdrop-blur-sm flex items-center gap-1 overflow-hidden">
           <span>{`v${__APP_VERSION__}`}</span>

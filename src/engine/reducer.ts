@@ -1,5 +1,6 @@
 import type {
   CardInstance,
+  CorePhase,
   GameAction,
   GameEvent,
   GameState,
@@ -10,6 +11,9 @@ import type {
   PlayerId,
   PlayerState,
   ReducerResult,
+  LearningPrompt,
+  LearningResumeAction,
+  LearningReward,
   RNG,
   TargetRef,
   TargetingType,
@@ -78,6 +82,21 @@ export function reduce(
       break;
     case 'CONFIRM_BLOCKER_ORDER':
       result = handleConfirmBlockerOrder(state);
+      break;
+    case 'START_LEARNING_CHALLENGE':
+      result = handleStartLearningChallenge(
+        state,
+        actingPlayer,
+        action.prompt,
+        action.reward,
+        action.resumeAction,
+      );
+      break;
+    case 'ANSWER_LEARNING_CHALLENGE':
+      result = handleAnswerLearningChallenge(state, actingPlayer, action.optionId);
+      break;
+    case 'SKIP_LEARNING_CHALLENGE':
+      result = handleSkipLearningChallenge(state, actingPlayer);
       break;
     case 'DISCARD_CARD':
       result = handleDiscardCard(state, actingPlayer, action.cardIndex);
@@ -884,25 +903,32 @@ function resolveEffectBuff(
   if (step.target === 'selected' && selectedTarget?.type === 'creature') {
     const found = findPermanent({ ...state, players }, selectedTarget.permanentId);
     if (found) {
-      const buffed = {
-        ...found.permanent,
-        temporaryAttackBonus: found.permanent.temporaryAttackBonus + step.attack,
-        temporaryHealthBonus: found.permanent.temporaryHealthBonus + step.health,
-      };
-      players[found.owner].board[found.slotIndex] = buffed;
+      players[found.owner].board[found.slotIndex] = withTemporaryBuff(
+        found.permanent,
+        step.attack,
+        step.health,
+      );
     }
   } else if (step.target === 'own_creatures') {
     players[casterId].board = players[casterId].board.map((p) => {
       if (!p) return null;
-      return {
-        ...p,
-        temporaryAttackBonus: p.temporaryAttackBonus + step.attack,
-        temporaryHealthBonus: p.temporaryHealthBonus + step.health,
-      };
+      return withTemporaryBuff(p, step.attack, step.health);
     });
   }
 
   return { newState: { ...state, players }, events: [] };
+}
+
+function withTemporaryBuff(
+  permanent: Permanent,
+  attackBonus: number,
+  healthBonus: number,
+): Permanent {
+  return {
+    ...permanent,
+    temporaryAttackBonus: permanent.temporaryAttackBonus + attackBonus,
+    temporaryHealthBonus: permanent.temporaryHealthBonus + healthBonus,
+  };
 }
 
 function resolveEffectGrantKeyword(
@@ -1782,6 +1808,111 @@ function resolveUnblockedAttack(
   }
 
   return { newState: currentState, events };
+}
+
+// ─── Learning Challenge ───
+
+function handleStartLearningChallenge(
+  state: GameState,
+  actingPlayer: PlayerId,
+  prompt: LearningPrompt,
+  reward: LearningReward,
+  resumeAction: LearningResumeAction,
+): ReducerResult {
+  const suspendedPhase = state.phase as CorePhase;
+  return {
+    newState: {
+      ...state,
+      phase: {
+        type: 'learning',
+        player: actingPlayer,
+        suspendedPhase,
+        resumeAction,
+        prompt,
+        reward,
+      },
+    },
+    events: [{ type: 'LEARNING_CHALLENGE_STARTED', player: actingPlayer, promptId: prompt.id }],
+  };
+}
+
+function handleAnswerLearningChallenge(
+  state: GameState,
+  actingPlayer: PlayerId,
+  optionId: string,
+): ReducerResult {
+  const phase = state.phase as Extract<Phase, { type: 'learning' }>;
+  const correct = optionId === phase.prompt.correctOptionId;
+  return resolveLearningChallenge(state, phase, actingPlayer, correct);
+}
+
+function handleSkipLearningChallenge(
+  state: GameState,
+  actingPlayer: PlayerId,
+): ReducerResult {
+  const phase = state.phase as Extract<Phase, { type: 'learning' }>;
+  return resolveLearningChallenge(state, phase, actingPlayer, false);
+}
+
+function resolveLearningChallenge(
+  state: GameState,
+  phase: Extract<Phase, { type: 'learning' }>,
+  actingPlayer: PlayerId,
+  correct: boolean,
+): ReducerResult {
+  let restoredState: GameState = { ...state, phase: phase.suspendedPhase };
+  if (correct) {
+    restoredState = applyLearningReward(restoredState, phase.player, phase.reward);
+  }
+
+  const resumed = resumeLearningAction(restoredState, phase.resumeAction);
+
+  return {
+    newState: resumed.newState,
+    events: [
+      {
+        type: 'LEARNING_CHALLENGE_RESOLVED',
+        player: actingPlayer,
+        promptId: phase.prompt.id,
+        correct,
+        rewardApplied: correct,
+      },
+      ...resumed.events,
+    ],
+  };
+}
+
+function resumeLearningAction(
+  state: GameState,
+  action: LearningResumeAction,
+): ReducerResult {
+  switch (action.type) {
+    case 'ADVANCE_PHASE':
+      return handleAdvancePhase(state);
+    case 'CONFIRM_ATTACKERS':
+      return handleConfirmAttackers(state);
+    case 'CONFIRM_BLOCKERS':
+      return handleConfirmBlockers(state);
+    case 'CONFIRM_BLOCKER_ORDER':
+      return handleConfirmBlockerOrder(state);
+  }
+}
+
+function applyLearningReward(
+  state: GameState,
+  player: PlayerId,
+  reward: LearningReward,
+): GameState {
+  const found = findPermanent(state, reward.permanentId);
+  if (!found || found.owner !== player) return state;
+
+  const players = clonePlayers(state.players);
+  players[found.owner].board[found.slotIndex] = withTemporaryBuff(
+    found.permanent,
+    reward.attackBonus,
+    reward.healthBonus,
+  );
+  return { ...state, players };
 }
 
 // ─── End-of-Turn Processing ───

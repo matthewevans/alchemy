@@ -35,6 +35,7 @@ export function DisplaySettings() {
       <SettingsSlider
         id="ui-scale"
         label="UI Scale"
+        description="Scales hand cards and in-card text size."
         value={uiScale}
         displayValue={`${Math.round(uiScale * 100)}%`}
         min={0.6}
@@ -48,6 +49,7 @@ export function DisplaySettings() {
       <SettingsSlider
         id="board-scale"
         label="Board Scale"
+        description="Scales cards shown on the battlefield."
         value={boardScale}
         displayValue={`${Math.round(boardScale * 100)}%`}
         min={0.6}
@@ -62,6 +64,7 @@ export function DisplaySettings() {
       <SettingsSelect
         id="battlefield"
         label="Battlefield"
+        description="Choose a board theme. Auto matches your deck's element."
         value={battlefield}
         options={BATTLEFIELD_OPTIONS}
         onChange={(v) => setBattlefield(v)}
@@ -69,12 +72,14 @@ export function DisplaySettings() {
       <SettingsToggle
         id="battlefield-ambience"
         label="Particles"
+        description="Shows animated ambient effects for the selected battlefield."
         checked={battlefieldAmbience}
         onChange={setBattlefieldAmbience}
       />
       <SettingsSelect
         id="stat-layout"
         label="Card Stats"
+        description="Changes where attack and health are placed on creature cards."
         value={statLayout}
         options={STAT_LAYOUT_OPTIONS}
         onChange={(v) => setStatLayout(v as StatLayout)}
@@ -82,4 +87,3 @@ export function DisplaySettings() {
     </>
   );
 }
-

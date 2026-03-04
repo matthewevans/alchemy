@@ -11,6 +11,7 @@ export function AudioSettings() {
       <SettingsToggle
         id="audio-enabled"
         label="Audio Enabled"
+        description="Master mute for both music and sound effects."
         checked={!isMuted}
         onChange={(enabled) => setMuted(!enabled)}
       />
@@ -18,6 +19,7 @@ export function AudioSettings() {
       <SettingsSlider
         id="sfx-volume"
         label="SFX"
+        description="Controls gameplay sound effect volume."
         value={sfxVolume}
         displayValue={`${Math.round(sfxVolume * 100)}%`}
         min={0}
@@ -29,6 +31,7 @@ export function AudioSettings() {
       <SettingsSlider
         id="music-volume"
         label="Music"
+        description="Controls background music volume."
         value={musicVolume}
         displayValue={`${Math.round(musicVolume * 100)}%`}
         min={0}
@@ -41,6 +44,7 @@ export function AudioSettings() {
       <SettingsToggle
         id="narration"
         label="Card Narration"
+        description="Reads played and previewed cards aloud."
         checked={narrationEnabled}
         onChange={setNarrationEnabled}
       />

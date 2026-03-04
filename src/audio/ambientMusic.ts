@@ -2,7 +2,7 @@ import { getAudioContext, getMusicGain } from './audioContext';
 
 const BASE = import.meta.env.BASE_URL;
 
-const TRACK_POOL = [
+export const AMBIENT_TRACK_POOL = [
   `${BASE}audio/music/background/bgm_01.mp3`,
   `${BASE}audio/music/background/bgm_02.mp3`,
   `${BASE}audio/music/background/bgm_03.mp3`,
@@ -17,7 +17,9 @@ const TRACK_POOL = [
   `${BASE}audio/music/background/bgm_12.mp3`,
   `${BASE}audio/music/background/bgm_13.mp3`,
   `${BASE}audio/music/background/bgm_14.mp3`,
-];
+] as const;
+
+const TRACK_POOL = [...AMBIENT_TRACK_POOL];
 
 const BATTLEFIELD_TRACKS: Record<string, string[]> = {
   fire_molten: TRACK_POOL,

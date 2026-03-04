@@ -47,6 +47,9 @@ export function getAutoAction(
       return hasPlayableAction ? null : { action: { type: 'ADVANCE_PHASE' }, delay: 200 };
     }
 
+    case 'learning':
+      return null;
+
     default:
       return null;
   }

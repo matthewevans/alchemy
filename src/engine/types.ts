@@ -65,9 +65,41 @@ export interface Permanent {
   armorUsedThisTurn: boolean;
 }
 
+// ─── Learning ───
+
+export type LearningDomain = 'reading' | 'math';
+export type LearningPromptKind = 'missing_letter' | 'word_to_picture' | 'addition' | 'subtraction';
+
+export interface LearningPromptOption {
+  id: string;
+  text: string;
+  imageId?: string;
+}
+
+export interface LearningPrompt {
+  id: string;
+  domain: LearningDomain;
+  kind: LearningPromptKind;
+  prompt: string;
+  options: LearningPromptOption[];
+  correctOptionId: string;
+}
+
+export interface LearningReward {
+  permanentId: string;
+  attackBonus: number;
+  healthBonus: number;
+}
+
+export type LearningResumeAction =
+  | { type: 'ADVANCE_PHASE' }
+  | { type: 'CONFIRM_ATTACKERS' }
+  | { type: 'CONFIRM_BLOCKERS' }
+  | { type: 'CONFIRM_BLOCKER_ORDER' };
+
 // ─── Phase (discriminated union) ───
 
-export type Phase =
+export type CorePhase =
   | { type: 'mulligan'; player: PlayerId }
   | { type: 'draw' }
   | { type: 'energy' }
@@ -105,7 +137,18 @@ export type Phase =
       blockers: Record<string, string>;
     }
   | { type: 'discard'; player: PlayerId; mustDiscard: number }
-  | { type: 'end' }
+  | { type: 'end' };
+
+export type Phase =
+  | CorePhase
+  | {
+      type: 'learning';
+      player: PlayerId;
+      suspendedPhase: CorePhase;
+      resumeAction: LearningResumeAction;
+      prompt: LearningPrompt;
+      reward: LearningReward;
+    }
   | { type: 'game_over'; winner: PlayerId };
 
 // ─── Stats ───
@@ -182,6 +225,14 @@ export type GameAction =
       blockerPermanentIds: string[];
     }
   | { type: 'CONFIRM_BLOCKER_ORDER' }
+  | {
+      type: 'START_LEARNING_CHALLENGE';
+      prompt: LearningPrompt;
+      reward: LearningReward;
+      resumeAction: LearningResumeAction;
+    }
+  | { type: 'ANSWER_LEARNING_CHALLENGE'; optionId: string }
+  | { type: 'SKIP_LEARNING_CHALLENGE' }
   | { type: 'DISCARD_CARD'; cardIndex: number }
   | { type: 'CONCEDE' };
 
@@ -224,6 +275,14 @@ export type GameEvent =
   | { type: 'CREATURES_UNTAPPED'; permanentIds: string[] }
   | { type: 'TURN_STARTED'; player: PlayerId; turn: number }
   | { type: 'FATIGUE_DAMAGE'; player: PlayerId; amount: number }
+  | { type: 'LEARNING_CHALLENGE_STARTED'; player: PlayerId; promptId: string }
+  | {
+      type: 'LEARNING_CHALLENGE_RESOLVED';
+      player: PlayerId;
+      promptId: string;
+      correct: boolean;
+      rewardApplied: boolean;
+    }
   | { type: 'GAME_OVER'; winner: PlayerId };
 
 // ─── Targeting ───
@@ -294,6 +353,8 @@ export function getActingPlayer(state: GameState): PlayerId | null {
       return phase.player;
     case 'targeting':
       return phase.casterId;
+    case 'learning':
+      return phase.player;
     case 'battle':
       if (phase.step === 'declare_blockers') return getOpponent(state.activePlayer);
       return state.activePlayer;

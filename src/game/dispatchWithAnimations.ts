@@ -1,11 +1,13 @@
 import type { GameAction, GameEvent, PlayerId } from '@engine/types';
 import { useGameStore } from './gameStore';
 import { usePreferencesStore } from './preferencesStore';
+import { useLearningStore } from './learningStore';
 import { groupEventsIntoSteps, getPositions, useAnimationStore } from './animationStore';
 import type { AnimationStep, BoardSnapshot } from './animationStore';
 import { narrateCard } from '@audio/tts';
 import { playEffectSound } from '@audio/sounds';
 import { useAudioStore } from '@audio/audioStore';
+import { maybeBuildLearningChallengeAction } from '../learning/policy';
 
 type LocalActionHandler = (action: GameAction, actingPlayer: PlayerId) => void;
 
@@ -19,7 +21,7 @@ export function dispatchWithAnimations(
 
   // Snapshot permanentId → cardId before dispatch so we can resolve
   // the attacking creature's element even after it dies in combat.
-  const { state, humanPlayer } = useGameStore.getState();
+  const { state, humanPlayer, gameId } = useGameStore.getState();
   const cardIdMap = new Map<string, string>();
   let preDispatchBoard: BoardSnapshot | null = null;
   if (state) {
@@ -34,6 +36,39 @@ export function dispatchWithAnimations(
       player1: [...state.players.player1.board],
       player2: [...state.players.player2.board],
     };
+  }
+
+  if (state && (action.type === 'CONFIRM_ATTACKERS' || action.type === 'CONFIRM_BLOCKERS')) {
+    const prefs = usePreferencesStore.getState();
+    const hasEnabledDomain = prefs.readingChallengesEnabled || prefs.mathChallengesEnabled;
+    if (
+      prefs.learningChallengesEnabled
+      && hasEnabledDomain
+      && actingPlayer === humanPlayer
+    ) {
+      const opportunityIndex = useLearningStore.getState().consumeOpportunity(gameId);
+      const learningAction = maybeBuildLearningChallengeAction({
+        state,
+        action,
+        actingPlayer,
+        humanPlayer,
+        opportunityIndex,
+        prefs: {
+          learningChallengesEnabled: prefs.learningChallengesEnabled,
+          readingChallengesEnabled: prefs.readingChallengesEnabled,
+          mathChallengesEnabled: prefs.mathChallengesEnabled,
+          readingLevel: prefs.readingLevel,
+          mathLevel: prefs.mathLevel,
+          learningFrequency: prefs.learningFrequency,
+        },
+      });
+
+      if (learningAction) {
+        const learningEvents = useGameStore.getState().dispatch(learningAction, actingPlayer);
+        onLocalAction?.(learningAction, actingPlayer);
+        return learningEvents;
+      }
+    }
   }
 
   const events = useGameStore.getState().dispatch(action, actingPlayer);

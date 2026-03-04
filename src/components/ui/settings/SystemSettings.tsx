@@ -8,6 +8,7 @@ export function SystemSettings() {
     <SettingsToggle
       id="auto-update"
       label="Auto-Update"
+      description="Automatically installs new game versions when available."
       checked={autoUpdateEnabled}
       onChange={setAutoUpdateEnabled}
     />

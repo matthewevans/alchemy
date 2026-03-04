@@ -1,6 +1,15 @@
-import type { GameAction, GameState, PlayerId, TargetRef, ValidationResult } from './types';
+import type {
+  GameAction,
+  GameState,
+  LearningPrompt,
+  LearningResumeAction,
+  LearningReward,
+  PlayerId,
+  TargetRef,
+  ValidationResult,
+} from './types';
 import { CARD_REGISTRY } from './cards';
-import { getOpponent } from './types';
+import { getActingPlayer, getOpponent } from './types';
 
 // ─── Action Validation ───
 
@@ -43,6 +52,18 @@ export function validateAction(
       );
     case 'CONFIRM_BLOCKER_ORDER':
       return validateConfirmBlockerOrder(state, actingPlayer);
+    case 'START_LEARNING_CHALLENGE':
+      return validateStartLearningChallenge(
+        state,
+        action.prompt,
+        action.reward,
+        action.resumeAction,
+        actingPlayer,
+      );
+    case 'ANSWER_LEARNING_CHALLENGE':
+      return validateAnswerLearningChallenge(state, action.optionId, actingPlayer);
+    case 'SKIP_LEARNING_CHALLENGE':
+      return validateSkipLearningChallenge(state, actingPlayer);
     case 'DISCARD_CARD':
       return validateDiscardCard(state, action.cardIndex, actingPlayer);
     case 'CONCEDE':
@@ -323,6 +344,90 @@ function validateConfirmBlockerOrder(state: GameState, actingPlayer: PlayerId): 
   return { valid: true };
 }
 
+function validateStartLearningChallenge(
+  state: GameState,
+  prompt: LearningPrompt,
+  reward: LearningReward,
+  resumeAction: LearningResumeAction,
+  actingPlayer: PlayerId,
+): ValidationResult {
+  if (state.phase.type === 'game_over') {
+    return { valid: false, reason: 'Cannot start a learning challenge after game is over' };
+  }
+  if (state.phase.type === 'learning') {
+    return { valid: false, reason: 'Already in a learning challenge' };
+  }
+  if (getActingPlayer(state) !== actingPlayer) {
+    return { valid: false, reason: 'Only the acting player can start a learning challenge' };
+  }
+
+  if (prompt.options.length < 2) {
+    return { valid: false, reason: 'Learning prompt must include at least 2 options' };
+  }
+  if (!prompt.options.some((option) => option.id === prompt.correctOptionId)) {
+    return { valid: false, reason: 'Learning prompt correct option is missing from options' };
+  }
+
+  const hasRewardTarget = state.players[actingPlayer].board.some(
+    (perm) => perm?.permanentId === reward.permanentId,
+  );
+  if (!hasRewardTarget) {
+    return { valid: false, reason: 'Learning reward target must be your creature' };
+  }
+  if (reward.attackBonus === 0 && reward.healthBonus === 0) {
+    return { valid: false, reason: 'Learning reward must change stats' };
+  }
+
+  const resumeValidation = validateLearningResumeAction(state, resumeAction, actingPlayer);
+  if (!resumeValidation.valid) {
+    return {
+      valid: false,
+      reason: `Learning resume action is invalid: ${resumeValidation.reason}`,
+    };
+  }
+
+  return { valid: true };
+}
+
+function validateLearningResumeAction(
+  state: GameState,
+  action: LearningResumeAction,
+  actingPlayer: PlayerId,
+): ValidationResult {
+  return validateAction(state, action, actingPlayer);
+}
+
+function validateAnswerLearningChallenge(
+  state: GameState,
+  optionId: string,
+  actingPlayer: PlayerId,
+): ValidationResult {
+  if (state.phase.type !== 'learning') {
+    return { valid: false, reason: 'ANSWER_LEARNING_CHALLENGE is only valid during learning phase' };
+  }
+  if (state.phase.player !== actingPlayer) {
+    return { valid: false, reason: 'Only the challenged player can answer' };
+  }
+  const isKnownOption = state.phase.prompt.options.some((option) => option.id === optionId);
+  if (!isKnownOption) {
+    return { valid: false, reason: 'Unknown learning option' };
+  }
+  return { valid: true };
+}
+
+function validateSkipLearningChallenge(
+  state: GameState,
+  actingPlayer: PlayerId,
+): ValidationResult {
+  if (state.phase.type !== 'learning') {
+    return { valid: false, reason: 'SKIP_LEARNING_CHALLENGE is only valid during learning phase' };
+  }
+  if (state.phase.player !== actingPlayer) {
+    return { valid: false, reason: 'Only the challenged player can skip' };
+  }
+  return { valid: true };
+}
+
 function validateDiscardCard(
   state: GameState,
   cardIndex: number,
@@ -382,6 +487,9 @@ export function enumerateLegalActions(
       break;
     case 'battle':
       enumerateBattleActions(state, actingPlayer, actions);
+      break;
+    case 'learning':
+      enumerateLearningActions(state, actingPlayer, actions);
       break;
     case 'discard':
       enumerateDiscardActions(state, actingPlayer, actions);
@@ -578,4 +686,19 @@ function enumerateDiscardActions(
   for (let cardIndex = 0; cardIndex < playerState.hand.length; cardIndex++) {
     actions.push({ type: 'DISCARD_CARD', cardIndex });
   }
+}
+
+function enumerateLearningActions(
+  state: GameState,
+  actingPlayer: PlayerId,
+  actions: GameAction[],
+): void {
+  if (state.phase.type !== 'learning' || state.phase.player !== actingPlayer) {
+    return;
+  }
+
+  for (const option of state.phase.prompt.options) {
+    actions.push({ type: 'ANSWER_LEARNING_CHALLENGE', optionId: option.id });
+  }
+  actions.push({ type: 'SKIP_LEARNING_CHALLENGE' });
 }
