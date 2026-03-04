@@ -484,6 +484,48 @@ describe('tree search policy', () => {
     const legal = enumerateLegalActions(state, 'player2').filter((a) => a.type !== 'CONCEDE');
     expect(legal).toContainEqual(action);
   });
+
+  it('never selects a target-required spell with no legal targets under tree search', () => {
+    const state = createTestGameState({
+      phase: { type: 'play' },
+      activePlayer: 'player2',
+      player2: {
+        currentEnergy: 2,
+        maxEnergy: 2,
+        hand: [
+          makeCardInstance('fire_fireball'),
+          makeCardInstance('water_splash'),
+        ],
+      },
+      player1: {
+        board: [null, null, null, null, null],
+      },
+    });
+
+    const action = chooseAction(state, 'player2', createRNG(31415), treeSearchConfig);
+    expect(action.type).not.toBe('CONCEDE');
+    if (action.type === 'PLAY_CARD') {
+      expect(state.players.player2.hand[action.cardIndex].cardId).toBe('water_splash');
+    }
+  });
+
+  it('advances when only targetless targeted spells are available under tree search', () => {
+    const state = createTestGameState({
+      phase: { type: 'play' },
+      activePlayer: 'player2',
+      player2: {
+        currentEnergy: 2,
+        maxEnergy: 2,
+        hand: [makeCardInstance('fire_fireball')],
+      },
+      player1: {
+        board: [null, null, null, null, null],
+      },
+    });
+
+    const action = chooseAction(state, 'player2', createRNG(27182), treeSearchConfig);
+    expect(action).toEqual({ type: 'ADVANCE_PHASE' });
+  });
 });
 
 // ─── Safety: Never returns invalid action ───

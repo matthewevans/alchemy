@@ -3,12 +3,13 @@ import { CARD_REGISTRY } from './cards';
 import { EFFECT_REGISTRY } from './effects';
 import { getActingPlayer, getCurrentHealth, getEffectiveAttack, getOpponent } from './types';
 import { enumerateLegalActions } from './validation';
-import { computeValidTargets, reduce } from './reducer';
+import { reduce } from './reducer';
 import type { SeededRNG } from './prng';
 import { restoreRNG } from './prng';
 import type { AIConfig } from './aiConfig';
 import { evaluateState, softmaxSelect } from './aiEval';
 import { chooseActionByTreeSearch } from './aiSearch';
+import { filterAIViableActions } from './aiActionPolicy';
 
 // ─── Core AI Function ───
 
@@ -23,8 +24,7 @@ export function chooseAction(
     throw new Error('No legal actions available');
   }
 
-  // Filter out CONCEDE — AI should never concede
-  const actions = legalActions.filter((a) => a.type !== 'CONCEDE');
+  const actions = filterAIViableActions(state, aiPlayer, legalActions);
   if (actions.length === 0) {
     return legalActions[0];
   }
@@ -160,13 +160,6 @@ function choosePlayAction(
   const byCard = new Map<number, GameAction>();
   for (const action of playActions) {
     if (action.type !== 'PLAY_CARD') continue;
-    const cardDef = CARD_REGISTRY[playerState.hand[action.cardIndex].cardId];
-
-    // Skip targeted spells with no legal targets
-    if (cardDef.type === 'spell' && cardDef.targetingType) {
-      const validTargets = computeValidTargets(state, aiPlayer, cardDef.targetingType);
-      if (validTargets.length === 0) continue;
-    }
 
     const existing = byCard.get(action.cardIndex);
     if (!existing) {

@@ -6,6 +6,7 @@ import { evaluateState, softmaxSelect } from './aiEval';
 import type { AIConfig, AISearchConfig } from './aiConfig';
 import type { SeededRNG } from './prng';
 import { restoreRNG } from './prng';
+import { filterAIViableActions } from './aiActionPolicy';
 
 interface SearchState {
   state: GameState;
@@ -50,7 +51,7 @@ function buildSearchKey(searchState: SearchState, aiPlayer: PlayerId): string {
 }
 
 function getSearchLegalActions(state: GameState, actingPlayer: PlayerId): GameAction[] {
-  return enumerateLegalActions(state, actingPlayer).filter((action) => action.type !== 'CONCEDE');
+  return filterAIViableActions(state, actingPlayer, enumerateLegalActions(state, actingPlayer));
 }
 
 function simulateAction(searchState: SearchState, action: GameAction, actingPlayer: PlayerId): SearchState | null {
@@ -278,8 +279,7 @@ export function chooseActionByTreeSearch(
   if (!canUseSearch(config, state.phase.type)) return null;
   if (getActingPlayer(state) !== aiPlayer) return null;
 
-  const legal = (rootActions ?? getSearchLegalActions(state, aiPlayer))
-    .filter((action) => action.type !== 'CONCEDE');
+  const legal = filterAIViableActions(state, aiPlayer, rootActions ?? getSearchLegalActions(state, aiPlayer));
   if (legal.length <= 1) {
     return legal[0] ?? null;
   }
