@@ -8,6 +8,7 @@ import { EFFECT_REGISTRY } from '@engine/effects';
 import { KEYWORD_REGISTRY } from '@engine/keywords';
 import { resolveDescription } from '@engine/descriptions';
 import { usePreferencesStore } from '@game/preferencesStore';
+import { narrateCard, isTTSAvailable } from '@audio/tts';
 import {
   getElementColor,
   getElementArtGradient,
@@ -75,6 +76,7 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
   const effect = card.effectId ? EFFECT_REGISTRY[card.effectId] : null;
   const isCreature = card.type === 'creature';
   const easyReadMode = usePreferencesStore((s) => s.easyReadMode);
+  const canNarrate = isTTSAvailable();
 
   // Stat values: use overrides if provided, else base card stats
   const attack = stats?.attack ?? card.attack ?? 0;
@@ -321,6 +323,34 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
           />
         )}
       </div>
+      {canNarrate && (
+        <button
+          type="button"
+          className={`absolute z-[6] text-white/70 hover:text-amber-300 transition-colors bg-black/45 hover:bg-black/60 rounded-full border border-white/20 shadow-md ${viewLevel === 'compact' ? 'left-1 bottom-1 p-[2px]' : 'left-1.5 bottom-1.5 p-[3px]'}`}
+          aria-label={`Read ${card.name} aloud`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            narrateCard(card.id, easyReadMode);
+          }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              width: viewLevel === 'compact' ? '10px' : '11px',
+              height: viewLevel === 'compact' ? '10px' : '11px',
+            }}
+          >
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+          </svg>
+        </button>
+      )}
     </>
   );
 }

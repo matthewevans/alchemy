@@ -15,18 +15,15 @@ describe('learning content', () => {
     expect(first).toEqual(second);
   });
 
-  it('emits both missing-letter and word-to-picture reading prompts over a seed range', () => {
+  it('emits only missing-letter reading prompts over a seed range', () => {
     const kinds = new Set<string>();
     for (let seed = 1; seed <= 120; seed += 1) {
       const prompt = buildReadingPrompt('r2', seed);
       kinds.add(prompt.kind);
-      if (prompt.kind === 'word_to_picture') {
-        expect(prompt.options.every((option) => typeof option.imageId === 'string')).toBe(true);
-      }
     }
 
     expect(kinds.has('missing_letter')).toBe(true);
-    expect(kinds.has('word_to_picture')).toBe(true);
+    expect(kinds.has('word_to_picture')).toBe(false);
   });
 
   it('keeps math answers in options for each level', () => {

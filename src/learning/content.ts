@@ -1,4 +1,4 @@
-import type { LearningDomain, LearningPrompt, LearningPromptOption } from '@engine/types';
+import type { LearningDomain, LearningPrompt } from '@engine/types';
 import type { MathLevel, ReadingLevel } from './config';
 import {
   buildMathBlueprint,
@@ -129,30 +129,6 @@ function buildMissingLetterPrompt(level: ReadingLevel, random: LearningRandom): 
   };
 }
 
-function buildWordToPicturePrompt(level: ReadingLevel, random: LearningRandom): LearningPrompt {
-  const vocab = READING_CURRICULUM[level].wordPictureVocab;
-  const target = random.pick(vocab);
-  const distractors = random
-    .shuffle(vocab.filter((item) => item.word !== target.word))
-    .slice(0, 3);
-  const options = random.shuffle([target, ...distractors]);
-
-  const promptOptions: LearningPromptOption[] = options.map((item, index) => ({
-    id: `picture:${item.word}`,
-    text: `Picture ${index + 1}`,
-    imageId: item.imagePath,
-  }));
-
-  return {
-    id: makePromptId('reading', random),
-    domain: 'reading',
-    kind: 'word_to_picture',
-    prompt: `Pick the picture for: ${target.word}`,
-    options: promptOptions,
-    correctOptionId: `picture:${target.word}`,
-  };
-}
-
 function buildMathOptions(
   level: MathLevel,
   answer: number,
@@ -185,10 +161,6 @@ export function buildReadingPrompt(
   seed?: number,
 ): LearningPrompt {
   const random = getRandom(seed, 'reading');
-  const shouldUsePictures = random.chance(READING_CURRICULUM[level].wordToPictureChance);
-  if (shouldUsePictures) {
-    return buildWordToPicturePrompt(level, random);
-  }
   return buildMissingLetterPrompt(level, random);
 }
 

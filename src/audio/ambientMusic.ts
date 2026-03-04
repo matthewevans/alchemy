@@ -20,6 +20,7 @@ export const AMBIENT_TRACK_POOL = [
 ] as const;
 
 const TRACK_POOL = [...AMBIENT_TRACK_POOL];
+const DEFAULT_TRACK_KEY = '__default__';
 
 const BATTLEFIELD_TRACKS: Record<string, string[]> = {
   fire_molten: TRACK_POOL,
@@ -50,14 +51,12 @@ function pickRandomTrack(battlefieldId: string | null): string {
   const tracks = getTracksForBattlefield(battlefieldId);
   if (tracks.length === 0) throw new Error('No ambient music tracks configured.');
 
-  if (!battlefieldId || tracks.length === 1) {
-    return tracks[Math.floor(Math.random() * tracks.length)];
-  }
-
-  const lastTrack = lastTrackByBattlefield.get(battlefieldId);
+  if (tracks.length === 1) return tracks[0];
+  const trackKey = battlefieldId ?? DEFAULT_TRACK_KEY;
+  const lastTrack = lastTrackByBattlefield.get(trackKey);
   const candidates = lastTrack ? tracks.filter((t) => t !== lastTrack) : tracks;
   const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-  lastTrackByBattlefield.set(battlefieldId, chosen);
+  lastTrackByBattlefield.set(trackKey, chosen);
   return chosen;
 }
 
@@ -103,7 +102,7 @@ async function playRandomTrackForCurrentBattlefield(token: number): Promise<void
 
     const source = ctx.createBufferSource();
     source.buffer = decoded;
-    source.loop = true;
+    source.loop = false;
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, ctx.currentTime);
@@ -111,6 +110,10 @@ async function playRandomTrackForCurrentBattlefield(token: number): Promise<void
 
     source.connect(gain).connect(getMusicGain());
     source.start();
+    source.onended = () => {
+      if (!isPlaying || token !== loadToken || currentSource !== source) return;
+      void playRandomTrackForCurrentBattlefield(token);
+    };
 
     const previousSource = currentSource;
     const previousGain = currentGain;

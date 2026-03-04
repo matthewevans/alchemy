@@ -106,19 +106,7 @@ export function CoachOverlay() {
 
             <p className="text-white text-sm leading-snug mb-3">{currentTip.message}</p>
 
-            <div className="flex items-center justify-center gap-3">
-              <button
-                className="px-4 py-1.5 rounded-lg text-sm font-bold text-slate-900 bg-amber-400 hover:bg-amber-300 transition-colors"
-                onClick={dismissTip}
-              >
-                Got it!
-              </button>
-              <button
-                className="text-xs text-white/40 hover:text-white/60 transition-colors"
-                onClick={skipTutorial}
-              >
-                Skip tips
-              </button>
+            <div className="flex items-center w-full">
               <button
                 className="text-white/40 hover:text-amber-300 transition-colors"
                 onClick={() => narrateText(currentTip.message)}
@@ -130,6 +118,20 @@ export function CoachOverlay() {
                   <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
                 </svg>
               </button>
+              <div className="ml-auto flex items-center gap-3">
+                <button
+                  className="px-4 py-1.5 rounded-lg text-sm font-bold text-slate-900 bg-amber-400 hover:bg-amber-300 transition-colors"
+                  onClick={dismissTip}
+                >
+                  Got it!
+                </button>
+                <button
+                  className="text-xs text-white/40 hover:text-white/60 transition-colors"
+                  onClick={skipTutorial}
+                >
+                  Skip tips
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>

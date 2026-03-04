@@ -24,6 +24,7 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['**/*.{webp,png,mp3,m4a,json}'],
       workbox: {
+        clientsClaim: true,
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       manifest: {

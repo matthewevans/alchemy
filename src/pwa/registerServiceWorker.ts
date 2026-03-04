@@ -3,7 +3,8 @@ import { usePreferencesStore } from '@game/preferencesStore';
 import { markPendingAutoUpdate } from './updateMarker';
 import { setUpdateStatus, getUpdateStatus, setDownloadProgress } from './updateStatus';
 
-const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
+const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
+const ACTIVATION_TIMEOUT_MS = 20 * 1000;
 
 /** Simulated progress: ticks every 200ms, decelerating toward 95%. */
 const PROGRESS_TICK_MS = 200;
@@ -13,6 +14,7 @@ const PROGRESS_CEILING = 95;
 let isRegistered = false;
 let manualCheckForUpdate: (() => Promise<void>) | null = null;
 let progressIntervalId: number | null = null;
+let activationTimeoutId: number | null = null;
 let simulatedProgress = 0;
 
 function startProgressSimulation() {
@@ -37,19 +39,43 @@ function completeProgress() {
   setDownloadProgress(100);
 }
 
+function clearActivationTimeout(): void {
+  if (activationTimeoutId !== null) {
+    window.clearTimeout(activationTimeoutId);
+    activationTimeoutId = null;
+  }
+}
+
+function setActivatingStatus(): void {
+  completeProgress();
+  setUpdateStatus('activating');
+  clearActivationTimeout();
+  activationTimeoutId = window.setTimeout(() => {
+    if (getUpdateStatus() !== 'activating') return;
+    setUpdateStatus('idle');
+    setDownloadProgress(0);
+    console.warn('[Alchemy] Service worker activation timed out; reset update indicator to idle.');
+  }, ACTIVATION_TIMEOUT_MS);
+}
+
 export function checkForServiceWorkerUpdate(): boolean {
   if (import.meta.env.DEV || !('serviceWorker' in navigator) || !manualCheckForUpdate) {
     return false;
   }
 
   setUpdateStatus('checking');
-  manualCheckForUpdate().then(() => {
-    // If status is still 'checking' after the update() promise resolves,
-    // no new SW was found — reset to idle.
-    if (getUpdateStatus() === 'checking') {
+  manualCheckForUpdate()
+    .then(() => {
+      // If status is still 'checking' after update() resolves,
+      // no new SW was found — reset to idle.
+      if (getUpdateStatus() === 'checking') {
+        setUpdateStatus('idle');
+      }
+    })
+    .catch((error: unknown) => {
       setUpdateStatus('idle');
-    }
-  });
+      console.warn('[Alchemy] Manual service worker update check failed.', error);
+    });
   return true;
 }
 
@@ -63,6 +89,7 @@ export function registerServiceWorker() {
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (hasReloadedOnControllerChange) return;
+    clearActivationTimeout();
     hasReloadedOnControllerChange = true;
     window.location.reload();
   });
@@ -70,16 +97,24 @@ export function registerServiceWorker() {
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
-      completeProgress();
-      setUpdateStatus('activating');
       markPendingAutoUpdate();
-      void updateSW(true);
+      setActivatingStatus();
+      void updateSW(true).catch((error: unknown) => {
+        clearActivationTimeout();
+        if (getUpdateStatus() === 'activating') {
+          setUpdateStatus('idle');
+          setDownloadProgress(0);
+        }
+        console.warn('[Alchemy] Failed to apply service worker update.', error);
+      });
     },
-    onRegisteredSW(_swUrl, swRegistration) {
+    onRegisteredSW(swUrl, swRegistration) {
       if (!swRegistration) return;
 
       // Surface the download phase — fires when a new SW starts installing
       swRegistration.addEventListener('updatefound', () => {
+        if (!navigator.serviceWorker.controller) return;
+
         const newWorker = swRegistration.installing;
         if (!newWorker) return;
         setUpdateStatus('downloading');
@@ -87,27 +122,71 @@ export function registerServiceWorker() {
 
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed') {
-            completeProgress();
-            setUpdateStatus('activating');
+            setActivatingStatus();
+            return;
+          }
+
+          if (newWorker.state === 'activated') {
+            clearActivationTimeout();
+            if (getUpdateStatus() === 'activating') {
+              setUpdateStatus('idle');
+              setDownloadProgress(0);
+            }
+            return;
+          }
+
+          if (newWorker.state === 'redundant') {
+            stopProgressSimulation();
+            clearActivationTimeout();
+            if (getUpdateStatus() !== 'checking') {
+              setUpdateStatus('idle');
+              setDownloadProgress(0);
+            }
           }
         });
       });
 
       // Manual checks always go through; auto checks respect the preference.
-      const doUpdate = () => swRegistration.update().then(() => {});
-      const autoCheck = () => {
+      const doUpdate = async (probeScript: boolean) => {
+        if (swRegistration.installing) return;
+
+        if (probeScript) {
+          if ('onLine' in navigator && !navigator.onLine) return;
+
+          try {
+            const response = await fetch(swUrl, {
+              cache: 'no-store',
+              headers: {
+                'cache-control': 'no-cache',
+              },
+            });
+            if (response.status !== 200) return;
+          } catch {
+            return;
+          }
+        }
+
+        await swRegistration.update();
+      };
+      const autoCheck = async () => {
         if (!usePreferencesStore.getState().autoUpdateEnabled) return Promise.resolve();
-        return doUpdate();
+        try {
+          await doUpdate(true);
+        } catch (error: unknown) {
+          console.warn('[Alchemy] Automatic service worker update check failed.', error);
+        }
       };
 
       const handleVisibilityChange = () => {
         if (document.visibilityState !== 'visible') return;
-        autoCheck();
+        void autoCheck();
       };
 
-      manualCheckForUpdate = doUpdate;
-      autoCheck();
-      const intervalId = window.setInterval(autoCheck, UPDATE_CHECK_INTERVAL_MS);
+      manualCheckForUpdate = () => doUpdate(false);
+      void autoCheck();
+      const intervalId = window.setInterval(() => {
+        void autoCheck();
+      }, UPDATE_CHECK_INTERVAL_MS);
       document.addEventListener('visibilitychange', handleVisibilityChange);
 
       window.addEventListener(
@@ -115,6 +194,7 @@ export function registerServiceWorker() {
         () => {
           window.clearInterval(intervalId);
           stopProgressSimulation();
+          clearActivationTimeout();
           document.removeEventListener('visibilitychange', handleVisibilityChange);
           manualCheckForUpdate = null;
         },
