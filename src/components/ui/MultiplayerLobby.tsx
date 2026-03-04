@@ -278,7 +278,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
       {/* Centered content */}
       <div className="flex-1 flex flex-col items-center justify-center px-4">
         {/* Logo with glow */}
-        <div className="relative mb-8 flex items-center justify-center pointer-events-none">
+        <div className="title-logo relative mb-8 flex items-center justify-center pointer-events-none">
           {!shouldReduceMotion && (
             <motion.div
               className="absolute"
@@ -297,7 +297,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
           <motion.img
             src={logoWordmarkSrc}
             alt="Alchemy"
-            className="relative w-80 max-w-[80vw]"
+            className="title-logo-img relative w-80 max-w-[80vw]"
             style={{ filter: 'drop-shadow(0 4px 20px rgba(251, 191, 36, 0.3))' }}
             initial={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.7, y: 20 }}
             animate={shouldReduceMotion ? undefined : { opacity: 1, scale: 1, y: 0 }}
@@ -309,30 +309,14 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
           {step.type === 'choose_role' && (
             <motion.div
               key="choose"
-              className="flex flex-col items-center gap-4"
+              className="title-buttons flex flex-col items-center gap-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             >
-              <motion.h2
-                className="text-3xl font-bold mb-1"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-              >
-                Multiplayer
-              </motion.h2>
-              <motion.p
-                className="text-white/50 text-sm mb-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1, duration: 0.3 }}
-              >
-                Challenge a friend via peer-to-peer
-              </motion.p>
               <motion.button
-                className={gameButtonClass({ tone: 'amber', size: 'lg', className: 'w-64 text-xl font-bold' })}
+                className={gameButtonClass({ tone: 'amber', size: 'lg', className: 'title-button w-64 text-xl font-bold' })}
                 initial={{ opacity: 0, y: 15, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ delay: 0.15, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -343,7 +327,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
                 Host Game
               </motion.button>
               <motion.button
-                className={gameButtonClass({ tone: 'blue', size: 'lg', className: 'w-64 text-xl font-bold' })}
+                className={gameButtonClass({ tone: 'blue', size: 'lg', className: 'title-button w-64 text-xl font-bold' })}
                 initial={{ opacity: 0, y: 15, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ delay: 0.25, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -353,6 +337,14 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
               >
                 Join Game
               </motion.button>
+              <motion.p
+                className="title-subtitle mt-6 text-white/50 text-sm tracking-wide"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+              >
+                Challenge a friend via peer-to-peer
+              </motion.p>
             </motion.div>
           )}
 
