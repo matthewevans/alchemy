@@ -8,13 +8,13 @@ const ELEMENTS: Element[] = ['fire', 'water', 'earth', 'air', 'shadow'];
 const FUTURE_EFFECT_IDS = ['ghost_knight_etb', 'shadow_dragon_etb'];
 
 describe('ALL_CARDS', () => {
-  it('has exactly 100 cards', () => {
-    expect(ALL_CARDS).toHaveLength(100);
+  it('has exactly 110 cards', () => {
+    expect(ALL_CARDS).toHaveLength(110);
   });
 
   it('each element has the expected number of cards', () => {
     const expectedCounts: Record<Element, number> = {
-      fire: 20, water: 20, earth: 20, air: 20, shadow: 20,
+      fire: 20, water: 20, earth: 20, air: 20, shadow: 30,
     };
     for (const element of ELEMENTS) {
       const cards = ALL_CARDS.filter((c) => c.element === element);
@@ -113,7 +113,7 @@ describe('CARD_REGISTRY', () => {
 describe('getCardsByElement', () => {
   it('returns correct count per element', () => {
     const expectedCounts: Record<Element, number> = {
-      fire: 20, water: 20, earth: 20, air: 20, shadow: 20,
+      fire: 20, water: 20, earth: 20, air: 20, shadow: 30,
     };
     for (const element of ELEMENTS) {
       expect(getCardsByElement(element)).toHaveLength(expectedCounts[element]);
@@ -134,7 +134,7 @@ describe('getCardsByCreatureType', () => {
   it('returns correct tribal counts', () => {
     const expectedCounts: Partial<Record<CreatureType, number>> = {
       angel: 3, dinosaur: 7, dragon: 4, beast: 29, elemental: 6,
-      fairy: 1, giant: 1, golem: 3, human: 5, plant: 3, undead: 8,
+      fairy: 1, giant: 1, golem: 3, human: 5, plant: 3, witch: 7, undead: 8,
     };
     for (const [type, count] of Object.entries(expectedCounts)) {
       expect(getCardsByCreatureType(type as CreatureType)).toHaveLength(count);
@@ -151,7 +151,7 @@ describe('getCardsByCreatureType', () => {
 
 describe('getCardsByTier', () => {
   it('returns correct card counts per tier', () => {
-    expect(getCardsByTier('apprentice')).toHaveLength(70);
+    expect(getCardsByTier('apprentice')).toHaveLength(80);
     expect(getCardsByTier('alchemist')).toHaveLength(15);
     expect(getCardsByTier('archmage')).toHaveLength(15);
   });

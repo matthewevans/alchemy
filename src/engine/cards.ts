@@ -114,6 +114,20 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'shadow_soul_siphon', name: 'Soul Siphon', type: 'spell', element: 'shadow', cost: 3, keywords: [], tier: 'archmage', effectId: 'soul_siphon', targetingType: EFFECT_REGISTRY.soul_siphon.targetingType, flavor: 'What is yours becomes mine.' },
   { id: 'shadow_void_storm', name: 'Void Storm', type: 'spell', element: 'shadow', cost: 5, keywords: [], tier: 'archmage', effectId: 'void_storm', flavor: 'Darkness that swallows everything.' },
 
+  // ─── Shadow Creatures (Witches) ───
+  { id: 'shadow_broom_scout', name: 'Broom Scout', type: 'creature', element: 'shadow', cost: 1, attack: 2, health: 1, creatureType: 'witch', keywords: ['swift'], tier: 'apprentice', flavor: 'First day on broom duty. Already too fast.' },
+  { id: 'shadow_moonling_witch', name: 'Moonling Witch', type: 'creature', element: 'shadow', cost: 1, attack: 1, health: 2, creatureType: 'witch', keywords: ['draw'], tier: 'apprentice', flavor: 'She reads moonlight like other kids read books.' },
+  { id: 'shadow_cauldron_student', name: 'Cauldron Student', type: 'creature', element: 'shadow', cost: 2, attack: 2, health: 2, creatureType: 'witch', keywords: ['blast'], tier: 'apprentice', flavor: 'Her potions pop before they pour.' },
+  { id: 'shadow_potion_healer', name: 'Potion Healer', type: 'creature', element: 'shadow', cost: 2, attack: 1, health: 4, creatureType: 'witch', keywords: ['heal'], tier: 'apprentice', flavor: 'One sip for courage, one sip for mending.' },
+  { id: 'shadow_star_chanter', name: 'Star Chanter', type: 'creature', element: 'shadow', cost: 3, attack: 2, health: 4, creatureType: 'witch', keywords: [], tier: 'apprentice', flavor: 'She sings softly and the night listens.' },
+  { id: 'shadow_night_oracle', name: 'Night Oracle', type: 'creature', element: 'shadow', cost: 4, attack: 3, health: 4, creatureType: 'witch', keywords: ['draw'], tier: 'apprentice', flavor: 'Her crystal ball always shows one card ahead.' },
+  { id: 'shadow_coven_matriarch', name: 'Coven Matriarch', type: 'creature', element: 'shadow', cost: 5, attack: 4, health: 5, creatureType: 'witch', keywords: ['heal'], tier: 'apprentice', flavor: 'Her warm tea solves problems and starts adventures.' },
+
+  // ─── Shadow Spells (Witches) ───
+  { id: 'shadow_starlit_hex', name: 'Starlit Hex', type: 'spell', element: 'shadow', cost: 1, keywords: [], tier: 'apprentice', effectId: 'dark_bolt', targetingType: EFFECT_REGISTRY.dark_bolt.targetingType, flavor: 'A tiny hex with a little sting for everyone.' },
+  { id: 'shadow_moon_sip', name: 'Moon Sip', type: 'spell', element: 'shadow', cost: 3, keywords: [], tier: 'apprentice', effectId: 'life_drain', flavor: 'A silver sip that steals a little gloom.' },
+  { id: 'shadow_midnight_banish', name: 'Midnight Banish', type: 'spell', element: 'shadow', cost: 4, keywords: [], tier: 'apprentice', effectId: 'doom', targetingType: EFFECT_REGISTRY.doom.targetingType, flavor: 'Back to the shadows. No arguing.' },
+
   // ─── Air Creatures (Angels / Priests) ───
   { id: 'air_acolyte', name: 'Acolyte', type: 'creature', element: 'air', cost: 1, attack: 1, health: 2, creatureType: 'human', keywords: ['heal'], tier: 'apprentice', flavor: 'Still learning which end of the wand to hold.' },
   { id: 'air_temple_dove', name: 'Temple Dove', type: 'creature', element: 'air', cost: 1, attack: 0, health: 3, creatureType: 'beast', keywords: ['draw'], tier: 'apprentice', flavor: 'It coos a soft lullaby that mends scraped knees.' },

@@ -26,6 +26,7 @@ export type CreatureType =
   | 'golem'
   | 'human'
   | 'plant'
+  | 'witch'
   | 'undead';
 
 export interface CardDefinition {

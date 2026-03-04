@@ -255,6 +255,38 @@ export const STARTER_DECKS: StarterDeck[] = [
     },
   },
 
+  // ── Moon Coven (Shadow — Witches) ──
+  {
+    name: 'Moon Coven',
+    elements: ['shadow'],
+    playstyle: 'Witchcraft tempo with drains and banish spells',
+    type: 'mono',
+    cards: {
+      apprentice: deck(
+        ['shadow_broom_scout', 2], ['shadow_moonling_witch', 2], ['shadow_cauldron_student', 2],
+        ['shadow_potion_healer', 2], ['shadow_star_chanter', 2], ['shadow_night_oracle', 2],
+        ['shadow_coven_matriarch', 2], ['shadow_starlit_hex', 2], ['shadow_moon_sip', 2],
+        ['shadow_midnight_banish', 2],
+      ),
+      alchemist: deck(
+        ['shadow_broom_scout', 2], ['shadow_moonling_witch', 2], ['shadow_cauldron_student', 2],
+        ['shadow_potion_healer', 2], ['shadow_star_chanter', 2], ['shadow_night_oracle', 2],
+        ['shadow_coven_matriarch', 2], ['shadow_starlit_hex', 2], ['shadow_moon_sip', 2],
+        ['shadow_midnight_banish', 2],
+        ['shadow_venom_wisp', 2], ['shadow_bone_sentinel', 2], ['shadow_blood_raven', 2],
+        ['shadow_dread_knight', 2], ['shadow_shadow_strike', 2],
+      ),
+      archmage: deck(
+        ['shadow_broom_scout', 2], ['shadow_moonling_witch', 2], ['shadow_cauldron_student', 2],
+        ['shadow_star_chanter', 2], ['shadow_starlit_hex', 2],
+        ['shadow_venom_wisp', 2], ['shadow_bone_sentinel', 2], ['shadow_blood_raven', 2],
+        ['shadow_dread_knight', 2], ['shadow_shadow_strike', 2],
+        ['shadow_shadow_asp', 2], ['shadow_deaths_hand', 2], ['shadow_abyssal_reaper', 2],
+        ['shadow_soul_siphon', 2], ['shadow_void_storm', 2],
+      ),
+    },
+  },
+
   // ════════════════════════════════════════════
   //  ALLIED PAIR DECKS (existing)
   // ════════════════════════════════════════════
