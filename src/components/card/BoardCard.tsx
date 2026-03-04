@@ -4,6 +4,7 @@ import type { Permanent } from '@engine/types';
 import { getEffectiveAttack } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
 import { useAnimationStore } from '@game/animationStore';
+import { useGameStore } from '@game/gameStore';
 import { usePositionRegistry } from '@hooks/usePositionRegistry';
 import { useLongPress } from '@hooks/useLongPress';
 import { getElementColor } from './cardUtils';
@@ -65,6 +66,8 @@ export function BoardCard({
   // During combat animations, use the per-step display damage so health updates
   // per-exchange rather than jumping to the final value immediately.
   const displayDamage = useAnimationStore((s) => s.displayCreatureDamage?.[permanent.permanentId]);
+  const learningPhase = useGameStore((s) => s.state?.phase);
+  const humanPlayer = useGameStore((s) => s.humanPlayer);
   const activeDamage = displayDamage ?? permanent.damage;
   const currentHealth = permanent.health + permanent.temporaryHealthBonus - activeDamage;
   const effectiveAttack = getEffectiveAttack(permanent);
@@ -78,6 +81,10 @@ export function BoardCard({
   const baseZIndex = isOpponentCard ? 46 : 24;
   const activeZIndex = isOpponentCard ? 54 : 32;
   const statusEffects = getActiveStatusEffects(permanent);
+  const isLearningRewardTarget =
+    learningPhase?.type === 'learning'
+    && learningPhase.player === humanPlayer
+    && learningPhase.reward.permanentId === permanent.permanentId;
 
   // Entrance glow flash
   const [showEntranceGlow, setShowEntranceGlow] = useState(true);
@@ -191,6 +198,22 @@ export function BoardCard({
             opacity: isSelectedForBlock || isAttacking || isBlocking ? [0.7, 1, 0.7] : [0.4, 0.7, 0.4],
           }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      )}
+
+      {/* Learning reward target pulse */}
+      {isLearningRewardTarget && (
+        <motion.div
+          className="absolute -inset-[3px] rounded-xl z-[12] pointer-events-none"
+          style={{
+            border: '2px solid rgba(110, 231, 183, 0.95)',
+            boxShadow: '0 0 0 1px rgba(16, 185, 129, 0.6), 0 0 22px rgba(16, 185, 129, 0.45)',
+          }}
+          animate={{
+            opacity: [0.55, 1, 0.55],
+            scale: [1, 1.02, 1],
+          }}
+          transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
         />
       )}
 

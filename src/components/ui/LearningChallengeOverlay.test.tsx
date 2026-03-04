@@ -157,7 +157,7 @@ describe('LearningChallengeOverlay', () => {
     expect(screen.getByText('CAT')).toBeInTheDocument();
   });
 
-  it('shows immediate success feedback and dispatches after one second', () => {
+  it('shows immediate success feedback and dispatches after three seconds', () => {
     vi.useFakeTimers();
     render(<LearningChallengeOverlay />);
 
@@ -168,7 +168,7 @@ describe('LearningChallengeOverlay', () => {
     expect(screen.getByRole('button', { name: 'A' })).toBeDisabled();
 
     act(() => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(3000);
     });
 
     expect(dispatchSpy).toHaveBeenCalledTimes(1);
@@ -178,7 +178,7 @@ describe('LearningChallengeOverlay', () => {
     );
   });
 
-  it('shows immediate failure feedback and dispatches after one second', () => {
+  it('shows immediate failure feedback and dispatches after three seconds', () => {
     vi.useFakeTimers();
     render(<LearningChallengeOverlay />);
 
@@ -189,7 +189,7 @@ describe('LearningChallengeOverlay', () => {
     expect(screen.getByRole('button', { name: 'O' })).toBeDisabled();
 
     act(() => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(3000);
     });
 
     expect(dispatchSpy).toHaveBeenCalledTimes(1);

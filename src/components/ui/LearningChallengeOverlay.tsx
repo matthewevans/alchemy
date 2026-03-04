@@ -3,10 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
 import { CARD_REGISTRY } from '@engine/cards';
-import { getPositions, type ElementPosition } from '@game/animationStore';
 import { gameButtonClass } from './buttonStyles';
 
-const ANSWER_FEEDBACK_MS = 1000;
+const ANSWER_FEEDBACK_MS = 3000;
+
+interface ElementPosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const CELEBRATION_GLYPHS = ['✨', '⭐', '💫', '🌟'] as const;
 
 interface AnswerFeedbackState {
   optionId: string;
@@ -52,6 +60,18 @@ function samePosition(a: ElementPosition | null, b: ElementPosition | null): boo
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }
 
+function getRewardCardPosition(permanentId: string): ElementPosition | null {
+  const element = document.querySelector<HTMLElement>(`[data-testid="board-card-${permanentId}"]`);
+  if (!element) return null;
+  const rect = element.getBoundingClientRect();
+  return {
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
 export function LearningChallengeOverlay() {
   const state = useGameStore((s) => s.state);
   const legalActions = useGameStore((s) => s.legalActions);
@@ -92,13 +112,12 @@ export function LearningChallengeOverlay() {
     if (!rewardPermanentId) return undefined;
 
     const syncPosition = () => {
-      const next = getPositions().get(rewardPermanentId);
-      const nextPosition = next ? { ...next } : null;
+      const nextPosition = getRewardCardPosition(rewardPermanentId);
       setRewardPosition((prev) => (samePosition(prev, nextPosition) ? prev : nextPosition));
     };
 
     const frameId = window.requestAnimationFrame(syncPosition);
-    const intervalId = window.setInterval(syncPosition, 120);
+    const intervalId = window.setInterval(syncPosition, 48);
     window.addEventListener('resize', syncPosition);
 
     return () => {
@@ -139,6 +158,7 @@ export function LearningChallengeOverlay() {
       ? `Correct! ${rewardText}`
       : 'Not quite. No bonus this time.'
     : null;
+  const celebrationTone = activeFeedback?.correct ? 'success' : 'retry';
   const missingWord =
     phase.prompt.kind === 'missing_letter'
       ? getMissingLetterWord(phase.prompt.prompt)
@@ -165,64 +185,72 @@ export function LearningChallengeOverlay() {
     : phase.prompt.domain === 'math'
       ? 'grid grid-cols-2 gap-2 mt-4'
       : 'grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4';
+  const panelDesktopPlacementClass = rewardTarget?.ownerId === humanPlayer
+    ? 'sm:self-start sm:mt-[calc(env(safe-area-inset-top)+0.75rem)]'
+    : 'sm:self-end sm:mb-[calc(var(--card-height)*0.52+env(safe-area-inset-bottom)+0.5rem)]';
   const activeRewardPosition = rewardPermanentId ? rewardPosition : null;
-  const rewardRingStyle = activeRewardPosition
-    ? {
-      left: activeRewardPosition.x - 6,
-      top: activeRewardPosition.y - 6,
-      width: activeRewardPosition.width + 12,
-      height: activeRewardPosition.height + 12,
-    }
-    : null;
+  const showBadgeBelowCard = activeRewardPosition ? activeRewardPosition.y < 108 : false;
   const rewardBadgeStyle = activeRewardPosition
     ? {
       left: activeRewardPosition.x + activeRewardPosition.width / 2,
-      top: activeRewardPosition.y - 12,
+      top: showBadgeBelowCard
+        ? activeRewardPosition.y + activeRewardPosition.height + 10
+        : activeRewardPosition.y - 12,
     }
     : null;
 
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 sm:items-start sm:justify-start sm:bg-transparent sm:backdrop-blur-none sm:p-0 sm:pointer-events-none"
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 sm:items-start sm:justify-end sm:bg-transparent sm:backdrop-blur-none sm:p-0 sm:pointer-events-none"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        {rewardRingStyle && (
-          <motion.div
-            className="pointer-events-none fixed z-[61] hidden rounded-2xl border-2 border-emerald-300/80 bg-emerald-400/10 shadow-[0_0_20px_rgba(74,222,128,0.35)] sm:block"
-            style={rewardRingStyle}
-            animate={{ opacity: [0.45, 0.9, 0.45] }}
-            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        )}
         {rewardBadgeStyle && (
           <motion.div
-            className="pointer-events-none fixed z-[62] hidden sm:block"
+            className="pointer-events-none fixed z-[2] hidden sm:block"
             style={rewardBadgeStyle}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
           >
-            <div className="translate-x-[-50%] translate-y-[-100%] rounded-lg border border-emerald-300/70 bg-slate-950/88 px-3 py-1.5 text-xs font-bold text-emerald-100 shadow-xl backdrop-blur-sm">
+            <div
+              className={`rounded-lg border border-emerald-300/65 bg-slate-950/90 px-3 py-1.5 text-xs font-bold text-emerald-100 shadow-xl backdrop-blur-sm ${
+                showBadgeBelowCard
+                  ? 'translate-x-[-50%]'
+                  : 'translate-x-[-50%] translate-y-[-100%]'
+              }`}
+            >
               <span>{formatSigned(phase.reward.attackBonus)} ATK</span>
-              <span className="mx-2 text-emerald-200/65">•</span>
+              <span className="mx-2 text-emerald-200/60">•</span>
               <span>{formatSigned(phase.reward.healthBonus)} HP</span>
             </div>
           </motion.div>
         )}
         <motion.div
-          className="w-full max-w-xl rounded-2xl border border-amber-400/35 bg-slate-900/95 p-5 shadow-2xl sm:pointer-events-auto sm:ml-3 sm:mt-[calc(env(safe-area-inset-top)+0.75rem)] sm:max-w-md"
+          className={`relative z-[3] w-full max-w-xl rounded-2xl border border-amber-300/45 bg-slate-900/95 p-5 shadow-2xl sm:pointer-events-auto sm:mr-[calc(var(--sidebar-w)+0.75rem)] sm:max-w-md ${panelDesktopPlacementClass}`}
           initial={{ opacity: 0, scale: 0.95, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 16 }}
           transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
         >
+          {activeFeedback && (
+            <motion.div
+              className={`pointer-events-none absolute inset-0 rounded-2xl ${
+                celebrationTone === 'success'
+                  ? 'bg-emerald-400/10'
+                  : 'bg-red-400/10'
+              }`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.05, 0.24, 0.06] }}
+              transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          )}
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-amber-200 text-xs font-semibold tracking-[0.08em] uppercase">
-                Learning Bonus
+              <p className="text-amber-100 text-[11px] font-semibold tracking-[0.08em] uppercase">
+                Battle Challenge
               </p>
               <p className="text-white text-xl font-bold mt-1">
                 {challengeLabel}
@@ -233,12 +261,25 @@ export function LearningChallengeOverlay() {
             </span>
           </div>
 
+          <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2">
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.06em] text-slate-200">
+              1. Solve
+            </p>
+            <span className="text-slate-400">→</span>
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.06em] text-emerald-200">
+              2. Power Up
+            </p>
+          </div>
+
           <div className="mt-3 rounded-xl border border-emerald-300/35 bg-emerald-900/20 p-3">
             <p className="text-emerald-100/85 text-xs font-semibold uppercase tracking-[0.08em]">
               Bonus Locked On
             </p>
             <div className="mt-1 flex items-center justify-between gap-3">
-              <p className="text-white text-sm font-semibold">{rewardTargetName}</p>
+              <div>
+                <p className="text-white text-sm font-semibold">{rewardTargetName}</p>
+                <p className="text-xs text-emerald-100/75 mt-0.5">Look for the glowing ring on the battlefield.</p>
+              </div>
               <div className="flex items-center gap-2 text-xs font-bold">
                 <span className="rounded-md border border-rose-300/45 bg-rose-400/20 px-2 py-1 text-rose-100">
                   {formatSigned(phase.reward.attackBonus)} ATK
@@ -345,7 +386,7 @@ export function LearningChallengeOverlay() {
                     tone,
                     size: 'md',
                     disabled: isDisabled,
-                    className: `w-full ${optionLayoutClass} ${isResolvingAnswer && !isSelected ? 'opacity-80' : ''}`,
+                    className: `relative w-full overflow-hidden ${optionLayoutClass} ${isResolvingAnswer && !isSelected ? 'opacity-80' : ''}`,
                   })}
                   disabled={isDisabled}
                   onClick={() => {
@@ -380,19 +421,65 @@ export function LearningChallengeOverlay() {
                       {option.text}
                     </span>
                   ) : option.text}
+                  {isSelected && activeFeedback && (
+                    <span className="pointer-events-none absolute inset-0" aria-hidden="true">
+                      {Array.from({ length: 8 }).map((_, i) => {
+                        const angle = (Math.PI * 2 * i) / 8;
+                        const x = Math.cos(angle) * 44;
+                        const y = Math.sin(angle) * 26;
+                        return (
+                          <motion.span
+                            key={`${option.id}-burst-${i}`}
+                            className="absolute left-1/2 top-1/2 text-sm"
+                            aria-hidden="true"
+                            initial={{ x: 0, y: 0, opacity: 0, scale: 0.6 }}
+                            animate={{
+                              x,
+                              y,
+                              opacity: [0, 1, 0],
+                              scale: [0.6, 1, 0.7],
+                              rotate: [0, i % 2 === 0 ? 18 : -18],
+                            }}
+                            transition={{
+                              duration: activeFeedback.correct ? 0.95 : 0.75,
+                              delay: i * 0.03,
+                              ease: 'easeOut',
+                            }}
+                          >
+                            {activeFeedback.correct ? CELEBRATION_GLYPHS[i % CELEBRATION_GLYPHS.length] : '⚡'}
+                          </motion.span>
+                        );
+                      })}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
           {feedbackText && (
-            <p className={`mt-3 rounded-lg border px-3 py-2 text-sm font-semibold ${
-              activeFeedback?.correct
-                ? 'border-emerald-300/45 bg-emerald-900/20 text-emerald-200'
-                : 'border-red-300/45 bg-red-900/20 text-red-200'
-            }`}
+            <motion.div
+              className={`mt-3 rounded-xl border px-3 py-3 ${
+                activeFeedback?.correct
+                  ? 'border-emerald-300/45 bg-emerald-900/25 text-emerald-100'
+                  : 'border-red-300/45 bg-red-900/25 text-red-100'
+              }`}
+              initial={{ opacity: 0, scale: 0.92, y: 8 }}
+              animate={{ opacity: 1, scale: [1, 1.03, 1], y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 8 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
             >
-              {feedbackText}
-            </p>
+              <div className="flex items-center gap-2">
+                <span className="text-xl leading-none">
+                  {activeFeedback?.correct ? '✨' : '⚡'}
+                </span>
+                <p className="text-base font-black">
+                  {activeFeedback?.correct ? 'Great answer!' : 'Close one!'}
+                </p>
+              </div>
+              <p className="mt-1 text-sm font-semibold">
+                {feedbackText}
+              </p>
+            </motion.div>
           )}
 
           {skipAction && (
