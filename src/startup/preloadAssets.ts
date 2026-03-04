@@ -4,6 +4,7 @@ import { BATTLEFIELDS } from '@components/board/battlefields';
 import { getAvatarPath, getCardArtPath, getElementIconPath } from '@components/card/cardUtils';
 import { AMBIENT_TRACK_POOL } from '@audio/ambientMusic';
 import { TITLE_TRACK_URL } from '@audio/titleMusic';
+import { DECK_SELECT_TRACK_URL } from '@audio/deckSelectMusic';
 
 type StartupPhase = 'discovering' | 'loading' | 'complete';
 
@@ -29,6 +30,8 @@ const ELEMENTS: readonly Element[] = ['fire', 'water', 'earth', 'air', 'shadow']
 const ASSET_PATH_PATTERN = /^(?:public\/|\/)?[^?#]+\.(?:webp|png|mp3|m4a|json)$/i;
 const SFX_CATALOG_URL = `${BASE}audio/sfx/catalog.json`;
 const VFX_SPRITE_INDEX_URL = `${BASE}vfx/sprites/index.json`;
+const PRELOAD_STAMP_STORAGE_KEY = 'alchemy:startup-preload:stamp';
+const PRELOAD_STAMP = `${__APP_VERSION__}:${__BUILD_HASH__}`;
 const CORE_ASSET_PATHS = [
   'logo.webp',
   'logo_wordmark.webp',
@@ -64,6 +67,24 @@ function toAssetUrl(path: string): string {
 
 function dedupe(paths: readonly string[]): string[] {
   return [...new Set(paths)];
+}
+
+function readPreloadStamp(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(PRELOAD_STAMP_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writePreloadStamp(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(PRELOAD_STAMP_STORAGE_KEY, PRELOAD_STAMP);
+  } catch {
+    // Ignore persistence failures.
+  }
 }
 
 function toPercent(done: number, total: number): number {
@@ -113,9 +134,15 @@ function listCoreAssets(): string[] {
     urls.push(getAvatarPath(element));
   }
 
-  urls.push(...AMBIENT_TRACK_POOL);
-  urls.push(TITLE_TRACK_URL);
   return urls;
+}
+
+function listPriorityAssets(): string[] {
+  return [
+    TITLE_TRACK_URL,
+    DECK_SELECT_TRACK_URL,
+    ...AMBIENT_TRACK_POOL,
+  ];
 }
 
 async function listManifestAssets(): Promise<string[]> {
@@ -157,12 +184,28 @@ async function runPreload(): Promise<StartupPreloadProgress> {
     return devState;
   }
 
+  if (readPreloadStamp() === PRELOAD_STAMP) {
+    const cachedState: StartupPreloadProgress = {
+      phase: 'complete',
+      loaded: 0,
+      failed: 0,
+      total: 0,
+      percent: 100,
+    };
+    emitProgress(cachedState);
+    return cachedState;
+  }
+
   emitProgress(INITIAL_PROGRESS);
 
-  const urls = dedupe([
+  const manifestAssets = await listManifestAssets();
+  const priorityUrls = dedupe(listPriorityAssets());
+  const prioritySet = new Set(priorityUrls);
+  const secondaryUrls = dedupe([
     ...listCoreAssets(),
-    ...(await listManifestAssets()),
-  ]);
+    ...manifestAssets,
+  ]).filter((url) => !prioritySet.has(url));
+  const urls = [...priorityUrls, ...secondaryUrls];
 
   if (urls.length === 0) {
     const done = { phase: 'complete', loaded: 0, failed: 0, total: 0, percent: 100 } as const;
@@ -208,6 +251,7 @@ async function runPreload(): Promise<StartupPreloadProgress> {
     percent: 100,
   };
   emitProgress(finalState);
+  if (failed === 0) writePreloadStamp();
   return finalState;
 }
 

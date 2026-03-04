@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import type { PlayerId, GameStats } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
 import { GameDispatchProvider, useGameDispatch } from '@game/GameDispatchContext';
@@ -20,19 +20,27 @@ import { GameOverScreen, MulliganOverlay } from '@components/ui';
 import { GameMenu } from '@components/ui/GameMenu';
 import { gameButtonClass } from '@components/ui/buttonStyles';
 import { AudioMuteButton } from '@components/ui/AudioMuteButton';
+import { StartupLoadingOverlay } from '@components/ui/StartupLoadingOverlay';
 import { useDialogA11y } from '@hooks/useDialogA11y';
+import {
+  ensureStartupAssetsPreloaded,
+  subscribeStartupPreload,
+  type StartupPreloadProgress,
+} from '../startup/preloadAssets';
 
 type GamePhase = 'playing' | 'game_over';
 
-interface LocationState {
-  isMultiplayer?: boolean;
-}
+const INITIAL_STARTUP_PROGRESS: StartupPreloadProgress = {
+  phase: 'discovering',
+  loaded: 0,
+  failed: 0,
+  total: 0,
+  percent: 0,
+};
 
 export function GamePage() {
   const { id: gameId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
-  const locationState = location.state as LocationState | null;
 
   const storeGameId = useGameStore((s) => s.gameId);
   const resetGame = useGameStore((s) => s.reset);
@@ -44,6 +52,7 @@ export function GamePage() {
   const [controller, setController] = useState<OpponentController | null>(null);
   const [isMultiplayer, setIsMultiplayer] = useState(false);
   const [disconnectReason, setDisconnectReason] = useState<string | null>(null);
+  const [startupProgress, setStartupProgress] = useState<StartupPreloadProgress>(INITIAL_STARTUP_PROGRESS);
   const controllerRef = useRef<OpponentController | null>(null);
   const initRef = useRef(false);
 
@@ -55,36 +64,47 @@ export function GamePage() {
 
   // Initialize game: either already in store, restore from persistence, or redirect
   useEffect(() => {
-    if (initRef.current) return;
-    initRef.current = true;
+    const unsubscribe = subscribeStartupPreload((progress) => {
+      setStartupProgress(progress);
+    });
+    void ensureStartupAssetsPreloaded();
+    return unsubscribe;
+  }, []);
 
-    // If the store already has this game (navigated from HomePage), set up controller
-    if (storeGameId === gameId) {
-      const session = takePendingSession();
-      if (session) {
-        // Multiplayer: set up network controller
-        const netController = createNetworkController(session, {
-          dispatch: (action, player) => dispatchWithAnimations(action, player),
-        });
-        session.onDisconnect((reason) => setDisconnectReason(reason));
-        setController(netController); // eslint-disable-line react-hooks/set-state-in-effect -- init-once effect
-        setIsMultiplayer(true);
-      } else {
-        // Single player: set up AI controller with difficulty config
-        const storeAiConfig = useGameStore.getState().aiConfig;
-        const ai = createAIController({
-          getState: () => useGameStore.getState(),
-          dispatch: (action, player) => dispatchWithAnimations(action, player),
-        }, storeAiConfig ?? undefined);
-        setController(ai);
-      }
+  useEffect(() => {
+    if (initRef.current) return;
+
+    if (storeGameId !== gameId) {
+      initRef.current = true;
+      // Page was refreshed or navigated to directly — redirect home so the user
+      // can tap "Resume" (the user gesture unlocks the Web Audio AudioContext).
+      navigate('/', { replace: true });
       return;
     }
 
-    // Page was refreshed or navigated to directly — redirect home so the user
-    // can tap "Resume" (the user gesture unlocks the Web Audio AudioContext).
-    navigate('/', { replace: true });
-  }, [gameId, storeGameId, navigate, locationState]);
+    if (startupProgress.phase !== 'complete') return;
+    initRef.current = true;
+
+    // If the store already has this game (navigated from HomePage), set up controller
+    const session = takePendingSession();
+    if (session) {
+      // Multiplayer: set up network controller
+      const netController = createNetworkController(session, {
+        dispatch: (action, player) => dispatchWithAnimations(action, player),
+      });
+      session.onDisconnect((reason) => setDisconnectReason(reason));
+      setController(netController); // eslint-disable-line react-hooks/set-state-in-effect -- init-once effect
+      setIsMultiplayer(true);
+    } else {
+      // Single player: set up AI controller with difficulty config
+      const storeAiConfig = useGameStore.getState().aiConfig;
+      const ai = createAIController({
+        getState: () => useGameStore.getState(),
+        dispatch: (action, player) => dispatchWithAnimations(action, player),
+      }, storeAiConfig ?? undefined);
+      setController(ai);
+    }
+  }, [gameId, storeGameId, navigate, startupProgress.phase]);
 
   const humanPlayer = useGameStore((s) => s.humanPlayer);
   const player1DeckIds = useGameStore((s) => s.player1DeckIds);
@@ -135,6 +155,21 @@ export function GamePage() {
   const handleDisconnectAck = useCallback(() => {
     handleMainMenu();
   }, [handleMainMenu]);
+
+  if (startupProgress.phase !== 'complete') {
+    const label = startupProgress.phase === 'discovering'
+      ? 'Preparing game assets...'
+      : `Preparing game assets... ${startupProgress.percent}%`;
+    return (
+      <StartupLoadingOverlay
+        label={label}
+        loaded={startupProgress.loaded}
+        total={startupProgress.total}
+        failed={startupProgress.failed}
+        percent={startupProgress.percent}
+      />
+    );
+  }
 
   return (
     <GameDispatchProvider controller={controller}>

@@ -3,7 +3,6 @@ import { RouterProvider } from 'react-router-dom';
 import { checkForServiceWorkerUpdate } from './pwa/registerServiceWorker';
 import { consumeRecentAutoUpdateMarker } from './pwa/updateMarker';
 import { useUpdateStatus, useDownloadProgress } from './pwa/updateStatus';
-import { StartupLoadingOverlay } from '@components/ui/StartupLoadingOverlay';
 import {
   ensureStartupAssetsPreloaded,
   subscribeStartupPreload,
@@ -57,25 +56,17 @@ function App() {
   const statusLabel = updateStatus === 'downloading'
     ? `downloading… ${downloadProgress}%`
     : (UPDATE_STATUS_LABELS[updateStatus] ?? null);
+  const preloadLabel = startupProgress.phase === 'complete'
+    ? null
+    : startupProgress.phase === 'discovering'
+      ? 'assets…'
+      : `assets… ${startupProgress.percent}%`;
   const isActive = updateStatus !== 'idle';
   const isDownloading = updateStatus === 'downloading';
-  const showStartupOverlay = startupProgress.phase !== 'complete';
-  const startupLabel = startupProgress.phase === 'discovering'
-    ? 'indexing assets...'
-    : `loading assets... ${startupProgress.percent}%`;
-
+  const isPreloading = startupProgress.phase !== 'complete';
   return (
     <>
       <RouterProvider router={router} />
-      {showStartupOverlay && (
-        <StartupLoadingOverlay
-          label={startupLabel}
-          loaded={startupProgress.loaded}
-          total={startupProgress.total}
-          failed={startupProgress.failed}
-          percent={startupProgress.percent}
-        />
-      )}
       <div className="version-badge fixed left-2 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-[1]">
         <div className="relative rounded-md border border-slate-600/60 bg-slate-950/75 px-2 py-1 text-[10px] text-slate-300 shadow-lg shadow-black/40 backdrop-blur-sm flex items-center gap-1 overflow-hidden">
           <span>{`v${__APP_VERSION__}`}</span>
@@ -90,12 +81,21 @@ function App() {
             ↻
           </button>
           {statusLabel && <span className="ml-1 text-cyan-300">{statusLabel}</span>}
+          {preloadLabel && <span className="ml-1 text-amber-300">{preloadLabel}</span>}
           {showUpdatedLabel && !statusLabel && <span className="ml-1 text-emerald-300">updated</span>}
           {isDownloading && (
             <div className="absolute bottom-0 left-0 right-0 h-[2px]">
               <div
                 className="h-full bg-cyan-400 transition-[width] duration-200 ease-out"
                 style={{ width: `${downloadProgress}%` }}
+              />
+            </div>
+          )}
+          {!isDownloading && isPreloading && (
+            <div className="absolute bottom-0 left-0 right-0 h-[2px]">
+              <div
+                className="h-full bg-amber-400 transition-[width] duration-200 ease-out"
+                style={{ width: `${startupProgress.percent}%` }}
               />
             </div>
           )}

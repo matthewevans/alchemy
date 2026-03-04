@@ -12,6 +12,7 @@ import { DIFFICULTY_ORDER, DIFFICULTY_LABELS } from '@engine/aiConfig';
 import { getElementColor, getElementIconPath } from '@components/card/cardUtils';
 import { CardPreview } from '@components/card/CardPreview';
 import { gameButtonClass } from './buttonStyles';
+import { AudioMuteButton } from './AudioMuteButton';
 
 const TIER_LABELS: Record<Tier, { label: string; description: string }> = {
   apprentice: { label: 'Apprentice', description: 'Simple rules, small decks' },
@@ -215,6 +216,11 @@ export function DeckSelector({ onSelectDeck, onBack, onCloneToDeckBuilder, tier 
           <CardPreview cardId={previewCardId} onDismiss={() => setPreviewCardId(null)} />
         )}
       </AnimatePresence>
+
+      {/* Bottom-right quick audio toggle */}
+      <div className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-30">
+        <AudioMuteButton className="w-14 h-14 p-0 rounded-full flex items-center justify-center text-white/40 hover:text-white/70" />
+      </div>
     </div>
   );
 }
@@ -249,10 +255,9 @@ function DeckDetailPanel({ deck, tier, onPlay, onClone, onClose, onPreviewCard }
 
   return (
     <motion.div
-      className="fixed inset-x-0 bottom-0 z-40 bg-slate-900/98 border-t backdrop-blur-sm flex flex-col"
+      className="fixed inset-0 z-40 bg-slate-900/98 border-t backdrop-blur-sm flex flex-col h-dvh max-h-dvh sm:inset-x-0 sm:bottom-0 sm:top-auto sm:h-auto sm:max-h-[60vh]"
       style={{
         borderColor: `${primaryColor}44`,
-        maxHeight: '60vh',
       }}
       initial={{ y: '100%' }}
       animate={{ y: 0 }}
