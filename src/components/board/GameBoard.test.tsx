@@ -5,12 +5,14 @@ import { GameDispatchProvider } from '@game/GameDispatchContext';
 import { useGameStore } from '@game/gameStore';
 import { useUIStore } from '@game/uiStore';
 import { createRNG } from '@engine/prng';
+import { useAudioStore } from '@audio/audioStore';
 import { GameBoard } from './GameBoard';
 
 describe('GameBoard', () => {
   beforeEach(() => {
     resetTestCounters();
     useUIStore.getState().clearUI();
+    useAudioStore.setState({ sfxVolume: 0 });
     useGameStore.setState({
       state: createTestGameState({
         phase: { type: 'play' },
@@ -117,6 +119,8 @@ describe('GameBoard', () => {
     expect(screen.getByTestId('combat-controls')).toHaveClass('fixed');
     expect(screen.getByTestId('blocker-controls')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'No Blocks' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Block!' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('skip-block-btn')).toHaveAttribute('data-armed', 'false');
   });
 
   it('renders attacker controls with No Attacks button during declare_attackers', () => {
@@ -144,7 +148,57 @@ describe('GameBoard', () => {
     );
 
     expect(screen.getByRole('button', { name: 'No Attacks' })).toBeInTheDocument();
-    expect(screen.getByTestId('skip-attack-btn')).toHaveAttribute('data-pulsing', 'false');
+    expect(screen.queryByRole('button', { name: 'Attack!' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('skip-attack-btn')).toHaveAttribute('data-armed', 'false');
+  });
+
+  it('No Attacks requires two taps when attacks are available', async () => {
+    const attackerA = makePermanent('fire_ember_sprite', 'player1');
+
+    useGameStore.setState({
+      state: createTestGameState({
+        phase: {
+          type: 'battle',
+          step: 'declare_attackers',
+          tentativeAttackers: [],
+        },
+        activePlayer: 'player1',
+        player1: {
+          board: [attackerA, null, null, null, null, null],
+        },
+      }),
+      legalActions: [
+        { type: 'CONFIRM_ATTACKERS' },
+        { type: 'DECLARE_ATTACKER', permanentId: attackerA.permanentId },
+      ],
+      rng: createRNG(123),
+      humanPlayer: 'player1',
+      events: [],
+      gameId: 'test-game',
+      player1DeckIds: [],
+      player2DeckIds: [],
+    });
+
+    render(
+      <GameDispatchProvider controller={null}>
+        <GameBoard />
+      </GameDispatchProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'No Attacks' }));
+    expect(screen.getByRole('button', { name: 'Tap again: No Attacks' })).toBeInTheDocument();
+    expect(screen.getByTestId('skip-attack-btn')).toHaveAttribute('data-armed', 'true');
+
+    const armedPhase = useGameStore.getState().state?.phase;
+    expect(armedPhase?.type).toBe('battle');
+    expect(armedPhase?.type === 'battle' && armedPhase.step).toBe('declare_attackers');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tap again: No Attacks' }));
+
+    await waitFor(() => {
+      const phase = useGameStore.getState().state?.phase;
+      expect(phase).toEqual({ type: 'play', postCombat: true });
+    });
   });
 
   it('All Attack toggles attacker selection and does not auto-confirm combat', async () => {
@@ -192,9 +246,11 @@ describe('GameBoard', () => {
     });
 
     expect(screen.getByRole('button', { name: 'Attack!' })).toBeInTheDocument();
-    expect(screen.getByTestId('skip-attack-btn')).toHaveAttribute('data-pulsing', 'true');
+    expect(screen.getByRole('button', { name: 'Clear Attackers' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'No Attacks' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'All Attack' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'All Attack' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Attackers' }));
 
     await waitFor(() => {
       const phase = useGameStore.getState().state?.phase;
@@ -204,7 +260,110 @@ describe('GameBoard', () => {
     });
 
     expect(screen.getByRole('button', { name: 'No Attacks' })).toBeInTheDocument();
-    expect(screen.getByTestId('skip-attack-btn')).toHaveAttribute('data-pulsing', 'false');
+    expect(screen.queryByRole('button', { name: 'Attack!' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All Attack' })).toBeInTheDocument();
+    expect(screen.getByTestId('skip-attack-btn')).toHaveAttribute('data-armed', 'false');
+  });
+
+  it('assigned blockers show Clear Blocks + Block! and hide No Blocks', () => {
+    const attacker = makePermanent('fire_ember_sprite', 'player2');
+    const blocker = makePermanent('water_coral_guardian', 'player1');
+
+    useGameStore.setState({
+      state: createTestGameState({
+        phase: {
+          type: 'battle',
+          step: 'declare_blockers',
+          confirmedAttackers: [attacker.permanentId],
+          tentativeBlockers: { [blocker.permanentId]: attacker.permanentId },
+        },
+        activePlayer: 'player2',
+        player1: {
+          board: [blocker, null, null, null, null, null],
+        },
+        player2: {
+          board: [attacker, null, null, null, null, null],
+        },
+      }),
+      legalActions: [
+        { type: 'CONFIRM_BLOCKERS' },
+        { type: 'REMOVE_BLOCKER', blockerPermanentId: blocker.permanentId },
+      ],
+      rng: createRNG(123),
+      humanPlayer: 'player1',
+      events: [],
+      gameId: 'test-game',
+      player1DeckIds: [],
+      player2DeckIds: [],
+    });
+
+    render(
+      <GameDispatchProvider controller={null}>
+        <GameBoard />
+      </GameDispatchProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Clear Blocks' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Block!' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'No Blocks' })).not.toBeInTheDocument();
+  });
+
+  it('No Blocks requires two taps when blocking choices are available', async () => {
+    const attacker = makePermanent('fire_ember_sprite', 'player2');
+    const blocker = makePermanent('water_coral_guardian', 'player1');
+
+    useGameStore.setState({
+      state: createTestGameState({
+        phase: {
+          type: 'battle',
+          step: 'declare_blockers',
+          confirmedAttackers: [attacker.permanentId],
+          tentativeBlockers: {},
+        },
+        activePlayer: 'player2',
+        player1: {
+          board: [blocker, null, null, null, null, null],
+        },
+        player2: {
+          board: [attacker, null, null, null, null, null],
+        },
+      }),
+      legalActions: [
+        { type: 'CONFIRM_BLOCKERS' },
+        {
+          type: 'ASSIGN_BLOCKER',
+          blockerPermanentId: blocker.permanentId,
+          attackerPermanentId: attacker.permanentId,
+        },
+      ],
+      rng: createRNG(123),
+      humanPlayer: 'player1',
+      events: [],
+      gameId: 'test-game',
+      player1DeckIds: [],
+      player2DeckIds: [],
+    });
+
+    render(
+      <GameDispatchProvider controller={null}>
+        <GameBoard />
+      </GameDispatchProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'No Blocks' }));
+    expect(screen.getByRole('button', { name: 'Tap again: No Blocks' })).toBeInTheDocument();
+    expect(screen.getByTestId('skip-block-btn')).toHaveAttribute('data-armed', 'true');
+
+    const armedPhase = useGameStore.getState().state?.phase;
+    expect(armedPhase?.type).toBe('battle');
+    expect(armedPhase?.type === 'battle' && armedPhase.step).toBe('declare_blockers');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tap again: No Blocks' }));
+
+    await waitFor(() => {
+      const phase = useGameStore.getState().state?.phase;
+      expect(phase).toEqual({ type: 'play', postCombat: true });
+    });
   });
 
   it('renders resolving label during combat resolution', () => {

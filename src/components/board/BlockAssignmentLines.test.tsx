@@ -121,4 +121,42 @@ describe('BlockAssignmentLines', () => {
     rerender(<BlockAssignmentLines />);
     expect(screen.getAllByTestId('block-assignment-line')).toHaveLength(2);
   });
+
+  it('removes the link when a blocker is unassigned', () => {
+    mockCards.push(
+      mountMockCard('blk-1', { x: 100, y: 250, width: 70, height: 100 }),
+      mountMockCard('atk-1', { x: 260, y: 130, width: 70, height: 100 }),
+    );
+
+    useGameStore.setState({
+      state: createTestGameState({
+        phase: {
+          type: 'battle',
+          step: 'declare_blockers',
+          confirmedAttackers: ['atk-1'],
+          tentativeBlockers: { 'blk-1': 'atk-1' },
+        },
+      }),
+    });
+
+    const { rerender } = render(<BlockAssignmentLines />);
+    expect(screen.getAllByTestId('block-assignment-line')).toHaveLength(1);
+
+    act(() => {
+      useGameStore.setState({
+        state: createTestGameState({
+          phase: {
+            type: 'battle',
+            step: 'declare_blockers',
+            confirmedAttackers: ['atk-1'],
+            tentativeBlockers: {},
+          },
+        }),
+      });
+    });
+
+    rerender(<BlockAssignmentLines />);
+    expect(screen.queryByTestId('block-assignment-line')).toBeNull();
+    expect(screen.queryByTestId('block-assignment-overlay')).toBeNull();
+  });
 });

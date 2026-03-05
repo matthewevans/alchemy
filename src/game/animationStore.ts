@@ -352,12 +352,43 @@ function groupCombatEvents(
   cardIdMap?: Map<string, string>,
 ): AnimationStep[] {
   const blockEffects: AnimationEffect[] = [];
-  const damageBySource = new Map<string, GameEvent[]>();
+  const blockerToAttacker = new Map<string, string>();
+  const damageByExchange = new Map<string, GameEvent[]>();
+  const exchangeOrder: string[] = [];
   const deaths: GameEvent[] = [];
+
+  const addDamageEvent = (exchangeKey: string, event: Extract<GameEvent, { type: 'DAMAGE_DEALT' | 'PLAYER_DAMAGED' }>) => {
+    if (!damageByExchange.has(exchangeKey)) {
+      damageByExchange.set(exchangeKey, []);
+      exchangeOrder.push(exchangeKey);
+    }
+    damageByExchange.get(exchangeKey)!.push(event);
+  };
+
+  const getExchangeKey = (event: Extract<GameEvent, { type: 'DAMAGE_DEALT' | 'PLAYER_DAMAGED' }>): string => {
+    if (event.type === 'PLAYER_DAMAGED') {
+      return `${event.source}::player:${event.player}`;
+    }
+
+    // For blocked combat, pair attacker↔blocker damage into the same exchange step
+    // so each blocker interaction animates as simultaneous trading.
+    const attackerForTarget = blockerToAttacker.get(event.targetId);
+    if (attackerForTarget === event.source) {
+      return `${event.source}::${event.targetId}`;
+    }
+
+    const attackerForSource = blockerToAttacker.get(event.source);
+    if (attackerForSource === event.targetId) {
+      return `${event.targetId}::${event.source}`;
+    }
+
+    return `${event.source}::${event.targetId}`;
+  };
 
   for (const e of events) {
     if (e.type === 'BLOCKERS_DECLARED') {
       for (const [blockerId, attackerId] of Object.entries(e.assignments)) {
+        blockerToAttacker.set(blockerId, attackerId);
         const blockerPos = positions.get(blockerId);
         const attackerPos = positions.get(attackerId);
         if (blockerPos && attackerPos) {
@@ -371,9 +402,7 @@ function groupCombatEvents(
         }
       }
     } else if (e.type === 'DAMAGE_DEALT' || e.type === 'PLAYER_DAMAGED') {
-      const source = e.source;
-      if (!damageBySource.has(source)) damageBySource.set(source, []);
-      damageBySource.get(source)!.push(e);
+      addDamageEvent(getExchangeKey(e), e);
     } else if (e.type === 'CREATURE_DIED') {
       deaths.push(e);
     }
@@ -385,8 +414,9 @@ function groupCombatEvents(
     steps.push({ effects: blockEffects, durationMs: STEP_DURATIONS.blockLink });
   }
 
-  // One step per attacker's exchange — includes combat strike projectiles
-  for (const [, damageEvents] of damageBySource) {
+  // One step per combat exchange (attacker↔blocker pair or attacker↔hero hit).
+  for (const exchangeKey of exchangeOrder) {
+    const damageEvents = damageByExchange.get(exchangeKey) ?? [];
     const effects: AnimationEffect[] = [];
 
     for (const e of damageEvents) {

@@ -61,6 +61,12 @@ export function AdventurePage() {
   const selectedZone = CAMPAIGN_GRAPH.zones.find((zone) => zone.id === selectedZoneId) ?? null;
   const totalNodeCount = Object.keys(CAMPAIGN_GRAPH.nodes).length;
   const completedNodeCount = campaignProgress.completedNodeIds.length;
+  const unlockedBeyondStartCount = campaignProgress.unlockedNodeIds.filter(
+    (nodeId) => nodeId !== CAMPAIGN_GRAPH.startNodeId,
+  ).length;
+  const hasProgressToReset = completedNodeCount > 0
+    || unlockedBeyondStartCount > 0
+    || campaignProgress.activeNodeId !== CAMPAIGN_GRAPH.startNodeId;
 
   const selectedZoneBoard = useMemo(
     () => {
@@ -115,6 +121,38 @@ export function AdventurePage() {
     }
   }, [campaignProgress, effectiveSelectedNodeId, getNodeStatus, searchParams, setActiveNode, setSearchParams]);
 
+  const handleResetProgress = useCallback(() => {
+    if (!hasProgressToReset) return;
+
+    const summary = [
+      'Reset Adventure progress?',
+      '',
+      `Completed battles: ${completedNodeCount}`,
+      `Unlocked battles beyond start: ${unlockedBeyondStartCount}`,
+      `Active battle: ${campaignProgress.activeNodeId ?? 'none'} → ${CAMPAIGN_GRAPH.startNodeId}`,
+      '',
+      'This will clear your local Adventure campaign progression for this profile.',
+      'This cannot be undone.',
+    ].join('\n');
+
+    if (!window.confirm(summary)) return;
+
+    void resetCampaign();
+    const params = new URLSearchParams();
+    params.set('zone', CAMPAIGN_GRAPH.zones[0]?.id ?? 'ember_trail');
+    params.set('node', CAMPAIGN_GRAPH.startNodeId);
+    if (seed) params.set('seed', seed);
+    setSearchParams(params, { replace: true });
+  }, [
+    campaignProgress.activeNodeId,
+    completedNodeCount,
+    hasProgressToReset,
+    resetCampaign,
+    seed,
+    setSearchParams,
+    unlockedBeyondStartCount,
+  ]);
+
   return (
     <div className="relative h-screen w-screen overflow-y-auto bg-slate-950 text-white px-4 py-6 pt-[calc(env(safe-area-inset-top)+1rem)] pb-[calc(env(safe-area-inset-bottom)+5rem)]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -142,15 +180,14 @@ export function AdventurePage() {
                 Main Menu
               </button>
               <button
-                className={gameButtonClass({ tone: 'red', size: 'sm', className: 'font-semibold' })}
-                onClick={() => {
-                  void resetCampaign();
-                  const params = new URLSearchParams();
-                  params.set('zone', CAMPAIGN_GRAPH.zones[0]?.id ?? 'ember_trail');
-                  params.set('node', CAMPAIGN_GRAPH.startNodeId);
-                  if (seed) params.set('seed', seed);
-                  setSearchParams(params, { replace: true });
-                }}
+                className={gameButtonClass({
+                  tone: 'red',
+                  size: 'sm',
+                  className: 'font-semibold',
+                  disabled: !hasProgressToReset,
+                })}
+                onClick={handleResetProgress}
+                disabled={!hasProgressToReset}
               >
                 Reset Progress
               </button>

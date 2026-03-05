@@ -71,14 +71,14 @@ export function BlockAssignmentLines() {
     let rafId: number;
     let stableCount = 0;
     let lastStableKey = '';
-    let lastRenderedKey = '';
+    let lastRenderedKey: string | null = null;
 
     function updateLinks() {
       const newLinks = collectBlockLinks(blockerAssignments);
       const key = serializeLinks(newLinks);
 
       if (key !== lastRenderedKey) {
-        setLinks(newLinks);
+        setLinks((prev) => (serializeLinks(prev) === key ? prev : newLinks));
         lastRenderedKey = key;
       }
 

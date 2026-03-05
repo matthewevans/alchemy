@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { GameEvent } from '@engine/types';
 import { groupEventsIntoSteps, useAnimationStore } from './animationStore';
+import type { AnimationEffect } from './animationStore';
 
 const pos = (x = 100, y = 100) => ({ x, y, width: 80, height: 120 });
 
@@ -39,6 +40,52 @@ describe('groupEventsIntoSteps (combat)', () => {
           && effect.to.x === 100,
       ),
     ).toBe(true);
+  });
+
+  it('groups multi-block combat into one simultaneous exchange per blocker', () => {
+    const attackerId = 'perm-attacker';
+    const blockerAId = 'perm-blocker-a';
+    const blockerBId = 'perm-blocker-b';
+    const positions = new Map([
+      [attackerId, pos(140, 220)],
+      [blockerAId, pos(250, 140)],
+      [blockerBId, pos(360, 140)],
+    ]);
+
+    const events: GameEvent[] = [
+      {
+        type: 'BLOCKERS_DECLARED',
+        assignments: {
+          [blockerAId]: attackerId,
+          [blockerBId]: attackerId,
+        },
+      },
+      { type: 'DAMAGE_DEALT', targetId: blockerAId, amount: 3, source: attackerId },
+      { type: 'DAMAGE_DEALT', targetId: blockerBId, amount: 1, source: attackerId },
+      { type: 'DAMAGE_DEALT', targetId: attackerId, amount: 2, source: blockerAId },
+      { type: 'DAMAGE_DEALT', targetId: attackerId, amount: 1, source: blockerBId },
+    ];
+
+    const steps = groupEventsIntoSteps(events, positions);
+    const exchangeSteps = steps.filter((step) =>
+      step.effects.some((effect) => effect.type === 'combat_strike' || effect.type === 'damage'),
+    );
+
+    expect(exchangeSteps).toHaveLength(2);
+
+    const firstStepStrikes = exchangeSteps[0].effects.filter(
+      (effect): effect is Extract<AnimationEffect, { type: 'combat_strike' }> => effect.type === 'combat_strike',
+    );
+    expect(firstStepStrikes).toHaveLength(2);
+    expect(firstStepStrikes.some((effect) => effect.sourceId === attackerId && effect.targetId === blockerAId)).toBe(true);
+    expect(firstStepStrikes.some((effect) => effect.sourceId === blockerAId && effect.targetId === attackerId)).toBe(true);
+
+    const secondStepStrikes = exchangeSteps[1].effects.filter(
+      (effect): effect is Extract<AnimationEffect, { type: 'combat_strike' }> => effect.type === 'combat_strike',
+    );
+    expect(secondStepStrikes).toHaveLength(2);
+    expect(secondStepStrikes.some((effect) => effect.sourceId === attackerId && effect.targetId === blockerBId)).toBe(true);
+    expect(secondStepStrikes.some((effect) => effect.sourceId === blockerBId && effect.targetId === attackerId)).toBe(true);
   });
 });
 
