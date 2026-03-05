@@ -1,19 +1,25 @@
-import type { GameAction, GameState, LearningDomain, LearningReward, PlayerId } from '@engine/types';
-import { LEARNING_FREQUENCY_INTERVAL } from './config';
+import type {
+  GameAction,
+  GameState,
+  LearningDomain,
+  PlayerId,
+} from '@engine/types';
 import type { LearningFrequency, MathLevel, ReadingLevel } from './config';
 import { buildMathPrompt, buildReadingPrompt } from './content';
 import { hashStringToSeed } from './random';
+import { evaluateLearningCadence } from './domain/cadencePolicy';
+import {
+  choosePromptBucket,
+  type LearningPromptBucket,
+  type PromptSelectionPrefs,
+} from './domain/promptSelectionPolicy';
+import { chooseLearningReward } from './domain/rewardPolicy';
 
-interface LearningPolicyPrefs {
+interface LearningPolicyPrefs extends PromptSelectionPrefs {
   learningChallengesEnabled: boolean;
-  readingChallengesEnabled: boolean;
-  mathChallengesEnabled: boolean;
   readingLevel: ReadingLevel;
   mathLevel: MathLevel;
   learningFrequency: LearningFrequency;
-  readingChallengeWeight: number;
-  wordChallengeWeight: number;
-  mathChallengeWeight: number;
 }
 
 interface LearningPolicyInput {
@@ -22,6 +28,8 @@ interface LearningPolicyInput {
   actingPlayer: PlayerId;
   humanPlayer: PlayerId;
   opportunityIndex: number;
+  correctStreak: number;
+  incorrectStreak: number;
   prefs: LearningPolicyPrefs;
 }
 
@@ -29,57 +37,8 @@ type LearningGateAction =
   | Extract<GameAction, { type: 'CONFIRM_ATTACKERS' }>
   | Extract<GameAction, { type: 'CONFIRM_BLOCKERS' }>;
 
-type LearningPromptBucket = 'reading' | 'word' | 'math';
-
 function isLearningGateAction(action: GameAction): action is LearningGateAction {
   return action.type === 'CONFIRM_ATTACKERS' || action.type === 'CONFIRM_BLOCKERS';
-}
-
-function sanitizeWeight(weight: number): number {
-  if (!Number.isFinite(weight)) return 0;
-  return Math.max(0, Math.round(weight));
-}
-
-function choosePromptBucket(
-  prefs: LearningPolicyPrefs,
-  selectionSeed: number,
-): LearningPromptBucket | null {
-  const choices: Array<{ bucket: LearningPromptBucket; weight: number }> = [];
-
-  if (prefs.mathChallengesEnabled) {
-    choices.push({ bucket: 'math', weight: sanitizeWeight(prefs.mathChallengeWeight) });
-  }
-  if (prefs.readingChallengesEnabled) {
-    choices.push({ bucket: 'reading', weight: sanitizeWeight(prefs.readingChallengeWeight) });
-    choices.push({ bucket: 'word', weight: sanitizeWeight(prefs.wordChallengeWeight) });
-  }
-
-  const totalWeight = choices.reduce((sum, choice) => sum + choice.weight, 0);
-  if (totalWeight <= 0) return null;
-
-  let roll = selectionSeed % totalWeight;
-  for (const choice of choices) {
-    roll -= choice.weight;
-    if (roll < 0) return choice.bucket;
-  }
-  return choices[choices.length - 1]?.bucket ?? null;
-}
-
-function chooseReward(
-  state: GameState,
-  action: LearningGateAction,
-): LearningReward | null {
-  if (action.type === 'CONFIRM_ATTACKERS') {
-    if (state.phase.type !== 'battle' || state.phase.step !== 'declare_attackers') return null;
-    const targetId = state.phase.tentativeAttackers[0];
-    if (!targetId) return null;
-    return { permanentId: targetId, attackBonus: 1, healthBonus: 0 };
-  }
-
-  if (state.phase.type !== 'battle' || state.phase.step !== 'declare_blockers') return null;
-  const targetId = Object.keys(state.phase.tentativeBlockers)[0];
-  if (!targetId) return null;
-  return { permanentId: targetId, attackBonus: 0, healthBonus: 1 };
 }
 
 function buildPromptSeed(
@@ -123,34 +82,63 @@ function buildSelectionSeed(
 export function maybeBuildLearningChallengeAction(
   input: LearningPolicyInput,
 ): Extract<GameAction, { type: 'START_LEARNING_CHALLENGE' }> | null {
-  const { state, action, actingPlayer, humanPlayer, opportunityIndex, prefs } = input;
+  const {
+    state,
+    action,
+    actingPlayer,
+    humanPlayer,
+    opportunityIndex,
+    correctStreak,
+    incorrectStreak,
+    prefs,
+  } = input;
+
   if (!prefs.learningChallengesEnabled) return null;
   if (state.phase.type === 'learning') return null;
   if (actingPlayer !== humanPlayer) return null;
   if (!isLearningGateAction(action)) return null;
 
-  const interval = LEARNING_FREQUENCY_INTERVAL[prefs.learningFrequency];
-  if (opportunityIndex % interval !== 0) return null;
+  const cadence = evaluateLearningCadence({
+    opportunityIndex,
+    learningFrequency: prefs.learningFrequency,
+    correctStreak,
+    incorrectStreak,
+  });
+  if (!cadence.shouldTrigger) return null;
+
   const selectionSeed = buildSelectionSeed(state, action, opportunityIndex);
-  const promptBucket = choosePromptBucket(prefs, selectionSeed);
-  if (!promptBucket) return null;
+  const selection = choosePromptBucket(prefs, selectionSeed);
+  if (!selection.bucket) return null;
 
-  const reward = chooseReward(state, action);
-  if (!reward) return null;
+  const rewardDecision = chooseLearningReward({
+    state,
+    action,
+    correctStreak,
+  });
+  if (!rewardDecision.reward) return null;
 
-  const promptSeed = buildPromptSeed(state, action, promptBucket, opportunityIndex);
-  const prompt = promptBucket === 'math'
+  const promptSeed = buildPromptSeed(state, action, selection.bucket, opportunityIndex);
+  const prompt = selection.bucket === 'math'
     ? buildMathPrompt(prefs.mathLevel, promptSeed)
     : buildReadingPrompt(
       prefs.readingLevel,
       promptSeed,
-      promptBucket === 'word' ? 'word_to_picture' : 'missing_letter',
+      selection.bucket === 'word' ? 'word_to_picture' : 'missing_letter',
     );
 
   return {
     type: 'START_LEARNING_CHALLENGE',
     prompt,
-    reward,
+    reward: rewardDecision.reward,
     resumeAction: { type: action.type },
+    meta: {
+      cadenceReason: cadence.reason,
+      rewardReason: rewardDecision.reason,
+      selectionReason: selection.reason,
+      opportunityIndex,
+      promptBucket: selection.bucket,
+      effectiveReadingLevel: prefs.readingLevel,
+      effectiveMathLevel: prefs.mathLevel,
+    },
   };
 }

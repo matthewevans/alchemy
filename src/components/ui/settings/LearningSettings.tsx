@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { usePreferencesStore } from '@game/preferencesStore';
+import { useLearningProfileStore } from '@game/learningProfileStore';
 import { SettingsSelect, SettingsSlider, SettingsToggle } from './SettingsControls';
 import type { LearningFrequency, MathLevel, ReadingLevel } from '../../../learning/config';
 import { LEARNING_AGE_RANGE_OPTIONS, type LearningAgeRange } from '../../../learning/onboarding';
@@ -24,10 +25,15 @@ export function LearningSettings() {
     setWordChallengeWeight,
     mathChallengeWeight,
     setMathChallengeWeight,
+    adaptiveLearningEnabled,
+    setAdaptiveLearningEnabled,
+    adaptiveExplanationEnabled,
+    setAdaptiveExplanationEnabled,
     applyLearningPreset,
     clearLearningPreset,
     learningAgeRange,
   } = usePreferencesStore();
+  const adaptiveProfile = useLearningProfileStore((s) => s.profile);
   const selectedAgeRange = LEARNING_AGE_RANGE_OPTIONS.find(
     (option) => option.value === learningAgeRange,
   );
@@ -101,6 +107,27 @@ export function LearningSettings() {
                 ]}
                 onChange={(value) => setLearningFrequency(value as LearningFrequency)}
               />
+              <SettingsToggle
+                id="adaptive-learning"
+                label="Adaptive Learning"
+                description="Adjusts reading and math levels from recent accuracy using bounded mastery rules."
+                checked={adaptiveLearningEnabled}
+                onChange={setAdaptiveLearningEnabled}
+              />
+              <SettingsToggle
+                id="adaptive-explain"
+                label="Explain Adaptation"
+                description="Shows a short reason when adaptive learning changes a level."
+                checked={adaptiveExplanationEnabled}
+                onChange={setAdaptiveExplanationEnabled}
+              />
+              {adaptiveLearningEnabled && adaptiveProfile && (
+                <div className="mt-1 rounded-lg border border-cyan-300/30 bg-cyan-900/15 px-3 py-2">
+                  <p className="text-xs text-cyan-100/85">
+                    Current adaptive levels: Reading {adaptiveProfile.reading.level.toUpperCase()} - Math {adaptiveProfile.math.level.toUpperCase()}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

@@ -26,6 +26,8 @@ import { CardPreview } from '@components/card';
 import { ActionFeedbackToast } from '@components/ui/ActionFeedbackToast';
 import { CoachOverlay } from '@components/ui/CoachOverlay';
 import { LearningChallengeOverlay } from '@components/ui/LearningChallengeOverlay';
+import { AdaptiveLearningToast } from '@components/ui/AdaptiveLearningToast';
+import { TutorialHelpPanel } from '@components/ui/TutorialHelpPanel';
 import { TargetingPanel } from '@components/targeting/TargetingPanel';
 import { gameButtonClass } from '@components/ui/buttonStyles';
 
@@ -268,6 +270,7 @@ export function GameBoard() {
 
       {/* Turn banner overlay */}
       <TurnBanner />
+      <AdaptiveLearningToast />
 
       {/* Block assignment links */}
       <BlockAssignmentLines />
@@ -348,6 +351,9 @@ export function GameBoard() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* On-demand tutorial help */}
+      <TutorialHelpPanel phase={phase} />
 
       {/* Animation overlay */}
       <AnimationOverlay />

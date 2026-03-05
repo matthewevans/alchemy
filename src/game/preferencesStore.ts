@@ -46,6 +46,8 @@ interface PreferencesState {
   readingChallengeWeight: number;
   wordChallengeWeight: number;
   mathChallengeWeight: number;
+  adaptiveLearningEnabled: boolean;
+  adaptiveExplanationEnabled: boolean;
   learningOnboardingCompleted: boolean;
   learningAgeRange: LearningAgeRange | null;
   autoUpdateEnabled: boolean;
@@ -72,6 +74,8 @@ interface PreferencesState {
   setReadingChallengeWeight: (weight: number) => void;
   setWordChallengeWeight: (weight: number) => void;
   setMathChallengeWeight: (weight: number) => void;
+  setAdaptiveLearningEnabled: (enabled: boolean) => void;
+  setAdaptiveExplanationEnabled: (enabled: boolean) => void;
   applyLearningPreset: (ageRange: LearningAgeRange) => void;
   clearLearningPreset: () => void;
   completeLearningOnboarding: (enabled: boolean, ageRange: LearningAgeRange) => void;
@@ -108,6 +112,8 @@ interface PersistedPreferences {
   readingChallengeWeight: number;
   wordChallengeWeight: number;
   mathChallengeWeight: number;
+  adaptiveLearningEnabled: boolean;
+  adaptiveExplanationEnabled: boolean;
   learningOnboardingCompleted: boolean;
   learningAgeRange: LearningAgeRange | null;
   autoUpdateEnabled: boolean;
@@ -182,6 +188,12 @@ function loadPersistedPreferences(): PersistedPreferences {
           parsed.mathChallengeWeight,
           DEFAULT_MATH_CHALLENGE_WEIGHT,
         ),
+        adaptiveLearningEnabled: typeof parsed.adaptiveLearningEnabled === 'boolean'
+          ? parsed.adaptiveLearningEnabled
+          : true,
+        adaptiveExplanationEnabled: typeof parsed.adaptiveExplanationEnabled === 'boolean'
+          ? parsed.adaptiveExplanationEnabled
+          : true,
         learningOnboardingCompleted: typeof parsed.learningOnboardingCompleted === 'boolean'
           ? parsed.learningOnboardingCompleted
           : true,
@@ -216,6 +228,8 @@ function loadPersistedPreferences(): PersistedPreferences {
     readingChallengeWeight: DEFAULT_READING_CHALLENGE_WEIGHT,
     wordChallengeWeight: DEFAULT_WORD_CHALLENGE_WEIGHT,
     mathChallengeWeight: DEFAULT_MATH_CHALLENGE_WEIGHT,
+    adaptiveLearningEnabled: true,
+    adaptiveExplanationEnabled: true,
     learningOnboardingCompleted: false,
     learningAgeRange: null,
     autoUpdateEnabled: true,
@@ -253,6 +267,8 @@ export const usePreferencesStore = create<PreferencesState>()(
     readingChallengeWeight: initial.readingChallengeWeight,
     wordChallengeWeight: initial.wordChallengeWeight,
     mathChallengeWeight: initial.mathChallengeWeight,
+    adaptiveLearningEnabled: initial.adaptiveLearningEnabled,
+    adaptiveExplanationEnabled: initial.adaptiveExplanationEnabled,
     learningOnboardingCompleted: initial.learningOnboardingCompleted,
     learningAgeRange: initial.learningAgeRange,
     autoUpdateEnabled: initial.autoUpdateEnabled,
@@ -388,6 +404,16 @@ export const usePreferencesStore = create<PreferencesState>()(
       );
       persistPreferences({ ...get(), mathChallengeWeight: clamped, learningAgeRange: null });
       set({ mathChallengeWeight: clamped, learningAgeRange: null });
+    },
+
+    setAdaptiveLearningEnabled: (adaptiveLearningEnabled) => {
+      persistPreferences({ ...get(), adaptiveLearningEnabled });
+      set({ adaptiveLearningEnabled });
+    },
+
+    setAdaptiveExplanationEnabled: (adaptiveExplanationEnabled) => {
+      persistPreferences({ ...get(), adaptiveExplanationEnabled });
+      set({ adaptiveExplanationEnabled });
     },
 
     applyLearningPreset: (ageRange) => {

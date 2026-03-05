@@ -98,6 +98,16 @@ export interface LearningReward {
   healthBonus: number;
 }
 
+export interface LearningChallengeMeta {
+  cadenceReason: string;
+  rewardReason: string;
+  selectionReason: string;
+  opportunityIndex: number;
+  promptBucket: 'reading' | 'word' | 'math';
+  effectiveReadingLevel: string;
+  effectiveMathLevel: string;
+}
+
 export type LearningResumeAction =
   | { type: 'ADVANCE_PHASE' }
   | { type: 'CONFIRM_ATTACKERS' }
@@ -155,6 +165,7 @@ export type Phase =
       resumeAction: LearningResumeAction;
       prompt: LearningPrompt;
       reward: LearningReward;
+      meta?: LearningChallengeMeta;
     }
   | { type: 'game_over'; winner: PlayerId };
 
@@ -237,6 +248,7 @@ export type GameAction =
       prompt: LearningPrompt;
       reward: LearningReward;
       resumeAction: LearningResumeAction;
+      meta?: LearningChallengeMeta;
     }
   | { type: 'ANSWER_LEARNING_CHALLENGE'; optionId: string }
   | { type: 'SKIP_LEARNING_CHALLENGE' }

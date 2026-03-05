@@ -10,6 +10,7 @@ import type { AIConfig } from '@engine/aiConfig';
 import { enumerateLegalActions } from '@engine/validation';
 import { saveGame, clearSavedGame, saveActiveGameId } from '@storage/persistence';
 import type { PersistedGame } from '@storage/persistence';
+import type { GameSessionMeta } from './sessionMeta';
 
 interface GameStore {
   // State
@@ -21,12 +22,18 @@ interface GameStore {
   player1DeckIds: string[];
   player2DeckIds: string[];
   aiConfig: AIConfig | null;
+  sessionMeta: GameSessionMeta | null;
 
   // Derived (cached on dispatch)
   legalActions: GameAction[];
 
   // Actions
-  initGame: (config: GameInitConfig, humanPlayer: PlayerId, aiConfig?: AIConfig) => string;
+  initGame: (
+    config: GameInitConfig,
+    humanPlayer: PlayerId,
+    aiConfig?: AIConfig,
+    sessionMeta?: GameSessionMeta,
+  ) => string;
   restoreGame: (gameState: GameState, rngState: number, persisted: PersistedGame) => void;
   dispatch: (action: GameAction, actingPlayer: PlayerId) => GameEvent[];
   suspend: () => void;
@@ -41,6 +48,7 @@ interface PendingAutoSave {
   player1DeckIds: string[];
   player2DeckIds: string[];
   aiConfig?: AIConfig;
+  sessionMeta?: GameSessionMeta;
 }
 
 const AUTOSAVE_DEBOUNCE_MS = 250;
@@ -59,6 +67,7 @@ function flushAutoSave(): void {
     save.player1DeckIds,
     save.player2DeckIds,
     save.aiConfig,
+    save.sessionMeta,
   );
 }
 
@@ -89,9 +98,10 @@ export const useGameStore = create<GameStore>()(
     player1DeckIds: [],
     player2DeckIds: [],
     aiConfig: null,
+    sessionMeta: null,
     legalActions: [],
 
-    initGame: (config, humanPlayer, aiConfig) => {
+    initGame: (config, humanPlayer, aiConfig, sessionMeta) => {
       const gameId = crypto.randomUUID();
       const gameState = createInitialGameState(config);
       const legal = enumerateLegalActions(gameState, humanPlayer);
@@ -108,12 +118,13 @@ export const useGameStore = create<GameStore>()(
         player1DeckIds: p1Ids,
         player2DeckIds: p2Ids,
         aiConfig: aiConfig ?? null,
+        sessionMeta: sessionMeta ?? null,
         legalActions: legal,
       });
 
       saveActiveGameId(gameId);
       cancelAutoSave();
-      saveGame(gameId, gameState, rng.getState(), humanPlayer, p1Ids, p2Ids, aiConfig);
+      saveGame(gameId, gameState, rng.getState(), humanPlayer, p1Ids, p2Ids, aiConfig, sessionMeta);
       return gameId;
     },
 
@@ -130,12 +141,22 @@ export const useGameStore = create<GameStore>()(
         player1DeckIds: persisted.player1DeckIds,
         player2DeckIds: persisted.player2DeckIds,
         aiConfig: persisted.aiConfig ?? null,
+        sessionMeta: persisted.meta ?? null,
         legalActions: legal,
       });
     },
 
     dispatch: (action, actingPlayer) => {
-      const { state, rng, humanPlayer, gameId, player1DeckIds, player2DeckIds, aiConfig } = get();
+      const {
+        state,
+        rng,
+        humanPlayer,
+        gameId,
+        player1DeckIds,
+        player2DeckIds,
+        aiConfig,
+        sessionMeta,
+      } = get();
       if (!state || !rng) throw new Error('Game not initialized');
 
       const result = reduce(state, action, actingPlayer, rng);
@@ -157,6 +178,7 @@ export const useGameStore = create<GameStore>()(
           player1DeckIds,
           player2DeckIds,
           aiConfig: aiConfig ?? undefined,
+          sessionMeta: sessionMeta ?? undefined,
         });
       } else {
         cancelAutoSave();
@@ -175,6 +197,7 @@ export const useGameStore = create<GameStore>()(
         player1DeckIds: [],
         player2DeckIds: [],
         aiConfig: null,
+        sessionMeta: null,
         legalActions: [],
       });
     },
@@ -191,6 +214,7 @@ export const useGameStore = create<GameStore>()(
         player1DeckIds: [],
         player2DeckIds: [],
         aiConfig: null,
+        sessionMeta: null,
         legalActions: [],
       });
     },

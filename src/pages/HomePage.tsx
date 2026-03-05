@@ -1,13 +1,12 @@
-import { useState, useCallback, useRef, lazy, Suspense, type ReactElement } from 'react';
+import { useState, useCallback, useRef, lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import type { PlayerId } from '@engine/types';
 import { createRNG } from '@engine/prng';
 import { TIER_CONFIGS } from '@engine/ruleset';
-import { createAIConfig } from '@engine/aiConfig';
-import { ELEMENTS } from '@engine/elements';
-import { STARTER_DECKS, buildStarterDeck } from '@engine/starterDecks';
 import { useGameStore } from '@game/gameStore';
+import { useLearningProfileStore } from '@game/learningProfileStore';
 import { usePreferencesStore } from '@game/preferencesStore';
+import { startSinglePlayerGame } from '@game/useCases/startSinglePlayerGame';
 import { clearSavedGame, loadActiveGameId, loadGame } from '@storage/persistence';
 import type { PeerSession } from '@network/peer';
 import { setPendingSession } from '@network/sessionTransfer';
@@ -57,12 +56,19 @@ export function HomePage() {
   const setSelectedTier = usePreferencesStore((s) => s.setTier);
   const selectedDifficulty = usePreferencesStore((s) => s.difficulty);
   const setSelectedDifficulty = usePreferencesStore((s) => s.setDifficulty);
+  const readingLevel = usePreferencesStore((s) => s.readingLevel);
+  const mathLevel = usePreferencesStore((s) => s.mathLevel);
+  const initializeLearningProfile = useLearningProfileStore((s) => s.initialize);
   const learningOnboardingCompleted = usePreferencesStore((s) => s.learningOnboardingCompleted);
   const completeLearningOnboarding = usePreferencesStore((s) => s.completeLearningOnboarding);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initGame = useGameStore((s) => s.initGame);
   const restoreGame = useGameStore((s) => s.restoreGame);
+
+  useEffect(() => {
+    void initializeLearningProfile('local_default', { readingLevel, mathLevel });
+  }, [initializeLearningProfile, readingLevel, mathLevel]);
 
   const savedGameId = loadActiveGameId();
   const hasSavedGame = savedGameId ? loadGame(savedGameId) !== null : false;
@@ -87,6 +93,10 @@ export function HomePage() {
     setSubScreen('multiplayer_lobby');
   }, []);
 
+  const handleAdventure = useCallback(() => {
+    navigate('/adventure');
+  }, [navigate]);
+
   const initialDeckRef = useRef<InitialDeck | undefined>(undefined);
 
   const handleDeckBuilder = useCallback(() => {
@@ -105,37 +115,17 @@ export function HomePage() {
 
   const handleSelectDeck = useCallback(
     (deckCardIds: string[]) => {
-      const humanElements = new Set<string>();
-      for (const id of deckCardIds) {
-        humanElements.add(id.split('_')[0]);
-      }
       const seedParam = searchParams.get('seed');
-      const seed = seedParam ? parseInt(seedParam, 10) : Date.now();
-      console.log(`[Alchemy] Game seed: ${seed}`);
-      const rng = createRNG(seed);
-
-      // Create AI config (personality is randomly chosen via seeded RNG)
-      const aiConfig = createAIConfig(selectedDifficulty, rng);
-      console.log(`[Alchemy] AI: ${aiConfig.difficulty} / ${aiConfig.personality}`);
-
-      const availableElements = ELEMENTS.filter((el) => !humanElements.has(el));
-      const aiElement = availableElements[Math.floor(rng() * availableElements.length)];
-      const aiMonoDecks = STARTER_DECKS.filter((d) => d.type === 'mono' && d.elements[0] === aiElement);
-      const aiStarterDeck = aiMonoDecks[Math.floor(rng() * aiMonoDecks.length)];
-      const aiDeck = buildStarterDeck(aiStarterDeck, selectedTier);
-
-      const gameId = initGame(
-        {
-          ruleset: TIER_CONFIGS[selectedTier],
-          player1Deck: deckCardIds,
-          player2Deck: aiDeck,
-          rng,
-        },
-        'player1',
-        aiConfig,
-      );
-
-      navigate(`/game/${gameId}`);
+      const parsedSeed = seedParam ? parseInt(seedParam, 10) : NaN;
+      const seed = Number.isFinite(parsedSeed) ? parsedSeed : undefined;
+      startSinglePlayerGame({
+        humanDeckIds: deckCardIds,
+        tier: selectedTier,
+        fallbackDifficulty: selectedDifficulty,
+        initGame,
+        navigate,
+        seed,
+      });
     },
     [initGame, navigate, searchParams, selectedTier, selectedDifficulty],
   );
@@ -156,6 +146,8 @@ export function HomePage() {
           rng,
         },
         localPlayer,
+        undefined,
+        { mode: 'multiplayer' },
       );
 
       // Multiplayer games aren't persisted across refresh
@@ -175,6 +167,7 @@ export function HomePage() {
       screen = (
         <TitleScreen
           onPlay={handlePlay}
+          onAdventure={handleAdventure}
           onMultiplayer={handleMultiplayer}
           onDeckBuilder={handleDeckBuilder}
           onResume={hasSavedGame ? handleResume : undefined}

@@ -2,6 +2,7 @@ import type { GameAction, GameEvent, PlayerId } from '@engine/types';
 import { useGameStore } from './gameStore';
 import { usePreferencesStore } from './preferencesStore';
 import { useLearningStore } from './learningStore';
+import { useLearningProfileStore } from './learningProfileStore';
 import { groupEventsIntoSteps, getPositions, useAnimationStore } from './animationStore';
 import type { AnimationStep, BoardSnapshot } from './animationStore';
 import { narrateCard } from '@audio/tts';
@@ -49,19 +50,30 @@ export function dispatchWithAnimations(
       && hasEnabledDomain
       && actingPlayer === humanPlayer
     ) {
-      const opportunityIndex = useLearningStore.getState().consumeOpportunity(gameId);
+      const learningRuntime = useLearningStore.getState();
+      const opportunityIndex = learningRuntime.consumeOpportunity(gameId);
+      const profile = useLearningProfileStore.getState().profile;
+      const effectiveReadingLevel = prefs.adaptiveLearningEnabled
+        ? (profile?.reading.level ?? prefs.readingLevel)
+        : prefs.readingLevel;
+      const effectiveMathLevel = prefs.adaptiveLearningEnabled
+        ? (profile?.math.level ?? prefs.mathLevel)
+        : prefs.mathLevel;
+
       const learningAction = maybeBuildLearningChallengeAction({
         state,
         action,
         actingPlayer,
         humanPlayer,
         opportunityIndex,
+        correctStreak: learningRuntime.correctStreak,
+        incorrectStreak: learningRuntime.incorrectStreak,
         prefs: {
           learningChallengesEnabled: prefs.learningChallengesEnabled,
           readingChallengesEnabled: prefs.readingChallengesEnabled,
           mathChallengesEnabled: prefs.mathChallengesEnabled,
-          readingLevel: prefs.readingLevel,
-          mathLevel: prefs.mathLevel,
+          readingLevel: effectiveReadingLevel,
+          mathLevel: effectiveMathLevel,
           learningFrequency: prefs.learningFrequency,
           readingChallengeWeight: prefs.readingChallengeWeight,
           wordChallengeWeight: prefs.wordChallengeWeight,

@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { PlayerId, GameStats } from '@engine/types';
 import { useGameStore } from '@game/gameStore';
+import { useLearningProfileStore } from '@game/learningProfileStore';
+import { usePreferencesStore } from '@game/preferencesStore';
 import { GameDispatchProvider, useGameDispatch } from '@game/GameDispatchContext';
 import { dispatchWithAnimations } from '@game/dispatchWithAnimations';
 import { createAIController } from '@game/controllers/aiController';
@@ -22,6 +24,7 @@ import { gameButtonClass } from '@components/ui/buttonStyles';
 import { AudioMuteButton } from '@components/ui/AudioMuteButton';
 import { StartupLoadingOverlay } from '@components/ui/StartupLoadingOverlay';
 import { useDialogA11y } from '@hooks/useDialogA11y';
+import { useCampaignStore } from '../campaign/store/campaignStore';
 import {
   ensureStartupAssetsPreloaded,
   subscribeStartupPreload,
@@ -45,6 +48,8 @@ export function GamePage() {
   const storeGameId = useGameStore((s) => s.gameId);
   const resetGame = useGameStore((s) => s.reset);
   const suspendGame = useGameStore((s) => s.suspend);
+  const sessionMeta = useGameStore((s) => s.sessionMeta);
+  const isAdventureSession = sessionMeta?.mode === 'adventure';
 
   const [phase, setPhase] = useState<GamePhase>('playing');
   const [gameOverWinner, setGameOverWinner] = useState<PlayerId>('player1');
@@ -53,6 +58,9 @@ export function GamePage() {
   const [isMultiplayer, setIsMultiplayer] = useState(false);
   const [disconnectReason, setDisconnectReason] = useState<string | null>(null);
   const [startupProgress, setStartupProgress] = useState<StartupPreloadProgress>(INITIAL_STARTUP_PROGRESS);
+  const initializeLearningProfile = useLearningProfileStore((s) => s.initialize);
+  const readingLevel = usePreferencesStore((s) => s.readingLevel);
+  const mathLevel = usePreferencesStore((s) => s.mathLevel);
   const controllerRef = useRef<OpponentController | null>(null);
   const initRef = useRef(false);
 
@@ -63,6 +71,15 @@ export function GamePage() {
   }, [controller]);
 
   // Initialize game: either already in store, restore from persistence, or redirect
+  useEffect(() => {
+    void initializeLearningProfile('local_default', { readingLevel, mathLevel });
+  }, [initializeLearningProfile, readingLevel, mathLevel]);
+
+  useEffect(() => {
+    if (!sessionMeta || sessionMeta.mode !== 'adventure') return;
+    void useCampaignStore.getState().initialize(sessionMeta.profileId);
+  }, [sessionMeta]);
+
   useEffect(() => {
     const unsubscribe = subscribeStartupPreload((progress) => {
       setStartupProgress(progress);
@@ -130,16 +147,27 @@ export function GamePage() {
           turns: turn,
         });
       }
+
+      if (sessionMeta?.mode === 'adventure') {
+        void useCampaignStore.getState().recordBattleResult(
+          sessionMeta.nodeId,
+          winner === humanPlayer,
+        );
+      }
     },
-    [gameId, humanPlayer, player1DeckIds, player2DeckIds, turn, isMultiplayer],
+    [gameId, humanPlayer, player1DeckIds, player2DeckIds, turn, isMultiplayer, sessionMeta],
   );
 
   const handlePlayAgain = useCallback(() => {
     controllerRef.current?.dispose();
     setController(null);
     resetGame();
+    if (isAdventureSession) {
+      navigate('/adventure');
+      return;
+    }
     navigate('/', { state: { initialScreen: isMultiplayer ? 'multiplayer_lobby' : 'deck_select' } });
-  }, [resetGame, navigate, isMultiplayer]);
+  }, [resetGame, navigate, isMultiplayer, isAdventureSession]);
 
   const handleMainMenu = useCallback(() => {
     controllerRef.current?.dispose();
@@ -188,6 +216,7 @@ export function GamePage() {
             stats={gameOverStats}
             onPlayAgain={handlePlayAgain}
             onMainMenu={handleMainMenu}
+            playAgainLabel={isAdventureSession ? 'Continue Adventure' : undefined}
           />
         )}
       </AnimatePresence>

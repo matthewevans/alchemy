@@ -12,6 +12,7 @@ import type {
   PlayerState,
   ReducerResult,
   LearningPrompt,
+  LearningChallengeMeta,
   LearningResumeAction,
   LearningReward,
   RNG,
@@ -90,6 +91,7 @@ export function reduce(
         action.prompt,
         action.reward,
         action.resumeAction,
+        action.meta,
       );
       break;
     case 'ANSWER_LEARNING_CHALLENGE':
@@ -1819,6 +1821,7 @@ function handleStartLearningChallenge(
   prompt: LearningPrompt,
   reward: LearningReward,
   resumeAction: LearningResumeAction,
+  meta?: LearningChallengeMeta,
 ): ReducerResult {
   const suspendedPhase = state.phase as CorePhase;
   return {
@@ -1831,6 +1834,7 @@ function handleStartLearningChallenge(
         resumeAction,
         prompt,
         reward,
+        meta,
       },
     },
     events: [{ type: 'LEARNING_CHALLENGE_STARTED', player: actingPlayer, promptId: prompt.id }],

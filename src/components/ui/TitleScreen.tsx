@@ -8,6 +8,7 @@ import { AudioMuteButton } from './AudioMuteButton';
 
 interface TitleScreenProps {
   onPlay: () => void;
+  onAdventure: () => void;
   onMultiplayer: () => void;
   onDeckBuilder: () => void;
   onResume?: () => void;
@@ -64,7 +65,15 @@ function MultiPlayerIcon() {
   );
 }
 
-export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: TitleScreenProps) {
+function AdventureIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5" aria-hidden="true">
+      <path fillRule="evenodd" d="M10 1.25a.75.75 0 0 1 .75.75v.765a7.251 7.251 0 0 1 6.485 6.485H18a.75.75 0 0 1 0 1.5h-.765a7.251 7.251 0 0 1-6.485 6.485V18a.75.75 0 0 1-1.5 0v-.765a7.251 7.251 0 0 1-6.485-6.485H2a.75.75 0 0 1 0-1.5h.765A7.251 7.251 0 0 1 9.25 2.765V2a.75.75 0 0 1 .75-.75ZM4.29 9.25h2.417a3.252 3.252 0 0 1 2.543-2.543V4.29a5.752 5.752 0 0 0-4.96 4.96Zm6.46 1.5v2.417a5.752 5.752 0 0 0 4.96-4.96h-2.417a3.252 3.252 0 0 1-2.543 2.543Zm0-4.043a3.252 3.252 0 0 1 2.543 2.543h2.417a5.752 5.752 0 0 0-4.96-4.96v2.417Zm-1.5 6.46V10.75a3.252 3.252 0 0 1-2.543-2.543H4.29a5.752 5.752 0 0 0 4.96 4.96Z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
+export function TitleScreen({ onPlay, onAdventure, onMultiplayer, onDeckBuilder, onResume }: TitleScreenProps) {
   const [showSettings, setShowSettings] = useState(false);
   const shouldReduceMotion = useReducedMotion();
   const particles = useSparkles(shouldReduceMotion ? 0 : 30);
@@ -171,13 +180,29 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
         </motion.button>
         <motion.button
           className={gameButtonClass({
-            tone: 'amber',
+            tone: 'blue',
             size: 'lg',
             className: 'title-button w-64 text-xl font-bold flex items-center justify-center gap-2',
           })}
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.5, delay: onResume ? 0.5 : 0.4, ease: [0.22, 1, 0.36, 1] }}
+          whileHover={shouldReduceMotion ? undefined : { scale: 1.04 }}
+          whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
+          onClick={onAdventure}
+        >
+          <AdventureIcon />
+          <span>Adventure</span>
+        </motion.button>
+        <motion.button
+          className={gameButtonClass({
+            tone: 'amber',
+            size: 'lg',
+            className: 'title-button w-64 text-xl font-bold flex items-center justify-center gap-2',
+          })}
+          initial={{ opacity: 0, y: 20, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.5, delay: onResume ? 0.6 : 0.5, ease: [0.22, 1, 0.36, 1] }}
           whileHover={shouldReduceMotion ? undefined : { scale: 1.04 }}
           whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
           onClick={onMultiplayer}
@@ -193,7 +218,7 @@ export function TitleScreen({ onPlay, onMultiplayer, onDeckBuilder, onResume }: 
           })}
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.5, delay: onResume ? 0.6 : 0.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.5, delay: onResume ? 0.7 : 0.6, ease: [0.22, 1, 0.36, 1] }}
           whileHover={shouldReduceMotion ? undefined : { scale: 1.04 }}
           whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
           onClick={onDeckBuilder}

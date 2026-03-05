@@ -4,11 +4,10 @@ import { useAnimationStore } from '@game/animationStore';
 import { usePreferencesStore } from '@game/preferencesStore';
 import { useTutorialStore } from '@game/tutorialStore';
 import { getActingPlayer } from '@engine/types';
+import { evaluateTipTrigger } from '../tutorial/domain/tipPolicy';
 
 export function useTutorialTriggers(): void {
   useEffect(() => {
-    if (!usePreferencesStore.getState().tutorialEnabled) return;
-
     useTutorialStore.getState().resetForNewGame();
 
     return useGameStore.subscribe(
@@ -17,15 +16,32 @@ export function useTutorialTriggers(): void {
         if (!phase) return;
         if (useAnimationStore.getState().isAnimating) return;
 
-        const { state, humanPlayer } = useGameStore.getState();
-        if (!state || getActingPlayer(state) !== humanPlayer) return;
+        const game = useGameStore.getState();
+        if (!game.state) return;
 
-        const { showTip } = useTutorialStore.getState();
+        const isHumanTurn = getActingPlayer(game.state) === game.humanPlayer;
+        const tutorialState = useTutorialStore.getState();
+        const prefs = usePreferencesStore.getState();
 
-        if (phase.type === 'energy') showTip('first_energy');
-        if (phase.type === 'play') showTip('first_play');
-        if (phase.type === 'battle' && phase.step === 'declare_attackers') showTip('first_battle');
-        if (phase.type === 'battle' && phase.step === 'declare_blockers') showTip('first_block');
+        const decision = evaluateTipTrigger(
+          {
+            phaseType: phase.type,
+            phaseStep: phase.type === 'battle' ? phase.step : undefined,
+            combatMathEnabled: prefs.combatMathEnabled,
+            isHumanTurn,
+          },
+          {
+            shownThisGame: tutorialState.shownThisGame,
+            autoSeenAcrossSessions: tutorialState.autoSeenSteps,
+            currentTipId: tutorialState.currentTip?.id ?? null,
+          },
+          {
+            autoTipsEnabled: prefs.tutorialEnabled,
+          },
+        );
+
+        if (!decision.shouldShow || !decision.tipId) return;
+        tutorialState.showTip(decision.tipId, 'auto');
       },
     );
   }, []);

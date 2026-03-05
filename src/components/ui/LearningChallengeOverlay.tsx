@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
 import { useGameDispatch } from '@game/GameDispatchContext';
+import { useLearningStore } from '@game/learningStore';
+import { useLearningProfileStore } from '@game/learningProfileStore';
+import { usePreferencesStore } from '@game/preferencesStore';
 import { CARD_REGISTRY } from '@engine/cards';
 import { gameButtonClass } from './buttonStyles';
 
@@ -80,6 +83,9 @@ export function LearningChallengeOverlay() {
   const legalActions = useGameStore((s) => s.legalActions);
   const humanPlayer = useGameStore((s) => s.humanPlayer);
   const dispatch = useGameDispatch();
+  const recordChallengeResult = useLearningStore((s) => s.recordChallengeResult);
+  const recordAdaptiveOutcome = useLearningProfileStore((s) => s.recordOutcome);
+  const adaptiveLearningEnabled = usePreferencesStore((s) => s.adaptiveLearningEnabled);
   const phase = state?.phase;
   const [answerFeedback, setAnswerFeedback] = useState<AnswerFeedbackState | null>(null);
   const [resolvingPromptId, setResolvingPromptId] = useState<string | null>(null);
@@ -221,6 +227,8 @@ export function LearningChallengeOverlay() {
         : activeRewardPosition.y - 12,
     }
     : null;
+  const cadenceReason = phase.meta?.cadenceReason;
+  const rewardReason = phase.meta?.rewardReason;
 
   return (
     <AnimatePresence>
@@ -394,6 +402,20 @@ export function LearningChallengeOverlay() {
           <p className="learning-overlay-instruction text-white/60 text-xs sm:text-sm mt-2">
             Answer correctly to empower the highlighted creature.
           </p>
+          {(cadenceReason || rewardReason) && (
+            <div className="mt-2 rounded-lg border border-white/10 bg-slate-950/35 px-2.5 py-2">
+              {cadenceReason && (
+                <p className="text-[11px] text-white/65">
+                  Why now: {cadenceReason}
+                </p>
+              )}
+              {rewardReason && (
+                <p className="mt-1 text-[11px] text-white/65">
+                  Reward logic: {rewardReason}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className={`learning-overlay-option-grid ${optionGridSizeClass} ${optionGridClass}`}>
             {phase.prompt.options.map((option) => {
@@ -424,6 +446,11 @@ export function LearningChallengeOverlay() {
                     resolveTimerRef.current = setTimeout(() => {
                       resolveTimerRef.current = null;
                       setResolvingPromptId(null);
+                      const outcome = correct ? 'correct' : 'incorrect';
+                      recordChallengeResult(outcome);
+                      if (adaptiveLearningEnabled) {
+                        void recordAdaptiveOutcome(phase.prompt.domain, outcome);
+                      }
                       dispatch(action, humanPlayer);
                     }, ANSWER_FEEDBACK_MS);
                   }}
@@ -517,6 +544,10 @@ export function LearningChallengeOverlay() {
                 disabled={isSkipDisabled}
                 onClick={() => {
                   if (isResolvingAnswer) return;
+                  recordChallengeResult('skipped');
+                  if (adaptiveLearningEnabled) {
+                    void recordAdaptiveOutcome(phase.prompt.domain, 'skipped');
+                  }
                   dispatch(skipAction, humanPlayer);
                 }}
               >

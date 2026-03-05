@@ -35,8 +35,11 @@
 - **3 difficulty tiers** — Apprentice, Alchemist, and Archmage rulesets with scaling complexity
 - **5 AI difficulties** — from Very Easy to Very Hard, with distinct AI personalities
 - **Deck builder** — craft custom decks from the full card pool
+- **Adventure mode map** — hybrid progression with core path + optional side battles and persistent node unlocks
+- **Contextual tutorial system** — auto tips shown once per concept, plus an on-demand in-game help panel
+- **Adaptive learning challenges** — reading/math prompts with streak-aware cadence, bounded level adjustment, and explainable adaptation feedback
 - **Peer-to-peer multiplayer** — real-time 1v1 via WebRTC with 5-character room codes
-- **Persistent state** — games auto-save to IndexedDB and resume across sessions
+- **Persistent state** — games and progression auto-save to localStorage and resume across sessions
 - **PWA-ready** — installable on any device for offline play
 
 <p align="center">
@@ -61,8 +64,21 @@ pnpm dev
 | **Engine** | Pure-function reducer, seeded PRNG, deterministic replay |
 | **Network** | PeerJS (WebRTC) for peer-to-peer multiplayer |
 | **Audio** | Web Audio API — procedural SFX + ambient music |
-| **Storage** | IndexedDB for game state, deck sharing via URL codes |
+| **Storage** | localStorage-backed repositories for game state, learning profiles, and campaign progression |
 | **Testing** | Vitest, Testing Library, Cypress E2E |
+
+## Architecture
+
+- **Domain (pure)** — gameplay-independent policies for tutorial tips, challenge cadence/reward, adaptive mastery, and campaign progression
+- **Application (orchestration)** — Zustand stores and use-cases that compose domain logic into gameplay flows
+- **Adapters (UI/state)** — React components/hooks that render state and dispatch actions only
+- **Infrastructure (persistence)** — repository contracts with local implementations, designed for future server-sync adapters
+
+## Learning Science Basis
+
+The learning system is grounded in evidence-aligned progression, retrieval practice, feedback timing, and spacing guidance documented in:
+
+- [`docs/learning-mechanics-research-reference.md`](./docs/learning-mechanics-research-reference.md)
 
 ## Build & Test
 

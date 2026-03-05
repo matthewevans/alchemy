@@ -10,6 +10,7 @@ interface GameOverScreenProps {
   stats: GameStats | null;
   onPlayAgain: () => void;
   onMainMenu: () => void;
+  playAgainLabel?: string;
 }
 
 interface FallingPiece {
@@ -50,7 +51,14 @@ function useFallingPieces(count: number, colors: string[]): FallingPiece[] {
   return pieces;
 }
 
-export function GameOverScreen({ winner, humanPlayer, stats, onPlayAgain, onMainMenu }: GameOverScreenProps) {
+export function GameOverScreen({
+  winner,
+  humanPlayer,
+  stats,
+  onPlayAgain,
+  onMainMenu,
+  playAgainLabel,
+}: GameOverScreenProps) {
   const isVictory = winner === humanPlayer;
   const shouldReduceMotion = useReducedMotion();
   const pieces = useFallingPieces(
@@ -228,7 +236,7 @@ export function GameOverScreen({ winner, humanPlayer, stats, onPlayAgain, onMain
           whileTap={{ scale: 0.95 }}
           onClick={onPlayAgain}
         >
-          Play Again
+          {playAgainLabel ?? 'Play Again'}
         </motion.button>
         <motion.button
           className={gameButtonClass({

@@ -21,5 +21,20 @@ describe('learningStore', () => {
     expect(useLearningStore.getState().consumeOpportunity('g2')).toBe(2);
     expect(useLearningStore.getState().consumeOpportunity(null)).toBe(1);
   });
-});
 
+  it('tracks correct/incorrect streaks for cadence and rewards', () => {
+    const store = useLearningStore.getState();
+    store.recordChallengeResult('correct');
+    store.recordChallengeResult('correct');
+    expect(useLearningStore.getState().correctStreak).toBe(2);
+    expect(useLearningStore.getState().incorrectStreak).toBe(0);
+
+    useLearningStore.getState().recordChallengeResult('incorrect');
+    expect(useLearningStore.getState().correctStreak).toBe(0);
+    expect(useLearningStore.getState().incorrectStreak).toBe(1);
+
+    useLearningStore.getState().recordChallengeResult('skipped');
+    expect(useLearningStore.getState().correctStreak).toBe(0);
+    expect(useLearningStore.getState().incorrectStreak).toBe(0);
+  });
+});

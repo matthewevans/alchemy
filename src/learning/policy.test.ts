@@ -21,6 +21,8 @@ describe('learning policy', () => {
       action: { type: 'CONFIRM_ATTACKERS' as const },
       actingPlayer: 'player1' as const,
       humanPlayer: 'player1' as const,
+      correctStreak: 0,
+      incorrectStreak: 0,
       prefs: {
         learningChallengesEnabled: true,
         readingChallengesEnabled: true,
@@ -59,6 +61,8 @@ describe('learning policy', () => {
       action: { type: 'CONFIRM_ATTACKERS' as const },
       actingPlayer: 'player1' as const,
       humanPlayer: 'player1' as const,
+      correctStreak: 0,
+      incorrectStreak: 0,
       prefs: {
         learningChallengesEnabled: true,
         readingChallengesEnabled: true,

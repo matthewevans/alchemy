@@ -28,6 +28,8 @@ export interface DeckSelectorProps {
   onTierChange?: (tier: Tier) => void;
   difficulty?: AIDifficulty;
   onDifficultyChange?: (difficulty: AIDifficulty) => void;
+  title?: string;
+  subtitle?: string;
 }
 
 function ElementIcon({ element }: { element: Element }) {
@@ -55,7 +57,17 @@ function ElementIcon({ element }: { element: Element }) {
   );
 }
 
-export function DeckSelector({ onSelectDeck, onBack, onCloneToDeckBuilder, tier = 'apprentice', onTierChange, difficulty = 'medium', onDifficultyChange }: DeckSelectorProps) {
+export function DeckSelector({
+  onSelectDeck,
+  onBack,
+  onCloneToDeckBuilder,
+  tier = 'apprentice',
+  onTierChange,
+  difficulty = 'medium',
+  onDifficultyChange,
+  title = 'Choose Your Deck',
+  subtitle,
+}: DeckSelectorProps) {
   const shouldReduceMotion = useReducedMotion();
   const [inspectedDeck, setInspectedDeck] = useState<StarterDeck | null>(null);
   const [previewCardId, setPreviewCardId] = useState<string | null>(null);
@@ -83,9 +95,19 @@ export function DeckSelector({ onSelectDeck, onBack, onCloneToDeckBuilder, tier 
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           >
-            Choose Your Deck
+            {title}
           </motion.h1>
         </div>
+        {subtitle && (
+          <motion.p
+            className="text-center text-xs text-white/60 mb-4"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {subtitle}
+          </motion.p>
+        )}
 
         {/* Tier selector — hidden when onTierChange is not provided (e.g. multiplayer) */}
         {onTierChange && <div className="flex justify-center gap-2 mb-4">
