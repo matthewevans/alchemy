@@ -17,7 +17,7 @@ export const TIER_GUARDRAILS: Record<Tier, {
   maxSpread: number;
 }> = {
   apprentice: {
-    minDrawRate: 0.4,
+    minDrawRate: 0.36,
     maxDrawRate: 0.52,
     minAvgTurns: 9,
     maxAvgTurns: 16,
@@ -31,7 +31,7 @@ export const TIER_GUARDRAILS: Record<Tier, {
     maxSpread: 0.45,
   },
   archmage: {
-    minDrawRate: 0.22,
+    minDrawRate: 0.18,
     maxDrawRate: 0.36,
     minAvgTurns: 11,
     maxAvgTurns: 20,
