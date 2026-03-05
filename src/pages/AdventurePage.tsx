@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMultiplayerLobbyMusic } from '@hooks/useMultiplayerLobbyMusic';
-import { AudioMuteButton } from '@components/ui/AudioMuteButton';
 import { AdventureMapBoard } from '@components/ui/AdventureMapBoard';
+import { ScreenChrome } from '@components/ui/ScreenChrome';
 import { gameButtonClass } from '@components/ui/buttonStyles';
 import { CAMPAIGN_GRAPH } from '../campaign/data/zones';
 import { CAMPAIGN_BOARD_LAYOUTS } from '../campaign/data/mapLayouts';
@@ -87,6 +87,9 @@ export function AdventurePage() {
     if (!selectedNode) return;
     navigate(`/adventure/deck-select/${selectedNode.id}${mapSearch(selectedNode.id, seed)}`);
   }, [navigate, selectedNode, seed]);
+  const handleBack = useCallback(() => {
+    navigate('/');
+  }, [navigate]);
 
   const handleSelectNode = useCallback((nodeId: CampaignNodeId) => {
     if (effectiveSelectedNodeId === nodeId) return;
@@ -154,7 +157,7 @@ export function AdventurePage() {
   ]);
 
   return (
-    <div className="relative h-screen w-screen overflow-y-auto bg-slate-950 text-white px-4 py-6 pt-[calc(env(safe-area-inset-top)+1rem)] pb-[calc(env(safe-area-inset-bottom)+5rem)]">
+    <div className="relative h-screen w-screen overflow-y-auto bg-slate-950 text-white px-4 py-6 pt-[calc(env(safe-area-inset-top)+5.25rem)] pb-[calc(env(safe-area-inset-bottom)+5rem)]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-32 left-[-4rem] h-72 w-72 rounded-full bg-cyan-500/8 blur-3xl" />
         <div className="absolute top-[12rem] right-[-6rem] h-96 w-96 rounded-full bg-amber-500/8 blur-3xl" />
@@ -173,12 +176,6 @@ export function AdventurePage() {
               <span className="rounded-full border border-white/20 bg-black/35 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/80">
                 Progress {completedNodeCount}/{totalNodeCount}
               </span>
-              <button
-                className={gameButtonClass({ tone: 'neutral', size: 'sm', className: 'font-semibold' })}
-                onClick={() => navigate('/')}
-              >
-                Main Menu
-              </button>
               <button
                 className={gameButtonClass({
                   tone: 'red',
@@ -259,9 +256,7 @@ export function AdventurePage() {
           </aside>
         </div>
       </div>
-      <div className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-30">
-        <AudioMuteButton className="w-14 h-14 p-0 rounded-full flex items-center justify-center text-white/40 hover:text-white/70" />
-      </div>
+      <ScreenChrome onBack={handleBack} />
     </div>
   );
 }

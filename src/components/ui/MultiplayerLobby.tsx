@@ -7,6 +7,7 @@ import { hostRoom, joinRoom, parseRoomCode } from '@network/connection';
 import { ELEMENTS } from '@engine/elements';
 import { DeckSelector } from './DeckSelector';
 import { gameButtonClass } from './buttonStyles';
+import { ScreenChrome } from './ScreenChrome';
 
 type LobbyStep =
   | { type: 'choose_role' }
@@ -230,6 +231,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-950 text-white overflow-hidden relative pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <ScreenChrome onBack={backHandler ?? undefined} />
       {/* Floating element icons */}
       {floatingIcons.map((icon) => (
         <motion.img
@@ -256,24 +258,6 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
           }}
         />
       ))}
-
-      {/* Top-left Back button */}
-      {backHandler && (
-        <div className="absolute top-4 left-4 z-10 pt-[env(safe-area-inset-top)]">
-          <motion.button
-            className={gameButtonClass({
-              tone: 'neutral',
-              size: 'sm',
-              className: 'px-4 py-2 font-medium',
-            })}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={backHandler}
-          >
-            Back
-          </motion.button>
-        </div>
-      )}
 
       {/* Centered content */}
       <div className="flex-1 flex flex-col items-center justify-center px-4">

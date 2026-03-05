@@ -12,7 +12,7 @@ import { DIFFICULTY_ORDER, DIFFICULTY_LABELS } from '@engine/aiConfig';
 import { getElementColor, getElementIconPath } from '@components/card/cardUtils';
 import { CardPreview } from '@components/card/CardPreview';
 import { gameButtonClass } from './buttonStyles';
-import { AudioMuteButton } from './AudioMuteButton';
+import { ScreenChrome } from './ScreenChrome';
 
 const TIER_LABELS: Record<Tier, { label: string; description: string }> = {
   apprentice: { label: 'Apprentice', description: 'Simple rules, small decks' },
@@ -74,21 +74,10 @@ export function DeckSelector({
 
   return (
     <div className="h-screen w-screen bg-slate-950 overflow-y-auto pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <ScreenChrome onBack={onBack} />
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="relative flex items-center justify-center mb-6">
-          <motion.button
-            className={gameButtonClass({
-              tone: 'neutral',
-              size: 'sm',
-              className: 'absolute left-0 px-4 py-2 font-medium',
-            })}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onBack}
-          >
-            Back
-          </motion.button>
+        <div className="flex items-center justify-center mb-6">
           <motion.h1
             className="text-2xl font-bold text-white"
             initial={{ opacity: 0, y: -10 }}
@@ -238,11 +227,6 @@ export function DeckSelector({
           <CardPreview cardId={previewCardId} onDismiss={() => setPreviewCardId(null)} />
         )}
       </AnimatePresence>
-
-      {/* Bottom-right quick audio toggle */}
-      <div className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-30">
-        <AudioMuteButton className="w-14 h-14 p-0 rounded-full flex items-center justify-center text-white/40 hover:text-white/70" />
-      </div>
     </div>
   );
 }
