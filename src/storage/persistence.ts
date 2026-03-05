@@ -39,21 +39,33 @@ export interface GameHistoryEntry {
 // ─── Storage Keys ───
 
 const GAME_KEY_PREFIX = 'alchemy:game:';
-const ACTIVE_GAME_KEY = 'alchemy:activeGameId';
+const ACTIVE_GAME_KEY_PREFIX = 'alchemy:activeGameId:';
 const HISTORY_KEY = 'alchemy:gameHistory';
+
+export type ActiveGameSlot = 'quickplay' | 'adventure';
+
+function activeGameKey(slot: ActiveGameSlot): string {
+  return `${ACTIVE_GAME_KEY_PREFIX}${slot}`;
+}
 
 // ─── Active Game ID ───
 
-export function saveActiveGameId(id: string): void {
-  localStorage.setItem(ACTIVE_GAME_KEY, id);
+export function saveActiveGameId(id: string, slot: ActiveGameSlot = 'quickplay'): void {
+  localStorage.setItem(activeGameKey(slot), id);
 }
 
-export function loadActiveGameId(): string | null {
-  return localStorage.getItem(ACTIVE_GAME_KEY);
+export function loadActiveGameId(slot: ActiveGameSlot = 'quickplay'): string | null {
+  return localStorage.getItem(activeGameKey(slot));
 }
 
-export function clearActiveGameId(): void {
-  localStorage.removeItem(ACTIVE_GAME_KEY);
+export function clearActiveGameId(slot?: ActiveGameSlot): void {
+  if (slot) {
+    localStorage.removeItem(activeGameKey(slot));
+    return;
+  }
+
+  localStorage.removeItem(activeGameKey('quickplay'));
+  localStorage.removeItem(activeGameKey('adventure'));
 }
 
 // ─── Game Persistence ───
@@ -86,7 +98,7 @@ export function saveGame(
 }
 
 export function loadGame(gameId?: string): { gameState: GameState; rngState: number; persisted: PersistedGame } | null {
-  const id = gameId ?? loadActiveGameId();
+  const id = gameId ?? loadActiveGameId('quickplay') ?? loadActiveGameId('adventure');
   if (!id) return null;
 
   const raw = localStorage.getItem(GAME_KEY_PREFIX + id);
@@ -111,9 +123,16 @@ export function loadGame(gameId?: string): { gameState: GameState; rngState: num
 }
 
 export function clearSavedGame(gameId?: string): void {
-  const id = gameId ?? loadActiveGameId();
+  const id = gameId ?? loadActiveGameId('quickplay') ?? loadActiveGameId('adventure');
   if (id) {
     localStorage.removeItem(GAME_KEY_PREFIX + id);
+    if (loadActiveGameId('quickplay') === id) {
+      clearActiveGameId('quickplay');
+    }
+    if (loadActiveGameId('adventure') === id) {
+      clearActiveGameId('adventure');
+    }
+    return;
   }
   clearActiveGameId();
 }

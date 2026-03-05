@@ -233,7 +233,7 @@ export function LearningChallengeOverlay() {
   return (
     <AnimatePresence>
       <motion.div
-        className="learning-overlay-root fixed inset-0 z-[60] flex items-center justify-center bg-black/65 backdrop-blur-sm p-2 sm:items-start sm:justify-end sm:bg-transparent sm:backdrop-blur-none sm:p-0 sm:pointer-events-none"
+        className="learning-overlay-root fixed inset-0 z-[48] flex items-center justify-center bg-black/65 backdrop-blur-sm p-2 sm:items-start sm:justify-end sm:bg-transparent sm:backdrop-blur-none sm:p-0 sm:pointer-events-none"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

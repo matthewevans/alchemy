@@ -11,7 +11,8 @@ interface TitleScreenProps {
   onAdventure: () => void;
   onMultiplayer: () => void;
   onDeckBuilder: () => void;
-  onResume?: () => void;
+  onResumeQuickplay?: () => void;
+  onResumeAdventure?: () => void;
 }
 
 const SPARKLE_COLORS = [
@@ -73,12 +74,22 @@ function AdventureIcon() {
   );
 }
 
-export function TitleScreen({ onPlay, onAdventure, onMultiplayer, onDeckBuilder, onResume }: TitleScreenProps) {
+export function TitleScreen({
+  onPlay,
+  onAdventure,
+  onMultiplayer,
+  onDeckBuilder,
+  onResumeQuickplay,
+  onResumeAdventure,
+}: TitleScreenProps) {
   const [showSettings, setShowSettings] = useState(false);
   const shouldReduceMotion = useReducedMotion();
   const particles = useSparkles(shouldReduceMotion ? 0 : 30);
   const logoWordmarkSrc = `${import.meta.env.BASE_URL}logo_wordmark.webp`;
   const settingsDialogRef = useDialogA11y({ open: showSettings, onClose: () => setShowSettings(false) });
+  const resumeCount = (onResumeAdventure ? 1 : 0) + (onResumeQuickplay ? 1 : 0);
+  const hasResume = resumeCount > 0;
+  const baseDelay = 0.3 + resumeCount * 0.1;
 
   return (
     <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 overflow-hidden relative pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
@@ -144,39 +155,58 @@ export function TitleScreen({ onPlay, onAdventure, onMultiplayer, onDeckBuilder,
 
       {/* Buttons — individually staggered */}
       <div className="title-buttons flex flex-col items-center gap-4">
-        {onResume && (
+        {onResumeAdventure && (
           <motion.button
             className={gameButtonClass({
               tone: 'blue',
               size: 'lg',
-              className: 'title-button w-64 text-2xl font-bold',
+              className: 'title-button w-64 text-xl font-bold flex items-center justify-center gap-2',
             })}
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             whileHover={shouldReduceMotion ? undefined : { scale: 1.06 }}
             whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
-            onClick={onResume}
+            onClick={onResumeAdventure}
           >
-            Resume Game
+            <AdventureIcon />
+            <span>Continue Adventure</span>
+          </motion.button>
+        )}
+        {onResumeQuickplay && (
+          <motion.button
+            className={gameButtonClass({
+              tone: 'neutral',
+              size: 'lg',
+              className: 'title-button w-64 text-xl font-bold flex items-center justify-center gap-2',
+            })}
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.5, delay: onResumeAdventure ? 0.4 : 0.3, ease: [0.22, 1, 0.36, 1] }}
+            whileHover={shouldReduceMotion ? undefined : { scale: 1.06 }}
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
+            onClick={onResumeQuickplay}
+          >
+            <SinglePlayerIcon />
+            <span>Resume Game</span>
           </motion.button>
         )}
         <motion.button
           data-testid="play-btn"
           className={gameButtonClass({
             tone: 'emerald',
-            size: onResume ? 'md' : 'lg',
-            className: `title-button w-64 ${onResume ? 'text-lg' : 'text-2xl'} font-bold flex items-center justify-center gap-2`,
+            size: hasResume ? 'md' : 'lg',
+            className: `title-button w-64 ${hasResume ? 'text-lg' : 'text-2xl'} font-bold flex items-center justify-center gap-2`,
           })}
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.5, delay: onResume ? 0.4 : 0.3, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.5, delay: baseDelay, ease: [0.22, 1, 0.36, 1] }}
           whileHover={shouldReduceMotion ? undefined : { scale: 1.06 }}
           whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
           onClick={onPlay}
         >
           <SinglePlayerIcon />
-          <span>{onResume ? 'New Game' : 'Play'}</span>
+          <span>{hasResume ? 'New Game' : 'Play'}</span>
         </motion.button>
         <motion.button
           className={gameButtonClass({
@@ -186,7 +216,7 @@ export function TitleScreen({ onPlay, onAdventure, onMultiplayer, onDeckBuilder,
           })}
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.5, delay: onResume ? 0.5 : 0.4, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.5, delay: baseDelay + 0.1, ease: [0.22, 1, 0.36, 1] }}
           whileHover={shouldReduceMotion ? undefined : { scale: 1.04 }}
           whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
           onClick={onAdventure}
@@ -202,7 +232,7 @@ export function TitleScreen({ onPlay, onAdventure, onMultiplayer, onDeckBuilder,
           })}
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.5, delay: onResume ? 0.6 : 0.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.5, delay: baseDelay + 0.2, ease: [0.22, 1, 0.36, 1] }}
           whileHover={shouldReduceMotion ? undefined : { scale: 1.04 }}
           whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
           onClick={onMultiplayer}
@@ -218,7 +248,7 @@ export function TitleScreen({ onPlay, onAdventure, onMultiplayer, onDeckBuilder,
           })}
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.5, delay: onResume ? 0.7 : 0.6, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.5, delay: baseDelay + 0.3, ease: [0.22, 1, 0.36, 1] }}
           whileHover={shouldReduceMotion ? undefined : { scale: 1.04 }}
           whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
           onClick={onDeckBuilder}

@@ -51,6 +51,12 @@ interface PendingAutoSave {
   sessionMeta?: GameSessionMeta;
 }
 
+function activeGameSlotForSession(sessionMeta?: GameSessionMeta): 'quickplay' | 'adventure' | null {
+  if (sessionMeta?.mode === 'adventure') return 'adventure';
+  if (sessionMeta?.mode === 'multiplayer') return null;
+  return 'quickplay';
+}
+
 const AUTOSAVE_DEBOUNCE_MS = 250;
 let pendingAutoSave: PendingAutoSave | null = null;
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -122,7 +128,10 @@ export const useGameStore = create<GameStore>()(
         legalActions: legal,
       });
 
-      saveActiveGameId(gameId);
+      const activeSlot = activeGameSlotForSession(sessionMeta);
+      if (activeSlot) {
+        saveActiveGameId(gameId, activeSlot);
+      }
       cancelAutoSave();
       saveGame(gameId, gameState, rng.getState(), humanPlayer, p1Ids, p2Ids, aiConfig, sessionMeta);
       return gameId;

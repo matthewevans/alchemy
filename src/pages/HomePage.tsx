@@ -70,24 +70,32 @@ export function HomePage() {
     void initializeLearningProfile('local_default', { readingLevel, mathLevel });
   }, [initializeLearningProfile, readingLevel, mathLevel]);
 
-  const savedGameId = loadActiveGameId();
-  const hasSavedGame = savedGameId ? loadGame(savedGameId) !== null : false;
+  const quickplaySavedGameId = loadActiveGameId('quickplay');
+  const adventureSavedGameId = loadActiveGameId('adventure');
+  const quickplaySavedGame = quickplaySavedGameId ? loadGame(quickplaySavedGameId) : null;
+  const adventureSavedGame = adventureSavedGameId ? loadGame(adventureSavedGameId) : null;
+  const hasQuickplaySavedGame = quickplaySavedGame !== null;
+  const hasAdventureSavedGame = adventureSavedGame !== null;
 
-  const handleResume = useCallback(() => {
-    if (!savedGameId) return;
-    const saved = loadGame(savedGameId);
-    if (!saved) return;
-    restoreGame(saved.gameState, saved.rngState, saved.persisted);
-    navigate(`/game/${savedGameId}`);
-  }, [savedGameId, navigate, restoreGame]);
+  const handleResumeQuickplay = useCallback(() => {
+    if (!quickplaySavedGame) return;
+    restoreGame(quickplaySavedGame.gameState, quickplaySavedGame.rngState, quickplaySavedGame.persisted);
+    navigate(`/game/${quickplaySavedGame.persisted.gameId}`);
+  }, [navigate, quickplaySavedGame, restoreGame]);
+
+  const handleResumeAdventure = useCallback(() => {
+    if (!adventureSavedGame) return;
+    restoreGame(adventureSavedGame.gameState, adventureSavedGame.rngState, adventureSavedGame.persisted);
+    navigate(`/game/${adventureSavedGame.persisted.gameId}`);
+  }, [adventureSavedGame, navigate, restoreGame]);
 
   const handlePlay = useCallback(() => {
-    // Clear any suspended game before starting a new one
-    if (savedGameId) {
-      clearSavedGame(savedGameId);
+    // Replace only the one-off quickplay slot; keep adventure resumes separate.
+    if (quickplaySavedGameId) {
+      clearSavedGame(quickplaySavedGameId);
     }
     setSubScreen('deck_select');
-  }, [savedGameId]);
+  }, [quickplaySavedGameId]);
 
   const handleMultiplayer = useCallback(() => {
     setSubScreen('multiplayer_lobby');
@@ -170,7 +178,8 @@ export function HomePage() {
           onAdventure={handleAdventure}
           onMultiplayer={handleMultiplayer}
           onDeckBuilder={handleDeckBuilder}
-          onResume={hasSavedGame ? handleResume : undefined}
+          onResumeQuickplay={hasQuickplaySavedGame ? handleResumeQuickplay : undefined}
+          onResumeAdventure={hasAdventureSavedGame ? handleResumeAdventure : undefined}
         />
       );
       break;
