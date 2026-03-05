@@ -302,7 +302,7 @@ export function TitleScreen({
               aria-modal="true"
               aria-label="Settings"
               tabIndex={-1}
-              className="settings-dialog bg-slate-800/95 rounded-2xl p-5 sm:p-7 flex flex-col items-stretch gap-4 w-[95vw] max-w-[720px] max-h-[88dvh] overflow-hidden shadow-2xl border border-slate-600/40"
+              className="settings-dialog bg-slate-800/95 rounded-2xl p-5 sm:p-7 flex flex-col items-stretch gap-4 w-[95vw] max-w-[720px] max-h-[88dvh] min-h-0 overflow-hidden shadow-2xl border border-slate-600/40"
               style={{
                 boxShadow: '0 0 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(0, 0, 0, 0.3)',
               }}
@@ -313,7 +313,9 @@ export function TitleScreen({
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-xl font-bold text-white text-center">Settings</h2>
-              <SettingsPanel onClose={() => setShowSettings(false)} />
+              <div className="flex flex-1 min-h-0 flex-col">
+                <SettingsPanel onClose={() => setShowSettings(false)} />
+              </div>
             </motion.div>
           </motion.div>
         )}

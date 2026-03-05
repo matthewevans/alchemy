@@ -63,7 +63,7 @@ export function SettingsSlider({
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         aria-describedby={descriptionId}
-        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-slate-600/60"
+        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-slate-600/60 touch-pan-y"
         style={{ accentColor }}
       />
     </div>

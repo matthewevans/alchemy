@@ -30,8 +30,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const ActiveContent = activeTabDef.content;
 
   return (
-    <div className="flex flex-col gap-4 w-full h-full min-h-0">
-      <div className="flex flex-col md:flex-row gap-3 min-h-0">
+    <div className="flex flex-1 flex-col gap-4 w-full min-h-0 overflow-hidden">
+      <div className="flex flex-1 flex-col md:flex-row gap-3 min-h-0 overflow-hidden">
         <nav
           role="tablist"
           className="flex md:flex-col gap-1 shrink-0 bg-slate-900/40 border border-slate-600/30 rounded-xl p-1 overflow-x-auto md:overflow-visible md:min-w-[150px]"
@@ -55,13 +55,13 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
         <div
           role="tabpanel"
-          className="flex-1 min-w-0 min-h-0 rounded-xl border border-slate-600/30 bg-slate-900/25 p-3 sm:p-4 flex flex-col"
+          className="flex-1 min-w-0 min-h-0 rounded-xl border border-slate-600/30 bg-slate-900/25 p-3 sm:p-4 flex flex-col overflow-hidden"
         >
           <div className="mb-3 shrink-0">
             <h3 className="text-sm font-semibold text-white/90">{activeTabDef.label}</h3>
             <p className="text-xs text-white/50 mt-0.5">{activeTabDef.description}</p>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1 pb-2">
             <div className="flex flex-col gap-2">
               <ActiveContent />
             </div>

@@ -72,10 +72,16 @@ function randomItem<T>(arr: T[]): T | null {
 const CURATED_POOL_BY_TYPE: Partial<Record<EffectSoundType, readonly string[]>> = {
   combat_strike: [
     'public/audio/sfx/damage/sfx_damage_creature_001.m4a',
+    'public/audio/sfx/damage/sfx_damage_creature_002.m4a',
+    'public/audio/sfx/damage/sfx_damage_creature_003.m4a',
+    'public/audio/sfx/damage/sfx_damage_creature_004.m4a',
   ],
   block_link: [],
   damage: [
     'public/audio/sfx/damage/sfx_damage_creature_001.m4a',
+    'public/audio/sfx/damage/sfx_damage_creature_002.m4a',
+    'public/audio/sfx/damage/sfx_damage_creature_003.m4a',
+    'public/audio/sfx/damage/sfx_damage_creature_004.m4a',
   ],
   player_damage: [
     'public/audio/sfx/damage/sfx_damage_hero_001.m4a',

@@ -61,7 +61,7 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
         tabIndex={-1}
         className={`bg-slate-800/95 rounded-2xl p-5 sm:p-8 flex flex-col gap-4 shadow-2xl border border-slate-600/40 ${
           view === 'settings'
-            ? 'settings-dialog items-stretch w-[95vw] max-w-[720px] max-h-[88dvh] overflow-hidden'
+            ? 'settings-dialog items-stretch w-[95vw] max-w-[720px] max-h-[88dvh] min-h-0 overflow-hidden'
             : 'items-center min-w-[360px] max-w-[90vw]'
         }`}
         style={{
@@ -85,14 +85,16 @@ export function GameMenu({ onResume, onConcede, onMainMenu }: GameMenuProps) {
           {view === 'settings' ? (
             <motion.div
               key="settings"
-              className="w-full flex flex-col items-stretch gap-4"
+              className="w-full flex flex-1 min-h-0 flex-col items-stretch gap-4"
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 40 }}
               transition={{ duration: 0.15 }}
             >
               <h2 className="text-xl font-bold text-white text-center">Settings</h2>
-              <SettingsPanel onClose={() => setView('menu')} />
+              <div className="flex flex-1 min-h-0 flex-col">
+                <SettingsPanel onClose={() => setView('menu')} />
+              </div>
             </motion.div>
           ) : (
             <motion.div
