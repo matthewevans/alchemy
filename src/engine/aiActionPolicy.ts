@@ -6,6 +6,7 @@ import {
   canKillInCombat,
   estimateGuaranteedUnblockedDamage,
   getCombatDamage,
+  resolveAttackerPermanents,
 } from './aiCombat';
 
 function isLowValueSuicideAttack(
@@ -40,11 +41,7 @@ function isLowValueSuicideAttack(
     return false;
   }
 
-  const currentAttackers = state.phase.tentativeAttackers
-    .map((permanentId) => state.players[actingPlayer].board.find(
-      (slot): slot is Permanent => slot !== null && slot.permanentId === permanentId,
-    ))
-    .filter((slot): slot is Permanent => slot !== undefined);
+  const currentAttackers = resolveAttackerPermanents(state, state.phase.tentativeAttackers, actingPlayer);
   const nextAttackers = currentAttackers.some((perm) => perm.permanentId === attacker.permanentId)
     ? currentAttackers
     : [...currentAttackers, attacker];

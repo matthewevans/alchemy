@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMultiplayerLobbyMusic } from '@hooks/useMultiplayerLobbyMusic';
 import { AdventureMapBoard } from '@components/ui/AdventureMapBoard';
@@ -124,37 +124,26 @@ export function AdventurePage() {
     }
   }, [campaignProgress, effectiveSelectedNodeId, getNodeStatus, searchParams, setActiveNode, setSearchParams]);
 
+  const [confirmingReset, setConfirmingReset] = useState(false);
+
   const handleResetProgress = useCallback(() => {
     if (!hasProgressToReset) return;
+    setConfirmingReset(true);
+  }, [hasProgressToReset]);
 
-    const summary = [
-      'Reset Adventure progress?',
-      '',
-      `Completed battles: ${completedNodeCount}`,
-      `Unlocked battles beyond start: ${unlockedBeyondStartCount}`,
-      `Active battle: ${campaignProgress.activeNodeId ?? 'none'} → ${CAMPAIGN_GRAPH.startNodeId}`,
-      '',
-      'This will clear your local Adventure campaign progression for this profile.',
-      'This cannot be undone.',
-    ].join('\n');
-
-    if (!window.confirm(summary)) return;
-
+  const handleConfirmReset = useCallback(() => {
+    setConfirmingReset(false);
     void resetCampaign();
     const params = new URLSearchParams();
     params.set('zone', CAMPAIGN_GRAPH.zones[0]?.id ?? 'ember_trail');
     params.set('node', CAMPAIGN_GRAPH.startNodeId);
     if (seed) params.set('seed', seed);
     setSearchParams(params, { replace: true });
-  }, [
-    campaignProgress.activeNodeId,
-    completedNodeCount,
-    hasProgressToReset,
-    resetCampaign,
-    seed,
-    setSearchParams,
-    unlockedBeyondStartCount,
-  ]);
+  }, [resetCampaign, seed, setSearchParams]);
+
+  const handleCancelReset = useCallback(() => {
+    setConfirmingReset(false);
+  }, []);
 
   return (
     <div className="relative h-screen w-screen overflow-y-auto bg-slate-950 text-white px-4 py-6 pt-[calc(env(safe-area-inset-top)+5.25rem)] pb-[calc(env(safe-area-inset-bottom)+5rem)]">
@@ -176,18 +165,36 @@ export function AdventurePage() {
               <span className="rounded-full border border-white/20 bg-black/35 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/80">
                 Progress {completedNodeCount}/{totalNodeCount}
               </span>
-              <button
-                className={gameButtonClass({
-                  tone: 'red',
-                  size: 'sm',
-                  className: 'font-semibold',
-                  disabled: !hasProgressToReset,
-                })}
-                onClick={handleResetProgress}
-                disabled={!hasProgressToReset}
-              >
-                Reset Progress
-              </button>
+              {confirmingReset ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-red-300">Reset progress?</span>
+                  <button
+                    className={gameButtonClass({ tone: 'red', size: 'sm', className: 'font-semibold' })}
+                    onClick={handleConfirmReset}
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    className={gameButtonClass({ tone: 'slate', size: 'sm', className: 'font-semibold' })}
+                    onClick={handleCancelReset}
+                  >
+                    Cancel
+                  </button>
+                </span>
+              ) : (
+                <button
+                  className={gameButtonClass({
+                    tone: 'red',
+                    size: 'sm',
+                    className: 'font-semibold',
+                    disabled: !hasProgressToReset,
+                  })}
+                  onClick={handleResetProgress}
+                  disabled={!hasProgressToReset}
+                >
+                  Reset Progress
+                </button>
+              )}
             </div>
           </div>
         </header>

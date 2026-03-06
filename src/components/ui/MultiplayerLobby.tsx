@@ -139,6 +139,10 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
         setStep({ type: 'error', message: err instanceof Error ? err.message : `Connection failed: ${err}` });
       }
     })();
+
+    return () => {
+      connectAttemptRef.current += 1;
+    };
   }, [step.type, hostDeckIds, onStartGame]);
 
   // ─── Join Flow ───

@@ -6,7 +6,7 @@ import { evaluateState, softmaxSelect } from './aiEval';
 import type { AIConfig, AISearchConfig } from './aiConfig';
 import { restoreRNG } from './prng';
 import { filterAIViableActions } from './aiActionPolicy';
-import { isSeededRNG } from './aiCombat';
+import { isSeededRNG } from './prng';
 
 interface SearchState {
   state: GameState;

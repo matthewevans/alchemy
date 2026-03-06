@@ -58,13 +58,17 @@ function runFullGame(
 
 describe('AI Difficulty System', () => {
   it('all difficulty levels complete a game without errors', () => {
+    let stallCount = 0;
     for (const difficulty of DIFFICULTY_ORDER) {
       const result = runFullGame(42, difficulty, 'medium');
       expect(result.turns, `${difficulty} game should progress`).toBeGreaterThan(0);
       // Defensive mirrors can hit the step cap with a draw; this still validates
       // that every difficulty executes legal actions without stalling or crashing.
       expect(result.turns, `${difficulty} game should not overflow step cap`).toBeLessThanOrEqual(MAX_STEPS);
+      if (result.winner === null) stallCount++;
     }
+    // At most one difficulty level should stall (hit step limit without a winner)
+    expect(stallCount, 'too many difficulty levels hit the step limit').toBeLessThanOrEqual(1);
   });
 
   it('very_hard wins more than very_easy over multiple games', () => {

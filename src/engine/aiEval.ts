@@ -16,7 +16,7 @@ function creatureValue(creature: Permanent): number {
   for (const keyword of keywords) {
     switch (keyword) {
       case 'deathtouch':
-        value += 3 + Math.min(attack, 1) * 2;
+        value += 3 + (attack > 0 ? 2 : 0);
         break;
       case 'fury':
         value += attack;

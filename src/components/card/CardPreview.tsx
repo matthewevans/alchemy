@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useDialogA11y } from '@hooks/useDialogA11y';
 import { CARD_REGISTRY } from '@engine/cards';
@@ -24,6 +24,7 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
   const easyReadMode = usePreferencesStore((s) => s.easyReadMode);
   const dialogRef = useDialogA11y({ open: true, onClose: onDismiss });
   const costPresentation = getCardCostPresentation(cardId, phase);
+  const previewCardInstance = useMemo(() => ({ instanceId: '__preview__', cardId }), [cardId]);
 
   useEffect(() => {
     if (narrationEnabled) narrateCard(cardId, easyReadMode);
@@ -87,7 +88,7 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
         >
           <div style={{ transform: `scale(${PREVIEW_SCALE})`, transformOrigin: 'center center' }}>
             <HandCard
-              cardInstance={{ instanceId: '__preview__', cardId }}
+              cardInstance={previewCardInstance}
               isPlayable={false}
               isSelected={false}
               costOverride={costPresentation.costOverride}

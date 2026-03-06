@@ -163,7 +163,7 @@ describe('GameBoard', () => {
 
     expect(screen.getByText('Before Blockers')).toBeInTheDocument();
     expect(screen.getByText('Fireball')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'No Response' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resolve Top Spell' })).toBeInTheDocument();
   });
 
   it('uses contextual priority copy when passing moves to blockers', () => {

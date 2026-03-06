@@ -1,4 +1,4 @@
-import type { CardDefinition, CreatureType, Element, Tier } from './types';
+import type { CardDefinition, CreatureType, Element, GameState, Keyword, Permanent, Tier } from './types';
 import { EFFECT_REGISTRY } from './effects';
 
 export const ALL_CARDS: CardDefinition[] = [
@@ -171,4 +171,16 @@ export function getCardsByTier(tier: Tier): CardDefinition[] {
 
 export function getCardsByCreatureType(creatureType: CreatureType): CardDefinition[] {
   return ALL_CARDS.filter((card) => card.creatureType === creatureType);
+}
+
+export function hasKeyword(permanent: Permanent, keyword: Keyword): boolean {
+  return CARD_REGISTRY[permanent.cardId].keywords.includes(keyword);
+}
+
+export function getPlayCost(state: GameState, cardId: string): number {
+  const cardDef = CARD_REGISTRY[cardId];
+  if (state.phase.type === 'combat_priority') {
+    return cardDef.cost + (cardDef.instantSurcharge ?? 0);
+  }
+  return cardDef.cost;
 }

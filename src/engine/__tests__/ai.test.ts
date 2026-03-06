@@ -13,28 +13,10 @@ import {
 import type { Phase } from '../types';
 
 const HEURISTIC_CONFIG: AIConfig = {
-  difficulty: 'easy',
-  personality: 'balanced',
-  policy: 'heuristic',
+  ...createAIConfig('easy', createRNG(0)),
   temperature: 0.01,
   playLookahead: false,
   combatLookahead: false,
-  search: {
-    enabled: false,
-    maxDepth: 1,
-    maxNodes: 4,
-    maxBranching: 2,
-    rolloutDepth: 0,
-    useTransposition: false,
-  },
-  weights: {
-    health: 1.0,
-    aggression: 1.0,
-    boardPresence: 1.0,
-    boardPower: 1.0,
-    boardDurability: 1.0,
-    handSize: 0.8,
-  },
 };
 
 beforeEach(() => {
@@ -388,28 +370,10 @@ describe('declare attackers', () => {
     });
 
     const heuristicCombatLookahead: AIConfig = {
-      difficulty: 'hard',
-      personality: 'balanced',
+      ...createAIConfig('hard', createRNG(0)),
       policy: 'heuristic',
       temperature: 0.05,
-      playLookahead: true,
-      combatLookahead: true,
-      search: {
-        enabled: false,
-        maxDepth: 1,
-        maxNodes: 8,
-        maxBranching: 4,
-        rolloutDepth: 0,
-        useTransposition: false,
-      },
-      weights: {
-        health: 1.0,
-        aggression: 1.0,
-        boardPresence: 1.0,
-        boardPower: 1.0,
-        boardDurability: 1.0,
-        handSize: 0.8,
-      },
+      search: { ...createAIConfig('hard', createRNG(0)).search, enabled: false },
     };
 
     const action = chooseAction(state, 'player2', createRNG(99), heuristicCombatLookahead);
@@ -444,28 +408,10 @@ describe('declare attackers', () => {
     });
 
     const mediumSearchConfig: AIConfig = {
-      difficulty: 'medium',
-      personality: 'balanced',
-      policy: 'tree_search',
+      ...createAIConfig('medium', createRNG(0)),
       temperature: 0.05,
-      playLookahead: true,
       combatLookahead: false,
-      search: {
-        enabled: true,
-        maxDepth: 2,
-        maxNodes: 16,
-        maxBranching: 4,
-        rolloutDepth: 2,
-        useTransposition: true,
-      },
-      weights: {
-        health: 1.0,
-        aggression: 1.0,
-        boardPresence: 1.0,
-        boardPower: 1.0,
-        boardDurability: 1.0,
-        handSize: 0.8,
-      },
+      search: { ...createAIConfig('medium', createRNG(0)).search, rolloutDepth: 2 },
     };
 
     const action = chooseAction(state, 'player2', createRNG(123), mediumSearchConfig);
@@ -776,28 +722,8 @@ describe('order blockers', () => {
     });
 
     const treeSearchConfig: AIConfig = {
-      difficulty: 'hard',
-      personality: 'balanced',
-      policy: 'tree_search',
+      ...createAIConfig('hard', createRNG(0)),
       temperature: 0.01,
-      playLookahead: true,
-      combatLookahead: true,
-      search: {
-        enabled: true,
-        maxDepth: 2,
-        maxNodes: 24,
-        maxBranching: 4,
-        rolloutDepth: 2,
-        useTransposition: true,
-      },
-      weights: {
-        health: 1.0,
-        aggression: 1.0,
-        boardPresence: 1.0,
-        boardPower: 1.0,
-        boardDurability: 1.0,
-        handSize: 0.8,
-      },
     };
 
     const firstAction = chooseAction(state, 'player2', createRNG(4242), treeSearchConfig);
@@ -868,28 +794,12 @@ describe('combat priority', () => {
   it('is deterministic in combat priority with seeded RNG', () => {
     const myCreature = makePermanent('fire_lava_hound', 'player2', { attack: 2, health: 3 });
     const config: AIConfig = {
-      difficulty: 'medium',
-      personality: 'balanced',
+      ...createAIConfig('medium', createRNG(0)),
       policy: 'heuristic',
       temperature: 1.1,
       playLookahead: false,
       combatLookahead: false,
-      search: {
-        enabled: false,
-        maxDepth: 1,
-        maxNodes: 8,
-        maxBranching: 4,
-        rolloutDepth: 0,
-        useTransposition: false,
-      },
-      weights: {
-        health: 1.0,
-        aggression: 1.0,
-        boardPresence: 1.0,
-        boardPower: 1.0,
-        boardDurability: 1.0,
-        handSize: 0.8,
-      },
+      search: { ...createAIConfig('medium', createRNG(0)).search, enabled: false },
     };
 
     const state = createTestGameState({
@@ -949,28 +859,9 @@ describe('discard phase', () => {
 
 describe('tree search policy', () => {
   const treeSearchConfig: AIConfig = {
-    difficulty: 'very_hard',
-    personality: 'balanced',
-    policy: 'tree_search',
+    ...createAIConfig('very_hard', createRNG(0)),
     temperature: 0.15,
-    playLookahead: true,
-    combatLookahead: true,
-    search: {
-      enabled: true,
-      maxDepth: 2,
-      maxNodes: 64,
-      maxBranching: 6,
-      rolloutDepth: 1,
-      useTransposition: true,
-    },
-    weights: {
-      health: 1.0,
-      aggression: 1.0,
-      boardPresence: 1.0,
-      boardPower: 1.0,
-      boardDurability: 1.0,
-      handSize: 0.8,
-    },
+    search: { ...createAIConfig('very_hard', createRNG(0)).search, maxNodes: 64, maxBranching: 6, rolloutDepth: 1 },
   };
 
   it('returns a legal non-concede action when tree search is enabled', () => {

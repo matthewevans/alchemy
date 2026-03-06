@@ -1,15 +1,8 @@
-import type { Keyword, Permanent, RNG } from './types';
+import type { GameState, Keyword, Permanent, PlayerId } from './types';
 import { getCurrentHealth, getEffectiveAttack } from './types';
-import { CARD_REGISTRY } from './cards';
-import type { SeededRNG } from './prng';
+import { CARD_REGISTRY, hasKeyword } from './cards';
 
-export function isSeededRNG(rng: RNG): rng is SeededRNG {
-  return typeof (rng as SeededRNG).getState === 'function';
-}
-
-export function hasKeyword(permanent: Permanent, keyword: Keyword): boolean {
-  return CARD_REGISTRY[permanent.cardId].keywords.includes(keyword);
-}
+export { hasKeyword };
 
 export function getKeywords(permanent: Permanent): Keyword[] {
   return CARD_REGISTRY[permanent.cardId].keywords;
@@ -77,6 +70,15 @@ export function evaluateSingleBlockOutcome(attacker: Permanent, blocker: Permane
     return 80 + getEffectiveAttack(blocker) * 5;
   }
   return -5;
+}
+
+export function resolveAttackerPermanents(state: GameState, attackerIds: string[], playerId: PlayerId): Permanent[] {
+  const board = state.players[playerId].board;
+  return attackerIds
+    .map((permanentId) => board.find(
+      (slot): slot is Permanent => slot !== null && slot.permanentId === permanentId,
+    ))
+    .filter((slot): slot is Permanent => slot !== undefined);
 }
 
 export function estimateWorstBlockOutcomeScore(

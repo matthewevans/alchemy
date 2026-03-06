@@ -2051,6 +2051,157 @@ describe('Archmage combat priority stack', () => {
   });
 });
 
+// ─── Combat Priority Stack ───
+
+describe('combat priority stack', () => {
+  it('targeted instant enters targeting with stackOnResolve during combat_priority', () => {
+    const target = makePermanent('water_tide_sprite', 'player2', {
+      attack: 1,
+      health: 2,
+    });
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      activePlayer: 'player1',
+      phase: {
+        type: 'combat_priority',
+        window: 'post_attackers',
+        confirmedAttackers: [],
+        blockers: {},
+        attackerBlockerOrder: {},
+        priorityPlayer: 'player1',
+        passCount: 0,
+        stack: [],
+      },
+      player1: {
+        currentEnergy: 4,
+        maxEnergy: 4,
+        hand: [makeCardInstance('fire_fireball')],
+      },
+      player2: {
+        board: [target, null, null, null, null],
+      },
+    });
+
+    const { newState } = reduce(state, { type: 'PLAY_CARD', cardIndex: 0 }, 'player1', rng);
+    expect(newState.phase.type).toBe('targeting');
+    if (newState.phase.type !== 'targeting') return;
+    expect(newState.phase.sourceCardId).toBe('fire_fireball');
+  });
+
+  it('SELECT_TARGET during combat targeting pushes item onto the stack', () => {
+    const target = makePermanent('water_tide_sprite', 'player2', {
+      attack: 1,
+      health: 2,
+    });
+    const ownCreature = makePermanent('fire_lava_hound', 'player2', {
+      attack: 2,
+      health: 3,
+    });
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      activePlayer: 'player1',
+      phase: {
+        type: 'combat_priority',
+        window: 'post_attackers',
+        confirmedAttackers: [],
+        blockers: {},
+        attackerBlockerOrder: {},
+        priorityPlayer: 'player1',
+        passCount: 0,
+        stack: [],
+      },
+      player1: {
+        currentEnergy: 4,
+        maxEnergy: 4,
+        hand: [makeCardInstance('fire_fireball')],
+      },
+      player2: {
+        // Give player2 an instant so auto-pass doesn't resolve everything
+        currentEnergy: 4,
+        maxEnergy: 4,
+        hand: [makeCardInstance('air_blessing')],
+        board: [target, ownCreature, null, null, null],
+      },
+    });
+
+    // Play the card -> enters targeting
+    const { newState: targetingState } = reduce(state, { type: 'PLAY_CARD', cardIndex: 0 }, 'player1', rng);
+    expect(targetingState.phase.type).toBe('targeting');
+
+    // Select target -> pushes onto stack and returns to combat_priority
+    const { newState: afterSelect } = reduce(
+      targetingState,
+      { type: 'SELECT_TARGET', targetRef: { type: 'creature', permanentId: target.permanentId } },
+      'player1',
+      rng,
+    );
+    expect(afterSelect.phase.type).toBe('combat_priority');
+    if (afterSelect.phase.type !== 'combat_priority') return;
+    expect(afterSelect.phase.stack).toHaveLength(1);
+    expect(afterSelect.phase.stack[0].cardId).toBe('fire_fireball');
+    expect(afterSelect.phase.stack[0].selectedTarget).toEqual({
+      type: 'creature',
+      permanentId: target.permanentId,
+    });
+    // Priority passes to opponent after casting
+    expect(afterSelect.phase.priorityPlayer).toBe('player2');
+    expect(afterSelect.phase.passCount).toBe(0);
+  });
+
+  it('PASS_PRIORITY with auto-pass resolves stacked spell when opponent has no instants', () => {
+    const target = makePermanent('earth_mountain_giant', 'player2', {
+      attack: 4,
+      health: 6,
+    });
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      activePlayer: 'player1',
+      phase: {
+        type: 'combat_priority',
+        window: 'post_blockers',
+        confirmedAttackers: [],
+        blockers: {},
+        attackerBlockerOrder: {},
+        priorityPlayer: 'player1',
+        passCount: 0,
+        stack: [
+          {
+            stackId: 'stack_fireball',
+            cardId: 'fire_fireball',
+            effectId: 'fireball',
+            casterId: 'player1',
+            selectedTarget: { type: 'creature', permanentId: target.permanentId },
+            surchargePaid: 1,
+          },
+        ],
+      },
+      player1: {
+        currentEnergy: 0,
+        maxEnergy: 0,
+        hand: [],
+      },
+      player2: {
+        currentEnergy: 0,
+        maxEnergy: 0,
+        hand: [],
+        board: [target, null, null, null, null],
+      },
+    });
+
+    // Player1 passes; player2 has no instants so auto-pass triggers,
+    // reaching passCount 2 which resolves the stack and exits priority
+    const { newState, events } = reduce(state, { type: 'PASS_PRIORITY' }, 'player1', rng);
+    expect(newState.phase).toEqual({ type: 'play', postCombat: true });
+    const spellResolved = events.filter((e) => e.type === 'SPELL_RESOLVED');
+    expect(spellResolved).toHaveLength(1);
+    expect(spellResolved[0]).toEqual(expect.objectContaining({ cardId: 'fire_fireball' }));
+    // Verify the target took 3 damage from the fireball but survived (6 health)
+    const survivingTarget = newState.players.player2.board.find((p) => p?.permanentId === target.permanentId);
+    expect(survivingTarget).toBeTruthy();
+    expect(survivingTarget!.damage).toBe(3);
+  });
+});
+
 // ─── Immutability ───
 
 describe('Immutability', () => {

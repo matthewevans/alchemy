@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@game/gameStore';
@@ -51,17 +51,17 @@ export function PlayerHand() {
   const phase = useGameStore((s) => s.state?.phase);
   const isDiscardPhase = phase?.type === 'discard';
 
-  const playableIndices = new Set(
+  const playableIndices = useMemo(() => new Set(
     legalActions
       .filter((a): a is Extract<GameAction, { type: 'PLAY_CARD' }> => a.type === 'PLAY_CARD')
       .map((a) => a.cardIndex),
-  );
+  ), [legalActions]);
 
-  const discardableIndices = new Set(
+  const discardableIndices = useMemo(() => new Set(
     legalActions
       .filter((a): a is Extract<GameAction, { type: 'DISCARD_CARD' }> => a.type === 'DISCARD_CARD')
       .map((a) => a.cardIndex),
-  );
+  ), [legalActions]);
 
   // Resolve which card is at a given X position — avoids z-index overlap issues
   // where the selected card (z-index 90) intercepts events for adjacent cards.

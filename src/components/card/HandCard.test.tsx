@@ -49,7 +49,7 @@ describe('HandCard layout metadata', () => {
 
     expect(screen.getByTestId('hand-card-cost')).toHaveTextContent('×3');
     const cost = screen.getByTestId('hand-card-cost');
-    expect(cost).toHaveClass('cursor-help');
+    expect(cost).toHaveAttribute('title', 'Combat instant cast: 2 base + 1 surcharge = 3 (before blockers).');
     fireEvent.mouseEnter(cost);
     expect(screen.getByTestId('hand-card-cost-tooltip')).toHaveTextContent('Combat instant cast');
   });

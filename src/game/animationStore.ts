@@ -341,13 +341,16 @@ export function groupEventsIntoSteps(
   const hasDamageDealt = events.some((e) => e.type === 'DAMAGE_DEALT');
 
   // Route all combat (including post-priority combat resolution with no declare markers)
-  // through per-exchange grouping.
-  if (hasBlockersConfirmed || hasAttackersDeclared || hasCombatDamage) {
+  // through per-exchange grouping. Check explicit combat markers first, then ETB/spell
+  // before falling back to the generic hasCombatDamage heuristic (which would misroute
+  // keyword-triggered damage like blast ETB).
+  if (hasBlockersConfirmed || hasAttackersDeclared) {
     return groupCombatEvents(events, positions, cardIdMap);
   }
   if (hasSpellResolved) return groupSpellEvents(events, positions);
   if (hasCreatureEntered && hasKeywordTriggered) return groupETBEvents(events, positions);
   if (hasCreatureEntered) return groupSummonEvents(events, positions);
+  if (hasCombatDamage) return groupCombatEvents(events, positions, cardIdMap);
   if (hasPlayerDamaged || hasDamageDealt) return groupStandaloneDamageEvents(events, positions);
   return [];
 }

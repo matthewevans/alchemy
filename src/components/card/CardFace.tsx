@@ -8,7 +8,7 @@ import { EFFECT_REGISTRY } from '@engine/effects';
 import { KEYWORD_REGISTRY } from '@engine/keywords';
 import { resolveDescription } from '@engine/descriptions';
 import { usePreferencesStore } from '@game/preferencesStore';
-import { narrateCard, isTTSAvailable } from '@audio/tts';
+import { narrateCard } from '@audio/tts';
 import {
   getElementColor,
   getElementArtGradient,
@@ -19,6 +19,8 @@ import {
 import { KeywordBadge } from './KeywordBadge';
 import { EffectShorthand } from './EffectShorthand';
 import { StatBar } from './StatBar';
+
+const CAN_NARRATE = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
 // ─── View level config ───
 
@@ -88,7 +90,7 @@ export function CardFace({
   const effect = card.effectId ? EFFECT_REGISTRY[card.effectId] : null;
   const isCreature = card.type === 'creature';
   const easyReadMode = usePreferencesStore((s) => s.easyReadMode);
-  const canNarrate = isTTSAvailable();
+  const canNarrate = CAN_NARRATE;
   const displayedCost = costOverride ?? card.cost;
   const [showCostHint, setShowCostHint] = useState(false);
 

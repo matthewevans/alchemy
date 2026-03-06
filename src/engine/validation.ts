@@ -8,7 +8,8 @@ import type {
   TargetRef,
   ValidationResult,
 } from './types';
-import { CARD_REGISTRY } from './cards';
+import { CARD_REGISTRY, getPlayCost } from './cards';
+import { computeValidTargets } from './reducer';
 import { getActingPlayer, getOpponent } from './types';
 
 // ─── Action Validation ───
@@ -157,7 +158,7 @@ function validatePlayCard(
     }
   }
 
-  const effectiveCost = cardDef.cost + (state.phase.type === 'combat_priority' ? (cardDef.instantSurcharge ?? 0) : 0);
+  const effectiveCost = getPlayCost(state, cardInstance.cardId);
   if (playerState.currentEnergy < effectiveCost) {
     return { valid: false, reason: 'Not enough energy to play this card' };
   }
@@ -635,8 +636,12 @@ function enumerateCombatPriorityActions(
     if (cardDef.type !== 'spell') continue;
     if (cardDef.spellSpeed !== 'instant') continue;
 
-    const effectiveCost = cardDef.cost + (cardDef.instantSurcharge ?? 0);
+    const effectiveCost = getPlayCost(state, cardInstance.cardId);
     if (playerState.currentEnergy < effectiveCost) continue;
+
+    if (cardDef.targetingType) {
+      if (computeValidTargets(state, actingPlayer, cardDef.targetingType).length === 0) continue;
+    }
 
     actions.push({ type: 'PLAY_CARD', cardIndex });
   }

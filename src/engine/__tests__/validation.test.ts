@@ -405,7 +405,9 @@ describe('validateAction', () => {
 
       const result = validateAction(state, { type: 'PLAY_CARD', cardIndex: 0 }, 'player1');
       expect(result.valid).toBe(false);
-      expect((result as { valid: false; reason: string }).reason).toContain('instant');
+      if (!result.valid) {
+        expect(result.reason).toContain('instant');
+      }
     });
 
     it('enforces instant surcharge energy checks in combat priority', () => {
@@ -421,7 +423,9 @@ describe('validateAction', () => {
 
       const result = validateAction(state, { type: 'PLAY_CARD', cardIndex: 0 }, 'player1');
       expect(result.valid).toBe(false);
-      expect((result as { valid: false; reason: string }).reason).toContain('energy');
+      if (!result.valid) {
+        expect(result.reason).toContain('energy');
+      }
     });
 
     it('validates PASS_PRIORITY for the priority player only', () => {
@@ -435,6 +439,8 @@ describe('validateAction', () => {
     });
 
     it('enumerates PASS_PRIORITY and instant-only PLAY_CARD actions', () => {
+      const board = Array(5).fill(null) as (ReturnType<typeof makePermanent> | null)[];
+      board[0] = makePermanent('fire_lava_hound', 'player2');
       const state = createTestGameState({
         phase: combatPriorityPhase,
         ruleset: { allowCombatTricks: true },
@@ -447,6 +453,7 @@ describe('validateAction', () => {
             makeCardInstance('fire_lava_hound'), // creature
           ],
         },
+        player2: { board },
       });
 
       const actions = enumerateLegalActions(state, 'player1');

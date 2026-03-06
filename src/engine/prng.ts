@@ -31,6 +31,11 @@ function _buildRNG(initialState: number): SeededRNG {
   return rng;
 }
 
+/** Type guard: is this RNG a SeededRNG with serializable state? */
+export function isSeededRNG(rng: RNG): rng is SeededRNG {
+  return typeof (rng as SeededRNG).getState === 'function';
+}
+
 /** Fisher-Yates shuffle using the provided RNG. Mutates array in-place. */
 export function shuffle<T>(array: T[], rng: RNG): T[] {
   for (let i = array.length - 1; i > 0; i--) {

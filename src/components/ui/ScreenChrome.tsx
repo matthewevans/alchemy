@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useDialogA11y } from '@hooks/useDialogA11y';
 import { AudioMuteButton } from './AudioMuteButton';
@@ -34,7 +34,8 @@ function SettingsIcon() {
 
 export function ScreenChrome({ onBack, backLabel = 'Back' }: ScreenChromeProps) {
   const [showSettings, setShowSettings] = useState(false);
-  const settingsDialogRef = useDialogA11y({ open: showSettings, onClose: () => setShowSettings(false) });
+  const closeSettings = useCallback(() => setShowSettings(false), []);
+  const settingsDialogRef = useDialogA11y({ open: showSettings, onClose: closeSettings });
 
   return (
     <>
@@ -80,7 +81,7 @@ export function ScreenChrome({ onBack, backLabel = 'Back' }: ScreenChromeProps) 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            onClick={() => setShowSettings(false)}
+            onClick={closeSettings}
           >
             <motion.div
               ref={settingsDialogRef}
@@ -88,7 +89,7 @@ export function ScreenChrome({ onBack, backLabel = 'Back' }: ScreenChromeProps) 
               aria-modal="true"
               aria-label="Settings"
               tabIndex={-1}
-              className="settings-dialog bg-slate-800/95 rounded-2xl p-5 sm:p-7 flex flex-col items-stretch gap-4 w-[95vw] max-w-[720px] max-h-[88dvh] min-h-0 overflow-hidden shadow-2xl border border-slate-600/40"
+              className="settings-dialog bg-slate-800/95 rounded-2xl p-5 sm:p-7 flex flex-col items-stretch gap-4 w-[95vw] max-w-[720px] max-h-[88dvh] min-h-0 overflow-hidden border border-slate-600/40"
               style={{
                 boxShadow: '0 0 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(0, 0, 0, 0.3)',
               }}
@@ -100,7 +101,7 @@ export function ScreenChrome({ onBack, backLabel = 'Back' }: ScreenChromeProps) 
             >
               <h2 className="text-xl font-bold text-white text-center">Settings</h2>
               <div className="flex flex-1 min-h-0 flex-col">
-                <SettingsPanel onClose={() => setShowSettings(false)} />
+                <SettingsPanel onClose={closeSettings} />
               </div>
             </motion.div>
           </motion.div>

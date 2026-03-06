@@ -7,7 +7,6 @@ import type {
   GameEvent,
   GameState,
   GameStats,
-  Keyword,
   Permanent,
   Phase,
   PlayerId,
@@ -21,7 +20,7 @@ import type {
   TargetRef,
   TargetingType,
 } from './types';
-import { CARD_REGISTRY } from './cards';
+import { CARD_REGISTRY, hasKeyword, getPlayCost } from './cards';
 import { drawCards, performMulligan } from './deck';
 import { EFFECT_REGISTRY } from './effects';
 import type { EffectStep } from './effects';
@@ -246,19 +245,6 @@ export function findPermanent(
 
 function findFirstEmptySlot(board: (Permanent | null)[]): number {
   return board.findIndex((slot) => slot === null);
-}
-
-function hasKeyword(permanent: Permanent, keyword: Keyword): boolean {
-  const cardDef = CARD_REGISTRY[permanent.cardId];
-  return cardDef.keywords.includes(keyword);
-}
-
-function getPlayCost(state: GameState, cardId: string): number {
-  const cardDef = CARD_REGISTRY[cardId];
-  if (state.phase.type === 'combat_priority') {
-    return cardDef.cost + (cardDef.instantSurcharge ?? 0);
-  }
-  return cardDef.cost;
 }
 
 function createCombatPriorityPhase(

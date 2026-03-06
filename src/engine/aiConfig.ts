@@ -93,11 +93,11 @@ const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
     combatLookahead: false,
     search: {
       enabled: false,
-      maxDepth: 1,
-      maxNodes: 4,
-      maxBranching: 2,
+      maxDepth: 0,
+      maxNodes: 0,
+      maxBranching: 0,
       rolloutDepth: 0,
-      useTransposition: true,
+      useTransposition: false,
     },
   },
   easy: {
@@ -107,11 +107,11 @@ const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
     combatLookahead: false,
     search: {
       enabled: false,
-      maxDepth: 1,
-      maxNodes: 8,
-      maxBranching: 3,
+      maxDepth: 0,
+      maxNodes: 0,
+      maxBranching: 0,
       rolloutDepth: 0,
-      useTransposition: true,
+      useTransposition: false,
     },
   },
   medium: {

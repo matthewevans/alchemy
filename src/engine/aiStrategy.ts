@@ -1,20 +1,20 @@
 import type { GameAction, GameState, Permanent, PlayerId, RNG } from './types';
 import { getActingPlayer, getCurrentHealth, getEffectiveAttack, getOpponent } from './types';
-import { CARD_REGISTRY } from './cards';
+import { CARD_REGISTRY, getPlayCost } from './cards';
 import { EFFECT_REGISTRY } from './effects';
 import { enumerateLegalActions } from './validation';
 import { reduce } from './reducer';
 import type { SeededRNG } from './prng';
-import { restoreRNG } from './prng';
+import { isSeededRNG, restoreRNG } from './prng';
 import type { AIConfig } from './aiConfig';
 import { evaluateState, softmaxSelect } from './aiEval';
 import { filterAIViableActions } from './aiActionPolicy';
 import {
-  isSeededRNG,
   getCombatDamage,
   estimateDamageToCreature,
   estimateGuaranteedUnblockedDamage,
   estimateWorstBlockOutcomeScore,
+  resolveAttackerPermanents,
 } from './aiCombat';
 
 // ─── Shared Helpers ───
@@ -511,9 +511,9 @@ export function chooseBlockerAction(
     );
     if (!blocker || !attacker) return -Infinity;
 
-    const blockerAttack = getEffectiveAttack(blocker);
+    const blockerAttack = getCombatDamage(blocker);
     const attackerHealth = getCurrentHealth(attacker);
-    const attackerAttack = getEffectiveAttack(attacker);
+    const attackerAttack = getCombatDamage(attacker);
     const blockerHealth = getCurrentHealth(blocker);
     let tradeScore = 0;
 
@@ -631,6 +631,9 @@ export function chooseCombatPriorityAction(
   const candidates = [...playActions, ...(passAction ? [passAction] : [])];
   const hand = state.players[aiPlayer].hand;
 
+  const opponent = getOpponent(aiPlayer);
+  const opponentBoard = state.players[opponent].board;
+
   return selectByScore(
     candidates,
     (action) => {
@@ -639,7 +642,30 @@ export function chooseCombatPriorityAction(
       const card = hand[action.cardIndex];
       if (!card) return -1;
       const cardDef = CARD_REGISTRY[card.cardId];
-      return cardDef.cost + (cardDef.instantSurcharge ?? 0);
+      let score = getPlayCost(state, card.cardId);
+
+      if (cardDef.effectId) {
+        const effectDef = EFFECT_REGISTRY[cardDef.effectId];
+        if (effectDef) {
+          for (const step of effectDef.steps) {
+            if (step.type === 'damage' && step.target === 'selected') {
+              const canKill = opponentBoard.some((p) => {
+                if (!p) return false;
+                return estimateDamageToCreature(p, step.amount) >= getCurrentHealth(p);
+              });
+              score += canKill ? 8 : step.amount;
+            } else if (step.type === 'destroy') {
+              score += 10;
+            } else if (step.type === 'buff') {
+              score += step.attack + step.health;
+            } else if (step.type === 'bounce') {
+              score += 6;
+            }
+          }
+        }
+      }
+
+      return score;
     },
     config.temperature,
     rng,
@@ -702,6 +728,11 @@ export function applyAttackerRiskGuard(
     return actions;
   }
 
+  // Small attack forces don't need simulation-based filtering
+  if (state.phase.tentativeAttackers.length + declareActions.length <= 2) {
+    return actions;
+  }
+
   const seededRng = rng as SeededRNG;
   const confirmScore = scoreAttackerActionByOutcome(state, confirmAction, aiPlayer, seededRng, config);
 
@@ -748,11 +779,7 @@ function createsLethalPressureFromDeclaration(
     (slot): slot is Permanent => slot !== null && !slot.isTapped,
   );
 
-  const currentAttackers = state.phase.tentativeAttackers
-    .map((permanentId) => state.players[aiPlayer].board.find(
-      (slot): slot is Permanent => slot !== null && slot.permanentId === permanentId,
-    ))
-    .filter((slot): slot is Permanent => slot !== undefined);
+  const currentAttackers = resolveAttackerPermanents(state, state.phase.tentativeAttackers, aiPlayer);
   const nextAttackers = currentAttackers.some((perm) => perm.permanentId === attacker.permanentId)
     ? currentAttackers
     : [...currentAttackers, attacker];

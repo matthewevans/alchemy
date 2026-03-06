@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { CombatPriorityPhase, GameAction } from '@engine/types';
+import type { CombatPriorityPhase, GameAction, PlayerId } from '@engine/types';
 import { CARD_REGISTRY } from '@engine/cards';
 import { useGameStore } from '@game/gameStore';
 import { getOpponent } from '@engine/types';
 import { useGameDispatch } from '@game/GameDispatchContext';
+import type { PhaseInfo } from '@hooks/usePhaseInfo';
 import { usePhaseInfo } from '@hooks/usePhaseInfo';
 import { gameButtonClass } from '@components/ui/buttonStyles';
 
@@ -45,6 +46,156 @@ function getStackCardTone(cardId: string): string {
       return 'border-white/25 bg-slate-950/75';
   }
 }
+
+// ─── Shared sub-components ───
+
+function ActionButtonContainer({ bottom, children }: { bottom: string; children: React.ReactNode }) {
+  return (
+    <div
+      data-testid="combat-controls"
+      className="fixed z-[45] pointer-events-none"
+      style={{
+        right: 'calc(env(safe-area-inset-right) + var(--sidebar-w) + 1rem)',
+        bottom,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function PhaseAdvanceButton({ phaseInfo, dispatch, humanPlayer }: {
+  phaseInfo: PhaseInfo;
+  dispatch: ReturnType<typeof useGameDispatch>;
+  humanPlayer: PlayerId;
+}) {
+  if (!phaseInfo.canAdvance || !phaseInfo.advanceAction || !phaseInfo.advanceLabel) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.button
+        className={gameButtonClass({
+          tone: phaseInfo.displayKey === 'play' ? 'red' : phaseInfo.displayKey === 'play2' ? 'indigo' : 'slate',
+          size: 'sm',
+          className: 'pointer-events-auto px-5 py-1.5 font-bold',
+        })}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        onClick={() => dispatch(phaseInfo.advanceAction!, humanPlayer)}
+      >
+        {phaseInfo.advanceLabel}
+      </motion.button>
+    </AnimatePresence>
+  );
+}
+
+function CombatPriorityControls({ phase, humanPlayer, dispatch, legalActions }: {
+  phase: CombatPriorityPhase;
+  humanPlayer: PlayerId;
+  dispatch: ReturnType<typeof useGameDispatch>;
+  legalActions: GameAction[];
+}) {
+  const passAction = legalActions.find((a) => a.type === 'PASS_PRIORITY');
+  const visibleStack = phase.stack.slice(Math.max(phase.stack.length - 4, 0));
+  const isPriorityPlayer = humanPlayer === phase.priorityPlayer;
+  const buttonLabel = getPriorityButtonLabel(phase);
+
+  if (visibleStack.length === 0) {
+    if (!isPriorityPlayer || !passAction) return null;
+
+    return (
+      <ActionButtonContainer bottom={COMBAT_CONTROLS_BOTTOM}>
+        <motion.button
+          className={`${gameButtonClass({
+            tone: 'slate',
+            size: 'sm',
+            className: 'px-5 py-2 font-bold',
+          })} pointer-events-auto`}
+          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          data-testid="pass-priority-btn"
+          onClick={() => dispatch(passAction, humanPlayer)}
+        >
+          {buttonLabel}
+        </motion.button>
+      </ActionButtonContainer>
+    );
+  }
+
+  return (
+    <ActionButtonContainer bottom={COMBAT_CONTROLS_BOTTOM}>
+      <motion.div
+        className="pointer-events-auto flex items-center gap-3 rounded-xl border border-white/20 bg-slate-900/85 px-3 py-2.5"
+        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 10, scale: 0.9 }}
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="flex flex-col leading-tight">
+          <span className="text-[11px] font-semibold text-blue-300 uppercase tracking-wide">
+            {getPriorityWindowLabel(phase.window)}
+          </span>
+          <span className="text-[11px] text-white/70">
+            {isPriorityPlayer ? 'Choose a response' : 'Opponent is deciding'}
+          </span>
+        </div>
+
+        <div className="relative h-14 w-44 overflow-visible" data-testid="stack-pile">
+          {visibleStack.map((item, idx) => {
+            const cardName = CARD_REGISTRY[item.cardId]?.name ?? item.cardId;
+            const isTop = idx === visibleStack.length - 1;
+            return (
+              <div
+                key={item.stackId}
+                className={`absolute h-12 w-36 rounded-md border px-2 py-1 shadow-lg backdrop-blur-sm ${getStackCardTone(item.cardId)}`}
+                style={{
+                  transform: `translate(${idx * 12}px, ${idx * -7}px)`,
+                  zIndex: idx + 1,
+                }}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-[10px] font-semibold text-white/95">{cardName}</span>
+                  <span className="text-[9px] uppercase tracking-wide text-white/65">
+                    {item.casterId === humanPlayer ? 'You' : 'Opp'}
+                  </span>
+                </div>
+                {isTop && (
+                  <span className="mt-0.5 block text-[9px] uppercase tracking-wide text-blue-200/85">
+                    Resolves Next
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {isPriorityPlayer && passAction && (
+          <motion.button
+            className={gameButtonClass({
+              tone: 'slate',
+              size: 'sm',
+              className: 'px-4 py-1.5 font-bold',
+            })}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.95 }}
+            data-testid="pass-priority-btn"
+            onClick={() => dispatch(passAction, humanPlayer)}
+          >
+            {buttonLabel}
+          </motion.button>
+        )}
+      </motion.div>
+    </ActionButtonContainer>
+  );
+}
+
+// ─── Main orchestrator ───
 
 export function ActionButton() {
   const phase = useGameStore((s) => s.state?.phase);
@@ -118,115 +269,13 @@ export function ActionButton() {
   if (!phase || !phaseInfo) return null;
 
   if (phase.type === 'combat_priority') {
-    const passAction = legalActions.find((a) => a.type === 'PASS_PRIORITY');
-    const visibleStack = phase.stack.slice(Math.max(phase.stack.length - 4, 0));
-    const isPriorityPlayer = humanPlayer === phase.priorityPlayer;
-    const buttonLabel = getPriorityButtonLabel(phase);
-
-    if (visibleStack.length === 0) {
-      if (!isPriorityPlayer || !passAction) {
-        return null;
-      }
-
-      return (
-        <div
-          data-testid="combat-controls"
-          className="fixed z-[45] pointer-events-none"
-          style={{
-            right: 'calc(env(safe-area-inset-right) + var(--sidebar-w) + 1rem)',
-            bottom: COMBAT_CONTROLS_BOTTOM,
-          }}
-        >
-          <motion.button
-            className={`${gameButtonClass({
-              tone: 'slate',
-              size: 'sm',
-              className: 'px-5 py-2 font-bold',
-            })} pointer-events-auto`}
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            data-testid="pass-priority-btn"
-            onClick={() => dispatch(passAction, humanPlayer)}
-          >
-            {buttonLabel}
-          </motion.button>
-        </div>
-      );
-    }
-
     return (
-      <div
-        data-testid="combat-controls"
-        className="fixed z-[45] pointer-events-none"
-        style={{
-          right: 'calc(env(safe-area-inset-right) + var(--sidebar-w) + 1rem)',
-          bottom: COMBAT_CONTROLS_BOTTOM,
-        }}
-      >
-        <motion.div
-          className="pointer-events-auto flex items-center gap-3 rounded-xl border border-white/20 bg-slate-900/85 px-3 py-2.5"
-          initial={{ opacity: 0, y: 10, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 10, scale: 0.9 }}
-          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <div className="flex flex-col leading-tight">
-            <span className="text-[11px] font-semibold text-blue-300 uppercase tracking-wide">
-              {getPriorityWindowLabel(phase.window)}
-            </span>
-            <span className="text-[11px] text-white/70">
-              {isPriorityPlayer ? 'Choose a response' : 'Opponent is deciding'}
-            </span>
-          </div>
-
-          <div className="relative h-14 w-44 overflow-visible" data-testid="stack-pile">
-            {visibleStack.map((item, idx) => {
-              const cardName = CARD_REGISTRY[item.cardId]?.name ?? item.cardId;
-              const isTop = idx === visibleStack.length - 1;
-              return (
-                <div
-                  key={item.stackId}
-                  className={`absolute h-12 w-36 rounded-md border px-2 py-1 shadow-lg backdrop-blur-sm ${getStackCardTone(item.cardId)}`}
-                  style={{
-                    transform: `translate(${idx * 12}px, ${idx * -7}px)`,
-                    zIndex: idx + 1,
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-[10px] font-semibold text-white/95">{cardName}</span>
-                    <span className="text-[9px] uppercase tracking-wide text-white/65">
-                      {item.casterId === humanPlayer ? 'You' : 'Opp'}
-                    </span>
-                  </div>
-                  {isTop && (
-                    <span className="mt-0.5 block text-[9px] uppercase tracking-wide text-blue-200/85">
-                      Resolves Next
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {isPriorityPlayer && passAction && (
-            <motion.button
-              className={gameButtonClass({
-                tone: 'slate',
-                size: 'sm',
-                className: 'px-4 py-1.5 font-bold',
-              })}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.95 }}
-              data-testid="pass-priority-btn"
-              onClick={() => dispatch(passAction, humanPlayer)}
-            >
-              {buttonLabel}
-            </motion.button>
-          )}
-        </motion.div>
-      </div>
+      <CombatPriorityControls
+        phase={phase}
+        humanPlayer={humanPlayer}
+        dispatch={dispatch}
+        legalActions={legalActions}
+      />
     );
   }
 
@@ -264,14 +313,7 @@ export function ActionButton() {
     };
 
     return (
-      <div
-        data-testid="combat-controls"
-        className="fixed z-[45] pointer-events-none"
-        style={{
-          right: 'calc(env(safe-area-inset-right) + var(--sidebar-w) + 1rem)',
-          bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)',
-        }}
-      >
+      <ActionButtonContainer bottom="calc(env(safe-area-inset-bottom) + 0.75rem)">
         <AnimatePresence>
           {phase.step === 'declare_attackers' && isAttacker && (
             <motion.div
@@ -481,28 +523,8 @@ export function ActionButton() {
           )}
         </AnimatePresence>
 
-        {/* Phase advance button (pre-combat "Battle!" / post-combat "End Turn") */}
-        <AnimatePresence>
-          {phaseInfo.canAdvance && phaseInfo.advanceAction && phaseInfo.advanceLabel && (
-            <motion.button
-              className={gameButtonClass({
-                tone: phaseInfo.displayKey === 'play' ? 'red' : phaseInfo.displayKey === 'play2' ? 'indigo' : 'slate',
-                size: 'sm',
-                className: 'pointer-events-auto px-5 py-1.5 font-bold',
-              })}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              onClick={() => dispatch(phaseInfo.advanceAction!, humanPlayer)}
-            >
-              {phaseInfo.advanceLabel}
-            </motion.button>
-          )}
-        </AnimatePresence>
-      </div>
+        <PhaseAdvanceButton phaseInfo={phaseInfo} dispatch={dispatch} humanPlayer={humanPlayer} />
+      </ActionButtonContainer>
     );
   }
 
@@ -510,29 +532,8 @@ export function ActionButton() {
   if (!phaseInfo.canAdvance || !phaseInfo.advanceAction || !phaseInfo.advanceLabel) return null;
 
   return (
-    <div
-      data-testid="combat-controls"
-      className="fixed z-[45] pointer-events-none"
-      style={{
-        right: 'calc(env(safe-area-inset-right) + var(--sidebar-w) + 1rem)',
-        bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)',
-      }}
-    >
-      <motion.button
-        className={gameButtonClass({
-          tone: phaseInfo.displayKey === 'play' ? 'red' : phaseInfo.displayKey === 'play2' ? 'indigo' : 'slate',
-          size: 'sm',
-          className: 'pointer-events-auto px-5 py-1.5 font-bold',
-        })}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0, y: 10, scale: 0.9 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-        onClick={() => dispatch(phaseInfo.advanceAction!, humanPlayer)}
-      >
-        {phaseInfo.advanceLabel}
-      </motion.button>
-    </div>
+    <ActionButtonContainer bottom="calc(env(safe-area-inset-bottom) + 0.75rem)">
+      <PhaseAdvanceButton phaseInfo={phaseInfo} dispatch={dispatch} humanPlayer={humanPlayer} />
+    </ActionButtonContainer>
   );
 }

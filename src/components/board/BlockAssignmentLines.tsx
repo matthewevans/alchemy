@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useGameStore } from '@game/gameStore';
 
@@ -52,17 +52,17 @@ export function BlockAssignmentLines() {
   const phase = useGameStore((s) => s.state?.phase);
   const [links, setLinks] = useState<BlockLink[]>([]);
 
-  const blockerAssignments = phase?.type === 'battle'
-    ? (
-      phase.step === 'declare_blockers'
-        ? phase.tentativeBlockers
-        : phase.step === 'order_blockers'
-          ? phase.blockers
-          : null
-    )
-    : phase?.type === 'combat_priority' && phase.window === 'post_blockers'
-      ? phase.blockers
-      : null;
+  const blockerAssignments = useMemo(() => {
+    if (phase?.type === 'battle') {
+      if (phase.step === 'declare_blockers') return phase.tentativeBlockers;
+      if (phase.step === 'order_blockers') return phase.blockers;
+      return null;
+    }
+    if (phase?.type === 'combat_priority' && phase.window === 'post_blockers') {
+      return phase.blockers;
+    }
+    return null;
+  }, [phase]);
 
   // Poll card positions via RAF until they stabilize. This tracks Framer Motion
   // layout animations so lines follow cards smoothly during rearrangement, then
