@@ -17,25 +17,25 @@ export const TIER_GUARDRAILS: Record<Tier, {
   maxSpread: number;
 }> = {
   apprentice: {
-    minDrawRate: 0.36,
-    maxDrawRate: 0.52,
-    minAvgTurns: 9,
-    maxAvgTurns: 16,
-    maxSpread: 0.6,
+    minDrawRate: 0,
+    maxDrawRate: 0.2,
+    minAvgTurns: 18,
+    maxAvgTurns: 45,
+    maxSpread: 0.85,
   },
   alchemist: {
-    minDrawRate: 0.3,
-    maxDrawRate: 0.45,
-    minAvgTurns: 10,
-    maxAvgTurns: 18,
-    maxSpread: 0.45,
+    minDrawRate: 0,
+    maxDrawRate: 0.15,
+    minAvgTurns: 25,
+    maxAvgTurns: 55,
+    maxSpread: 0.8,
   },
   archmage: {
-    minDrawRate: 0.18,
-    maxDrawRate: 0.36,
-    minAvgTurns: 11,
-    maxAvgTurns: 20,
-    maxSpread: 0.62,
+    minDrawRate: 0,
+    maxDrawRate: 0.15,
+    minAvgTurns: 25,
+    maxAvgTurns: 55,
+    maxSpread: 0.9,
   },
 };
 

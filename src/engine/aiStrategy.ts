@@ -714,6 +714,13 @@ export function applyAttackerRiskGuard(
     }
   }
 
+  // If no individual attacker scores better than not attacking, don't strip
+  // them all — the guard evaluates attackers one-at-a-time, but multiple
+  // attackers together can overwhelm blockers. Let the search decide.
+  if (allowedDeclarations.size === 0) {
+    return actions;
+  }
+
   const filtered = actions.filter(
     (action) => action.type !== 'DECLARE_ATTACKER' || allowedDeclarations.has(action.permanentId),
   );
