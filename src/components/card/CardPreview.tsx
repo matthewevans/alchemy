@@ -79,26 +79,22 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
       >
         <div
           style={{
-            width: `calc(var(--card-width) * ${PREVIEW_SCALE})`,
-            height: `calc(var(--card-height) * ${PREVIEW_SCALE})`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+            '--card-width': `calc(var(--_card-w) * ${PREVIEW_SCALE})`,
+            '--card-height': `calc(var(--_card-h) * ${PREVIEW_SCALE})`,
+            '--card-font-scale': `calc(var(--_card-fs) * ${PREVIEW_SCALE})`,
+          } as React.CSSProperties}
         >
-          <div style={{ transform: `scale(${PREVIEW_SCALE})`, transformOrigin: 'center center' }}>
-            <HandCard
-              cardInstance={previewCardInstance}
-              isPlayable={false}
-              isSelected={false}
-              costOverride={costPresentation.costOverride}
-              costHint={costPresentation.costHint}
-              highlightCost={costPresentation.highlightCost}
-              verbose
-              onClick={() => {}}
-              onHover={() => {}}
-            />
-          </div>
+          <HandCard
+            cardInstance={previewCardInstance}
+            isPlayable={false}
+            isSelected={false}
+            costOverride={costPresentation.costOverride}
+            costHint={costPresentation.costHint}
+            highlightCost={costPresentation.highlightCost}
+            verbose
+            onClick={() => {}}
+            onHover={() => {}}
+          />
         </div>
       </motion.div>
     </motion.div>
