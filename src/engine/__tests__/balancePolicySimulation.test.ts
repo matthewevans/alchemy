@@ -3,6 +3,7 @@ import { CARD_REGISTRY, getCardsByElement } from '../cards';
 import { ALLIED_PAIRS } from '../elements';
 import { createInitialGameState } from '../gameInit';
 import { chooseAction } from '../ai';
+import { DEFAULT_AI_CONFIG } from '../aiConfig';
 import { createRNG } from '../prng';
 import { computeValidTargets, reduce } from '../reducer';
 import { TIER_CONFIGS } from '../ruleset';
@@ -163,7 +164,7 @@ function chooseTempoAction(state: GameState, actingPlayer: PlayerId, rng: () => 
 
 function choosePolicyAction(state: GameState, actingPlayer: PlayerId, policy: Policy, rng: () => number): GameAction {
   if (policy === 'heuristic') {
-    return chooseAction(state, actingPlayer, rng);
+    return chooseAction(state, actingPlayer, rng, DEFAULT_AI_CONFIG);
   }
   return chooseTempoAction(state, actingPlayer, rng);
 }

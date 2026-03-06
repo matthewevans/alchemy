@@ -123,6 +123,81 @@ describe('GameBoard', () => {
     expect(screen.getByTestId('skip-block-btn')).toHaveAttribute('data-armed', 'false');
   });
 
+  it('renders combat priority controls with stack preview and pass action', () => {
+    useGameStore.setState({
+      state: createTestGameState({
+        ruleset: { allowCombatTricks: true },
+        phase: {
+          type: 'combat_priority',
+          window: 'post_attackers',
+          confirmedAttackers: ['atk_1'],
+          blockers: {},
+          attackerBlockerOrder: {},
+          priorityPlayer: 'player1',
+          passCount: 0,
+          stack: [
+            {
+              stackId: 'stack_1',
+              cardId: 'fire_fireball',
+              effectId: 'fireball',
+              casterId: 'player1',
+              selectedTarget: null,
+              surchargePaid: 1,
+            },
+          ],
+        },
+      }),
+      legalActions: [{ type: 'PASS_PRIORITY' }],
+      humanPlayer: 'player1',
+      events: [],
+      gameId: 'test-game',
+      player1DeckIds: [],
+      player2DeckIds: [],
+    });
+
+    render(
+      <GameDispatchProvider controller={null}>
+        <GameBoard />
+      </GameDispatchProvider>,
+    );
+
+    expect(screen.getByText('Before Blockers')).toBeInTheDocument();
+    expect(screen.getByText('Fireball')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'No Response' })).toBeInTheDocument();
+  });
+
+  it('uses contextual priority copy when passing moves to blockers', () => {
+    useGameStore.setState({
+      state: createTestGameState({
+        ruleset: { allowCombatTricks: true },
+        phase: {
+          type: 'combat_priority',
+          window: 'post_attackers',
+          confirmedAttackers: ['atk_1'],
+          blockers: {},
+          attackerBlockerOrder: {},
+          priorityPlayer: 'player1',
+          passCount: 1,
+          stack: [],
+        },
+      }),
+      legalActions: [{ type: 'PASS_PRIORITY' }],
+      humanPlayer: 'player1',
+      events: [],
+      gameId: 'test-game',
+      player1DeckIds: [],
+      player2DeckIds: [],
+    });
+
+    render(
+      <GameDispatchProvider controller={null}>
+        <GameBoard />
+      </GameDispatchProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Proceed to Blockers' })).toBeInTheDocument();
+  });
+
   it('renders attacker controls with No Attacks button during declare_attackers', () => {
     useGameStore.setState({
       state: createTestGameState({

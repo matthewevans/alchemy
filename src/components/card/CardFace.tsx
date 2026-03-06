@@ -55,6 +55,9 @@ export interface CardFaceStatusEffect {
 export interface CardFaceProps {
   cardId: string;
   viewLevel: CardViewLevel;
+  costOverride?: number;
+  costHint?: string;
+  highlightCost?: boolean;
   stats?: CardFaceStats;
   statFlashControls?: {
     attack: AnimationControls;
@@ -65,7 +68,16 @@ export interface CardFaceProps {
 
 // ─── Component ───
 
-export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEffects }: CardFaceProps) {
+export function CardFace({
+  cardId,
+  viewLevel,
+  costOverride,
+  costHint,
+  highlightCost,
+  stats,
+  statFlashControls,
+  statusEffects,
+}: CardFaceProps) {
   const card = CARD_REGISTRY[cardId];
   const config = VIEW_CONFIG[viewLevel];
   const elementColor = getElementColor(card.element);
@@ -77,6 +89,8 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
   const isCreature = card.type === 'creature';
   const easyReadMode = usePreferencesStore((s) => s.easyReadMode);
   const canNarrate = isTTSAvailable();
+  const displayedCost = costOverride ?? card.cost;
+  const [showCostHint, setShowCostHint] = useState(false);
 
   // Stat values: use overrides if provided, else base card stats
   const attack = stats?.attack ?? card.attack ?? 0;
@@ -137,12 +151,41 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
           {config.showCost && (
             <div
               data-testid="hand-card-cost"
-              className="shrink-0 flex items-center"
+              className={`relative shrink-0 flex items-center ${costHint ? 'cursor-help' : ''}`}
               style={{ gap: 'calc(var(--card-font-scale) * 0.05rem)' }}
+              title={costHint}
+              onMouseEnter={() => {
+                if (costHint) setShowCostHint(true);
+              }}
+              onMouseLeave={() => {
+                if (costHint) setShowCostHint(false);
+              }}
+              onClick={(e) => {
+                if (!costHint) return;
+                e.stopPropagation();
+                setShowCostHint((prev) => !prev);
+              }}
             >
+              {highlightCost && (
+                <motion.span
+                  className="pointer-events-none absolute -inset-[2px] rounded-md"
+                  style={{
+                    border: '1px solid rgba(251, 191, 36, 0.65)',
+                    boxShadow: '0 0 10px rgba(251, 191, 36, 0.45)',
+                  }}
+                  animate={{
+                    boxShadow: [
+                      '0 0 6px rgba(251, 191, 36, 0.35)',
+                      '0 0 12px rgba(251, 191, 36, 0.65)',
+                      '0 0 6px rgba(251, 191, 36, 0.35)',
+                    ],
+                  }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              )}
               <img
                 src={elementIconPath}
-                alt={`${card.cost} ${card.element}`}
+                alt={`${displayedCost} ${card.element}`}
                 className="select-none drop-shadow-sm"
                 draggable={false}
                 style={{
@@ -151,14 +194,34 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
                   objectFit: 'contain',
                 }}
               />
-              {card.cost > 1 && (
+              {displayedCost > 1 && (
                 <span
                   className="text-white/50 leading-none"
                   style={{ fontSize: 'calc(var(--card-font-scale) * 0.4rem)' }}
                 >
-                  ×<span className="font-bold text-white/80" style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}>{card.cost}</span>
+                  ×<span className="font-bold text-white/80" style={{ fontSize: 'calc(var(--card-font-scale) * 0.5rem)' }}>{displayedCost}</span>
                 </span>
               )}
+              {highlightCost && (
+                <span className="text-amber-200/90 leading-none" style={{ fontSize: 'calc(var(--card-font-scale) * 0.45rem)' }}>
+                  ✦
+                </span>
+              )}
+
+              <AnimatePresence>
+                {showCostHint && costHint && (
+                  <motion.div
+                    data-testid="hand-card-cost-tooltip"
+                    className="absolute top-full right-0 mt-1 w-48 rounded-md border border-amber-200/35 bg-slate-950/95 px-2 py-1.5 text-[10px] leading-tight text-white shadow-[0_8px_24px_rgba(0,0,0,0.65)] z-30"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 4 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    {costHint}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -216,14 +279,43 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
           <div className="flex justify-center" style={{ marginTop: 'calc(var(--card-font-scale) * -0.35rem)' }}>
             <span
               data-testid="hand-card-type-label"
-              className="relative z-[3] inline-flex rounded px-1.5 py-[1px] text-white/85 uppercase tracking-wide backdrop-blur-sm"
+              className="relative z-[3] inline-flex items-center rounded px-1.5 py-[1px] text-white/85 uppercase tracking-wide backdrop-blur-sm"
               style={{
                 fontSize: 'calc(var(--card-font-scale) * 0.44rem)',
                 background: 'rgba(15, 23, 42, 0.85)',
                 border: '1px solid rgba(148, 163, 184, 0.3)',
+                gap: 'calc(var(--card-font-scale) * 0.2rem)',
               }}
             >
               {isCreature ? 'Creature' : 'Spell'}
+              {canNarrate && (
+                <button
+                  type="button"
+                  className="text-white/50 hover:text-amber-300 transition-colors"
+                  aria-label={`Read ${card.name} aloud`}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    narrateCard(card.id, easyReadMode);
+                  }}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{
+                      width: 'calc(var(--card-font-scale) * 0.45rem)',
+                      height: 'calc(var(--card-font-scale) * 0.45rem)',
+                    }}
+                  >
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                  </svg>
+                </button>
+              )}
             </span>
           </div>
         )}
@@ -331,34 +423,6 @@ export function CardFace({ cardId, viewLevel, stats, statFlashControls, statusEf
           />
         )}
       </div>
-      {canNarrate && (
-        <button
-          type="button"
-          className={`absolute z-[6] text-white/70 hover:text-amber-300 transition-colors bg-black/45 hover:bg-black/60 rounded-full border border-white/20 shadow-md ${viewLevel === 'compact' ? 'left-1 bottom-1 p-[2px]' : 'left-1.5 bottom-1.5 p-[3px]'}`}
-          aria-label={`Read ${card.name} aloud`}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            narrateCard(card.id, easyReadMode);
-          }}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{
-              width: viewLevel === 'compact' ? '10px' : '11px',
-              height: viewLevel === 'compact' ? '10px' : '11px',
-            }}
-          >
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-          </svg>
-        </button>
-      )}
     </>
   );
 }

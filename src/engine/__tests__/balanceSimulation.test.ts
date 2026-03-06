@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { getCardsByElement } from '../cards';
 import { createInitialGameState } from '../gameInit';
 import { chooseAction } from '../ai';
+import { DEFAULT_AI_CONFIG } from '../aiConfig';
 import { createRNG } from '../prng';
 import { reduce } from '../reducer';
 import { TIER_CONFIGS } from '../ruleset';
@@ -56,7 +57,7 @@ function runGame(seed: number, p1: Element, p2: Element, startingPlayer: PlayerI
     }
 
     const actingPlayer = getActingPlayer(state)!;
-    const action = chooseAction(state, actingPlayer, rng);
+    const action = chooseAction(state, actingPlayer, rng, DEFAULT_AI_CONFIG);
     const result = reduce(state, action, actingPlayer, rng);
     state = result.newState;
   }

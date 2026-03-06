@@ -1774,6 +1774,283 @@ describe('Derived stats', () => {
   });
 });
 
+// ─── Archmage Combat Priority Stack ───
+
+describe('Archmage combat priority stack', () => {
+  it('enters post-attackers priority window when combat tricks are enabled', () => {
+    const attacker = makePermanent('fire_lava_hound', 'player1', {
+      attack: 2,
+      health: 3,
+      summonedThisTurn: false,
+    });
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_attackers',
+        tentativeAttackers: [attacker.permanentId],
+      },
+      player1: {
+        currentEnergy: 1,
+        maxEnergy: 1,
+        hand: [makeCardInstance('fire_blazing_speed')],
+        board: [attacker, null, null, null, null],
+      },
+      player2: { board: [null, null, null, null, null] },
+    });
+
+    const { newState, events } = reduce(state, { type: 'CONFIRM_ATTACKERS' }, 'player1', rng);
+    expect(newState.phase.type).toBe('combat_priority');
+    if (newState.phase.type !== 'combat_priority') return;
+
+    expect(newState.phase.window).toBe('post_attackers');
+    expect(newState.phase.priorityPlayer).toBe('player1');
+    expect(newState.phase.passCount).toBe(0);
+    expect(newState.phase.stack).toEqual([]);
+    expect(newState.phase.confirmedAttackers).toEqual([attacker.permanentId]);
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'ATTACKERS_DECLARED',
+      attackerIds: [attacker.permanentId],
+    }));
+  });
+
+  it('closes post-attackers priority into blocker declaration after pass-pass with empty stack', () => {
+    const attacker = makePermanent('fire_lava_hound', 'player1', {
+      attack: 2,
+      health: 3,
+      summonedThisTurn: false,
+      isTapped: true,
+    });
+    const blocker = makePermanent('water_shell_crab', 'player2', {
+      attack: 0,
+      health: 4,
+    });
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      activePlayer: 'player1',
+      phase: {
+        type: 'combat_priority',
+        window: 'post_attackers',
+        confirmedAttackers: [attacker.permanentId],
+        blockers: {},
+        attackerBlockerOrder: {},
+        priorityPlayer: 'player1',
+        passCount: 0,
+        stack: [],
+      },
+      player1: { board: [attacker, null, null, null, null] },
+      player2: {
+        currentEnergy: 2,
+        maxEnergy: 2,
+        hand: [makeCardInstance('air_blessing')],
+        board: [blocker, null, null, null, null],
+      },
+    });
+
+    const { newState: afterFirstPass } = reduce(state, { type: 'PASS_PRIORITY' }, 'player1', rng);
+    expect(afterFirstPass.phase.type).toBe('combat_priority');
+    if (afterFirstPass.phase.type !== 'combat_priority') return;
+    expect(afterFirstPass.phase.priorityPlayer).toBe('player2');
+    expect(afterFirstPass.phase.passCount).toBe(1);
+
+    const { newState: afterSecondPass } = reduce(afterFirstPass, { type: 'PASS_PRIORITY' }, 'player2', rng);
+    expect(afterSecondPass.phase).toEqual({
+      type: 'battle',
+      step: 'declare_blockers',
+      confirmedAttackers: [attacker.permanentId],
+      tentativeBlockers: {},
+    });
+  });
+
+  it('does not hold priority for targetless instant options', () => {
+    const attacker = makePermanent('fire_lava_hound', 'player1', {
+      attack: 2,
+      health: 3,
+      summonedThisTurn: false,
+      isTapped: true,
+    });
+    const blocker = makePermanent('water_shell_crab', 'player2', {
+      attack: 0,
+      health: 4,
+    });
+
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      activePlayer: 'player1',
+      phase: {
+        type: 'combat_priority',
+        window: 'post_attackers',
+        confirmedAttackers: [attacker.permanentId],
+        blockers: {},
+        attackerBlockerOrder: {},
+        priorityPlayer: 'player1',
+        passCount: 0,
+        stack: [],
+      },
+      player1: {
+        currentEnergy: 4,
+        maxEnergy: 4,
+        hand: [makeCardInstance('fire_fireball')], // no enemy creature targets
+        board: [attacker, null, null, null, null],
+      },
+      player2: { board: [blocker, null, null, null, null] },
+    });
+
+    const { newState } = reduce(state, { type: 'PASS_PRIORITY' }, 'player1', rng);
+    expect(newState.phase).toEqual({
+      type: 'battle',
+      step: 'declare_blockers',
+      confirmedAttackers: [attacker.permanentId],
+      tentativeBlockers: {},
+    });
+  });
+
+  it('resolves combat once from post-blockers after pass-pass with an empty stack', () => {
+    const attacker = makePermanent('fire_lava_hound', 'player1', {
+      attack: 3,
+      health: 3,
+      summonedThisTurn: false,
+      isTapped: true,
+    });
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      activePlayer: 'player1',
+      phase: {
+        type: 'combat_priority',
+        window: 'post_blockers',
+        confirmedAttackers: [attacker.permanentId],
+        blockers: {},
+        attackerBlockerOrder: {},
+        priorityPlayer: 'player1',
+        passCount: 0,
+        stack: [],
+      },
+      player1: { board: [attacker, null, null, null, null] },
+      player2: { board: [null, null, null, null, null], health: 20 },
+    });
+
+    const { newState, events } = reduce(state, { type: 'PASS_PRIORITY' }, 'player1', rng);
+
+    expect(newState.phase).toEqual({ type: 'play', postCombat: true });
+    expect(newState.players.player2.health).toBe(17);
+    expect(events.filter((e) => e.type === 'PLAYER_DAMAGED')).toHaveLength(1);
+  });
+
+  it('auto-passes through priority and resolves the stack in LIFO order', () => {
+    const target = makePermanent('water_tide_sprite', 'player2', {
+      attack: 1,
+      health: 2,
+    });
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      activePlayer: 'player1',
+      phase: {
+        type: 'combat_priority',
+        window: 'post_blockers',
+        confirmedAttackers: [],
+        blockers: {},
+        attackerBlockerOrder: {},
+        priorityPlayer: 'player1',
+        passCount: 0,
+        stack: [
+          {
+            stackId: 'stack_fireball',
+            cardId: 'fire_fireball',
+            effectId: 'fireball',
+            casterId: 'player1',
+            selectedTarget: { type: 'creature', permanentId: target.permanentId },
+            surchargePaid: 1,
+          },
+          {
+            stackId: 'stack_blessing',
+            cardId: 'air_blessing',
+            effectId: 'blessing',
+            casterId: 'player2',
+            selectedTarget: { type: 'creature', permanentId: target.permanentId },
+            surchargePaid: 0,
+          },
+        ],
+      },
+      player1: {
+        currentEnergy: 0,
+        maxEnergy: 0,
+        hand: [],
+      },
+      player2: {
+        currentEnergy: 0,
+        maxEnergy: 0,
+        hand: [],
+        board: [target, null, null, null, null],
+      },
+    });
+
+    const { newState, events } = reduce(state, { type: 'PASS_PRIORITY' }, 'player1', rng);
+    expect(newState.phase).toEqual({ type: 'play', postCombat: true });
+
+    const spellResolvedEvents = events.filter((event) => event.type === 'SPELL_RESOLVED');
+    expect(spellResolvedEvents).toHaveLength(2);
+    expect(spellResolvedEvents[0]).toEqual(expect.objectContaining({ cardId: 'air_blessing' }));
+    expect(spellResolvedEvents[1]).toEqual(expect.objectContaining({ cardId: 'fire_fireball' }));
+
+    const survivingTarget = newState.players.player2.board.find((p) => p?.permanentId === target.permanentId);
+    expect(survivingTarget).toBeTruthy();
+    expect(survivingTarget!.damage).toBe(3);
+    expect(survivingTarget!.temporaryHealthBonus).toBe(3);
+  });
+
+  it('refunds and resumes priority when targeting is cancelled during combat priority', () => {
+    const attacker = makePermanent('fire_lava_hound', 'player1', {
+      attack: 2,
+      health: 3,
+      summonedThisTurn: false,
+      isTapped: true,
+    });
+    const target = makePermanent('water_tide_sprite', 'player2', {
+      attack: 1,
+      health: 2,
+    });
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      activePlayer: 'player1',
+      phase: {
+        type: 'combat_priority',
+        window: 'post_attackers',
+        confirmedAttackers: [attacker.permanentId],
+        blockers: {},
+        attackerBlockerOrder: {},
+        priorityPlayer: 'player1',
+        passCount: 0,
+        stack: [],
+      },
+      player1: {
+        currentEnergy: 4,
+        maxEnergy: 4,
+        hand: [makeCardInstance('fire_fireball')],
+        board: [attacker, null, null, null, null],
+      },
+      player2: {
+        board: [target, null, null, null, null],
+      },
+    });
+
+    const { newState: targetingState } = reduce(state, { type: 'PLAY_CARD', cardIndex: 0 }, 'player1', rng);
+    expect(targetingState.phase.type).toBe('targeting');
+    expect(targetingState.players.player1.currentEnergy).toBe(1);
+
+    const { newState } = reduce(targetingState, { type: 'CANCEL_TARGETING' }, 'player1', rng);
+    expect(newState.phase.type).toBe('combat_priority');
+    if (newState.phase.type !== 'combat_priority') return;
+
+    expect(newState.phase.window).toBe('post_attackers');
+    expect(newState.phase.priorityPlayer).toBe('player1');
+    expect(newState.phase.passCount).toBe(0);
+    expect(newState.phase.stack).toEqual([]);
+    expect(newState.players.player1.currentEnergy).toBe(4);
+    expect(newState.players.player1.hand.some((card) => card.cardId === 'fire_fireball')).toBe(true);
+  });
+});
+
 // ─── Immutability ───
 
 describe('Immutability', () => {

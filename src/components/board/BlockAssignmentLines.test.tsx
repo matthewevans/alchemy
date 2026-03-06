@@ -159,4 +159,30 @@ describe('BlockAssignmentLines', () => {
     expect(screen.queryByTestId('block-assignment-line')).toBeNull();
     expect(screen.queryByTestId('block-assignment-overlay')).toBeNull();
   });
+
+  it('renders lines during post_blockers combat priority', () => {
+    mockCards.push(
+      mountMockCard('p1:fire_magma_sentinel#0', { x: 100, y: 250, width: 70, height: 100 }),
+      mountMockCard('p2:earth_mountain_giant#1', { x: 260, y: 130, width: 70, height: 100 }),
+    );
+
+    useGameStore.setState({
+      state: createTestGameState({
+        phase: {
+          type: 'combat_priority',
+          window: 'post_blockers',
+          confirmedAttackers: ['p2:earth_mountain_giant#1'],
+          blockers: { 'p1:fire_magma_sentinel#0': 'p2:earth_mountain_giant#1' },
+          attackerBlockerOrder: { 'p2:earth_mountain_giant#1': ['p1:fire_magma_sentinel#0'] },
+          priorityPlayer: 'player2',
+          passCount: 1,
+          stack: [],
+        },
+        activePlayer: 'player2',
+      }),
+    });
+
+    render(<BlockAssignmentLines />);
+    expect(screen.getAllByTestId('block-assignment-line')).toHaveLength(1);
+  });
 });

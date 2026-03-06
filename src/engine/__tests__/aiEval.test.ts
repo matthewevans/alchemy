@@ -167,7 +167,7 @@ describe('createAIConfig', () => {
       easy: 2.0,
       medium: 1.0,
       hard: 0.5,
-      very_hard: 0.15,
+      very_hard: 0.01,
     };
 
     for (const difficulty of DIFFICULTY_ORDER) {
@@ -181,7 +181,8 @@ describe('createAIConfig', () => {
     const config = createAIConfig('very_easy', createRNG(42));
     expect(config.playLookahead).toBe(false);
     expect(config.combatLookahead).toBe(false);
-    expect(config.search.enabled).toBe(true);
+    expect(config.policy).toBe('heuristic');
+    expect(config.search.enabled).toBe(false);
     expect(config.search.rolloutDepth).toBe(0);
   });
 
@@ -189,6 +190,13 @@ describe('createAIConfig', () => {
     const config = createAIConfig('hard', createRNG(42));
     expect(config.playLookahead).toBe(true);
     expect(config.combatLookahead).toBe(true);
+  });
+
+  it('very_hard always uses balanced personality', () => {
+    for (let seed = 1; seed <= 30; seed++) {
+      const config = createAIConfig('very_hard', createRNG(seed));
+      expect(config.personality).toBe('balanced');
+    }
   });
 
   it('selects personality from the three options', () => {

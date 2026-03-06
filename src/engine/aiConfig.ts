@@ -87,12 +87,12 @@ interface DifficultyPreset {
 
 const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
   very_easy: {
-    policy: 'tree_search',
+    policy: 'heuristic',
     temperature: 4.0,
     playLookahead: false,
     combatLookahead: false,
     search: {
-      enabled: true,
+      enabled: false,
       maxDepth: 1,
       maxNodes: 4,
       maxBranching: 2,
@@ -101,12 +101,12 @@ const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
     },
   },
   easy: {
-    policy: 'tree_search',
+    policy: 'heuristic',
     temperature: 2.0,
     playLookahead: true,
     combatLookahead: false,
     search: {
-      enabled: true,
+      enabled: false,
       maxDepth: 1,
       maxNodes: 8,
       maxBranching: 3,
@@ -121,8 +121,8 @@ const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
     combatLookahead: true,
     search: {
       enabled: true,
-      maxDepth: 1,
-      maxNodes: 12,
+      maxDepth: 2,
+      maxNodes: 16,
       maxBranching: 4,
       rolloutDepth: 0,
       useTransposition: true,
@@ -138,13 +138,13 @@ const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
       maxDepth: 2,
       maxNodes: 24,
       maxBranching: 4,
-      rolloutDepth: 1,
+      rolloutDepth: 2,
       useTransposition: true,
     },
   },
   very_hard: {
     policy: 'tree_search',
-    temperature: 0.15,
+    temperature: 0.01,
     playLookahead: true,
     combatLookahead: true,
     search: {
@@ -152,7 +152,7 @@ const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
       maxDepth: 2,
       maxNodes: 32,
       maxBranching: 5,
-      rolloutDepth: 1,
+      rolloutDepth: 2,
       useTransposition: true,
     },
   },
@@ -163,7 +163,11 @@ const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
 const PERSONALITIES: AIPersonality[] = ['aggressive', 'defensive', 'balanced'];
 
 export function createAIConfig(difficulty: AIDifficulty, rng: RNG): AIConfig {
-  const personality = PERSONALITIES[Math.floor(rng() * PERSONALITIES.length)];
+  const personality = difficulty === 'very_hard'
+    ? 'balanced'
+    : difficulty === 'hard'
+      ? 'aggressive'
+      : PERSONALITIES[Math.floor(rng() * PERSONALITIES.length)];
   const preset = DIFFICULTY_PRESETS[difficulty];
   return {
     difficulty,
@@ -176,6 +180,25 @@ export function createAIConfig(difficulty: AIDifficulty, rng: RNG): AIConfig {
     weights: { ...PERSONALITY_WEIGHTS[personality] },
   };
 }
+
+/** Sensible default config (medium difficulty, balanced personality). */
+export const DEFAULT_AI_CONFIG: AIConfig = {
+  difficulty: 'medium',
+  personality: 'balanced',
+  policy: 'tree_search',
+  temperature: 1.0,
+  playLookahead: true,
+  combatLookahead: true,
+  search: {
+    enabled: true,
+    maxDepth: 2,
+    maxNodes: 16,
+    maxBranching: 4,
+    rolloutDepth: 0,
+    useTransposition: true,
+  },
+  weights: { ...PERSONALITY_WEIGHTS.balanced },
+};
 
 export const DIFFICULTY_ORDER: readonly AIDifficulty[] = [
   'very_easy',

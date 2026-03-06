@@ -15,7 +15,7 @@ type LobbyStep =
   | { type: 'host_waiting'; roomCode: string; hostDeckIds: string[] }
   | { type: 'join_enter_code' }
   | { type: 'join_select_deck'; roomCode: string }
-  | { type: 'connecting' }
+  | { type: 'connecting'; role: 'host' | 'guest' }
   | { type: 'error'; message: string };
 
 interface MultiplayerLobbyProps {
@@ -56,6 +56,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
   const mountedRef = useRef(true);
   const hostRef = useRef<HostResult | null>(null);
   const sessionRef = useRef<PeerSession | null>(null);
+  const connectAttemptRef = useRef(0);
   const shouldReduceMotion = useReducedMotion();
   const floatingIcons = useFloatingIcons(shouldReduceMotion ? 0 : 8);
   const logoWordmarkSrc = `${import.meta.env.BASE_URL}logo_wordmark.webp`;
@@ -63,6 +64,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
   useEffect(() => {
     return () => {
       mountedRef.current = false;
+      connectAttemptRef.current += 1;
       sessionRef.current?.close();
       hostRef.current?.destroy();
     };
@@ -73,6 +75,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
   // ─── Host Flow ───
 
   const handleHostDeckSelected = useCallback((deckIds: string[]) => {
+    connectAttemptRef.current += 1;
     const host = hostRoom();
     hostRef.current = host;
     setStep({ type: 'host_waiting', roomCode: host.roomCode, hostDeckIds: deckIds });
@@ -84,15 +87,14 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
     const host = hostRef.current;
     if (!host) return;
-
-    let cancelled = false;
+    const attemptId = connectAttemptRef.current;
 
     (async () => {
       try {
         const { conn, destroyPeer } = await host.waitForGuest();
-        if (cancelled || !mountedRef.current) { destroyPeer(); return; }
+        if (attemptId !== connectAttemptRef.current || !mountedRef.current) { destroyPeer(); return; }
 
-        setStep({ type: 'connecting' });
+        setStep({ type: 'connecting', role: 'host' });
         const session = createPeerSession(conn, destroyPeer);
         sessionRef.current = session;
 
@@ -115,7 +117,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
           });
         });
 
-        if (cancelled || !mountedRef.current) { session.close(); return; }
+        if (attemptId !== connectAttemptRef.current || !mountedRef.current) { session.close(); return; }
 
         const seed = Date.now();
         const sent = session.send({
@@ -133,16 +135,10 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
       } catch (err) {
         sessionRef.current?.close();
         sessionRef.current = null;
-        if (cancelled || !mountedRef.current) return;
+        if (attemptId !== connectAttemptRef.current || !mountedRef.current) return;
         setStep({ type: 'error', message: err instanceof Error ? err.message : `Connection failed: ${err}` });
       }
     })();
-
-    return () => {
-      cancelled = true;
-      sessionRef.current?.close();
-      sessionRef.current = null;
-    };
   }, [step.type, hostDeckIds, onStartGame]);
 
   // ─── Join Flow ───
@@ -160,11 +156,13 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
   const handleJoinDeckSelected = useCallback(async (deckIds: string[]) => {
     if (step.type !== 'join_select_deck') return;
     const { roomCode } = step;
+    const attemptId = connectAttemptRef.current + 1;
+    connectAttemptRef.current = attemptId;
 
-    setStep({ type: 'connecting' });
+    setStep({ type: 'connecting', role: 'guest' });
     try {
       const { conn, destroyPeer } = await joinRoom(roomCode);
-      if (!mountedRef.current) { destroyPeer(); return; }
+      if (attemptId !== connectAttemptRef.current || !mountedRef.current) { destroyPeer(); return; }
 
       const session = createPeerSession(conn, destroyPeer);
       sessionRef.current = session;
@@ -191,19 +189,20 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
         });
       });
 
-      if (!mountedRef.current) { session.close(); return; }
+      if (attemptId !== connectAttemptRef.current || !mountedRef.current) { session.close(); return; }
 
       sessionRef.current = null;
       onStartGame(session, false, deckIds, setup.hostDeckIds, setup.seed);
     } catch (err) {
       sessionRef.current?.close();
       sessionRef.current = null;
-      if (!mountedRef.current) return;
+      if (attemptId !== connectAttemptRef.current || !mountedRef.current) return;
       setStep({ type: 'error', message: err instanceof Error ? err.message : `Connection failed: ${err}` });
     }
   }, [step, onStartGame]);
 
   const handleBack = useCallback(() => {
+    connectAttemptRef.current += 1;
     sessionRef.current?.close();
     sessionRef.current = null;
     hostRef.current?.destroy();
@@ -225,9 +224,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
   // ─── Main Lobby UI ───
 
-  const backHandler = step.type === 'choose_role' ? onBack
-    : step.type === 'connecting' ? null
-    : handleBack;
+  const backHandler = step.type === 'choose_role' ? onBack : handleBack;
 
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-950 text-white overflow-hidden relative pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
@@ -442,7 +439,16 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
               />
-              <p className="text-white/70">Connecting...</p>
+              <p className="text-white/70">
+                {step.role === 'host' ? 'Finalizing connection...' : 'Connecting to host...'}
+              </p>
+              <motion.button
+                className={gameButtonClass({ tone: 'neutral', size: 'md', className: 'px-6 font-medium mt-2' })}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleBack}
+              >
+                Cancel
+              </motion.button>
             </motion.div>
           )}
 

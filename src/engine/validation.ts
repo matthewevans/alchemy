@@ -52,6 +52,8 @@ export function validateAction(
       );
     case 'CONFIRM_BLOCKER_ORDER':
       return validateConfirmBlockerOrder(state, actingPlayer);
+    case 'PASS_PRIORITY':
+      return validatePassPriority(state, actingPlayer);
     case 'START_LEARNING_CHALLENGE':
       return validateStartLearningChallenge(
         state,
@@ -123,11 +125,19 @@ function validatePlayCard(
   targetSlot: number | undefined,
   actingPlayer: PlayerId,
 ): ValidationResult {
-  if (state.phase.type !== 'play') {
-    return { valid: false, reason: 'PLAY_CARD is only valid during play phase' };
+  if (state.phase.type !== 'play' && state.phase.type !== 'combat_priority') {
+    return { valid: false, reason: 'PLAY_CARD is only valid during play or combat priority phase' };
   }
-  if (state.activePlayer !== actingPlayer) {
+  if (state.phase.type === 'play' && state.activePlayer !== actingPlayer) {
     return { valid: false, reason: 'It is not your turn' };
+  }
+  if (state.phase.type === 'combat_priority') {
+    if (!state.ruleset.allowCombatTricks) {
+      return { valid: false, reason: 'Combat tricks are disabled for this ruleset' };
+    }
+    if (state.phase.priorityPlayer !== actingPlayer) {
+      return { valid: false, reason: 'It is not your priority window' };
+    }
   }
   const playerState = state.players[actingPlayer];
   if (cardIndex < 0 || cardIndex >= playerState.hand.length) {
@@ -135,7 +145,20 @@ function validatePlayCard(
   }
   const cardInstance = playerState.hand[cardIndex];
   const cardDef = CARD_REGISTRY[cardInstance.cardId];
-  if (playerState.currentEnergy < cardDef.cost) {
+  if (state.phase.type === 'combat_priority') {
+    if (targetSlot !== undefined) {
+      return { valid: false, reason: 'Cannot select creature slot while casting in combat priority' };
+    }
+    if (cardDef.type !== 'spell') {
+      return { valid: false, reason: 'Only spells can be cast during combat priority' };
+    }
+    if (cardDef.spellSpeed !== 'instant') {
+      return { valid: false, reason: 'Only instant spells can be cast during combat priority' };
+    }
+  }
+
+  const effectiveCost = cardDef.cost + (state.phase.type === 'combat_priority' ? (cardDef.instantSurcharge ?? 0) : 0);
+  if (playerState.currentEnergy < effectiveCost) {
     return { valid: false, reason: 'Not enough energy to play this card' };
   }
   if (cardDef.type === 'creature') {
@@ -344,6 +367,16 @@ function validateConfirmBlockerOrder(state: GameState, actingPlayer: PlayerId): 
   return { valid: true };
 }
 
+function validatePassPriority(state: GameState, actingPlayer: PlayerId): ValidationResult {
+  if (state.phase.type !== 'combat_priority') {
+    return { valid: false, reason: 'PASS_PRIORITY is only valid during combat priority phase' };
+  }
+  if (state.phase.priorityPlayer !== actingPlayer) {
+    return { valid: false, reason: 'Only the priority player can pass priority' };
+  }
+  return { valid: true };
+}
+
 function validateStartLearningChallenge(
   state: GameState,
   prompt: LearningPrompt,
@@ -488,6 +521,9 @@ export function enumerateLegalActions(
     case 'battle':
       enumerateBattleActions(state, actingPlayer, actions);
       break;
+    case 'combat_priority':
+      enumerateCombatPriorityActions(state, actingPlayer, actions);
+      break;
     case 'learning':
       enumerateLearningActions(state, actingPlayer, actions);
       break;
@@ -575,6 +611,34 @@ function enumeratePlayActions(
       // Spell
       actions.push({ type: 'PLAY_CARD', cardIndex });
     }
+  }
+}
+
+function enumerateCombatPriorityActions(
+  state: GameState,
+  actingPlayer: PlayerId,
+  actions: GameAction[],
+): void {
+  if (state.phase.type !== 'combat_priority') {
+    return;
+  }
+  if (!state.ruleset.allowCombatTricks || state.phase.priorityPlayer !== actingPlayer) {
+    return;
+  }
+
+  actions.push({ type: 'PASS_PRIORITY' });
+
+  const playerState = state.players[actingPlayer];
+  for (let cardIndex = 0; cardIndex < playerState.hand.length; cardIndex++) {
+    const cardInstance = playerState.hand[cardIndex];
+    const cardDef = CARD_REGISTRY[cardInstance.cardId];
+    if (cardDef.type !== 'spell') continue;
+    if (cardDef.spellSpeed !== 'instant') continue;
+
+    const effectiveCost = cardDef.cost + (cardDef.instantSurcharge ?? 0);
+    if (playerState.currentEnergy < effectiveCost) continue;
+
+    actions.push({ type: 'PLAY_CARD', cardIndex });
   }
 }
 

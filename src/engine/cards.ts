@@ -12,9 +12,9 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'fire_dragon_whelp', name: 'Dragon Whelp', type: 'creature', element: 'fire', cost: 5, attack: 5, health: 4, creatureType: 'dragon', keywords: ['blast'], tier: 'apprentice', flavor: 'Small for a dragon. Big for a problem.' },
 
   // ─── Fire Spells ───
-  { id: 'fire_fireball', name: 'Fireball', type: 'spell', element: 'fire', cost: 2, keywords: [], tier: 'apprentice', effectId: 'fireball', targetingType: EFFECT_REGISTRY.fireball.targetingType, flavor: 'The first spell every fire mage learns. The last one many foes see.' },
+  { id: 'fire_fireball', name: 'Fireball', type: 'spell', element: 'fire', cost: 2, spellSpeed: 'instant', instantSurcharge: 1, keywords: [], tier: 'apprentice', effectId: 'fireball', targetingType: EFFECT_REGISTRY.fireball.targetingType, flavor: 'The first spell every fire mage learns. The last one many foes see.' },
   { id: 'fire_eruption', name: 'Eruption', type: 'spell', element: 'fire', cost: 3, keywords: [], tier: 'apprentice', effectId: 'eruption', flavor: 'The mountain remembers every slight.' },
-  { id: 'fire_blazing_speed', name: 'Blazing Speed', type: 'spell', element: 'fire', cost: 1, keywords: [], tier: 'apprentice', effectId: 'blazing_speed', targetingType: EFFECT_REGISTRY.blazing_speed.targetingType, flavor: 'Too fast to see, too bright to miss.' },
+  { id: 'fire_blazing_speed', name: 'Blazing Speed', type: 'spell', element: 'fire', cost: 1, spellSpeed: 'instant', keywords: [], tier: 'apprentice', effectId: 'blazing_speed', targetingType: EFFECT_REGISTRY.blazing_speed.targetingType, flavor: 'Too fast to see, too bright to miss.' },
 
   // ─── Fire Creatures (Forge) ───
   { id: 'fire_spark_striker', name: 'Spark Striker', type: 'creature', element: 'fire', cost: 1, attack: 1, health: 1, creatureType: 'elemental', keywords: ['fury'], tier: 'alchemist', flavor: 'One hit from each tiny fist!' },
@@ -26,8 +26,8 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'fire_inferno_dragon', name: 'Inferno Dragon', type: 'creature', element: 'fire', cost: 6, attack: 5, health: 5, creatureType: 'dragon', keywords: ['fury'], tier: 'archmage', flavor: 'When it roars, even volcanoes listen.' },
 
   // ─── Fire Spells (Forge) ───
-  { id: 'fire_forge_hammer', name: 'Forge Hammer', type: 'spell', element: 'fire', cost: 1, keywords: [], tier: 'alchemist', effectId: 'forge_hammer', targetingType: EFFECT_REGISTRY.forge_hammer.targetingType, flavor: 'Strength, hammered to a fine edge.' },
-  { id: 'fire_furnace_blast', name: 'Furnace Blast', type: 'spell', element: 'fire', cost: 3, keywords: [], tier: 'archmage', effectId: 'furnace_blast', targetingType: EFFECT_REGISTRY.furnace_blast.targetingType, flavor: 'Hotter than hot. Way hotter than that.' },
+  { id: 'fire_forge_hammer', name: 'Forge Hammer', type: 'spell', element: 'fire', cost: 1, spellSpeed: 'instant', keywords: [], tier: 'alchemist', effectId: 'forge_hammer', targetingType: EFFECT_REGISTRY.forge_hammer.targetingType, flavor: 'Strength, hammered to a fine edge.' },
+  { id: 'fire_furnace_blast', name: 'Furnace Blast', type: 'spell', element: 'fire', cost: 3, spellSpeed: 'instant', instantSurcharge: 1, keywords: [], tier: 'archmage', effectId: 'furnace_blast', targetingType: EFFECT_REGISTRY.furnace_blast.targetingType, flavor: 'Hotter than hot. Way hotter than that.' },
   { id: 'fire_flame_wave', name: 'Flame Wave', type: 'spell', element: 'fire', cost: 5, keywords: [], tier: 'archmage', effectId: 'flame_wave', flavor: 'A wall of fire with nowhere to run.' },
 
   // ─── Water Creatures ───
@@ -55,7 +55,7 @@ export const ALL_CARDS: CardDefinition[] = [
 
   // ─── Water Spells (Depths) ───
   { id: 'water_riptide', name: 'Riptide', type: 'spell', element: 'water', cost: 3, keywords: [], tier: 'alchemist', effectId: 'riptide', flavor: 'The tide takes everything eventually.' },
-  { id: 'water_tidal_surge', name: 'Tidal Surge', type: 'spell', element: 'water', cost: 4, keywords: [], tier: 'archmage', effectId: 'tidal_surge', targetingType: EFFECT_REGISTRY.tidal_surge.targetingType, flavor: 'The sea giveth. The sea taketh.' },
+  { id: 'water_tidal_surge', name: 'Tidal Surge', type: 'spell', element: 'water', cost: 4, spellSpeed: 'instant', keywords: [], tier: 'archmage', effectId: 'tidal_surge', targetingType: EFFECT_REGISTRY.tidal_surge.targetingType, flavor: 'The sea giveth. The sea taketh.' },
   { id: 'water_maelstrom', name: 'Maelstrom', type: 'spell', element: 'water', cost: 5, keywords: [], tier: 'archmage', effectId: 'maelstrom', flavor: 'Everything goes in. Nothing comes out.' },
 
   // ─── Earth Creatures ───
@@ -68,9 +68,9 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'earth_mountain_giant', name: 'Mountain Giant', type: 'creature', element: 'earth', cost: 5, attack: 4, health: 6, creatureType: 'giant', keywords: [], tier: 'apprentice', flavor: 'When the mountain walks, the world listens.' },
 
   // ─── Earth Spells ───
-  { id: 'earth_entangle', name: 'Entangle', type: 'spell', element: 'earth', cost: 1, keywords: [], tier: 'apprentice', effectId: 'entangle', targetingType: EFFECT_REGISTRY.entangle.targetingType, flavor: 'The forest does not forget trespassers.' },
+  { id: 'earth_entangle', name: 'Entangle', type: 'spell', element: 'earth', cost: 1, spellSpeed: 'instant', keywords: [], tier: 'apprentice', effectId: 'entangle', targetingType: EFFECT_REGISTRY.entangle.targetingType, flavor: 'The forest does not forget trespassers.' },
   { id: 'earth_earthquake', name: 'Earthquake', type: 'spell', element: 'earth', cost: 3, keywords: [], tier: 'apprentice', effectId: 'earthquake', flavor: 'Even the brave lose their footing.' },
-  { id: 'earth_growth', name: 'Growth', type: 'spell', element: 'earth', cost: 2, keywords: [], tier: 'apprentice', effectId: 'growth', targetingType: EFFECT_REGISTRY.growth.targetingType, flavor: 'A whisper of ancient green magic.' },
+  { id: 'earth_growth', name: 'Growth', type: 'spell', element: 'earth', cost: 2, spellSpeed: 'instant', keywords: [], tier: 'apprentice', effectId: 'growth', targetingType: EFFECT_REGISTRY.growth.targetingType, flavor: 'A whisper of ancient green magic.' },
 
   // ─── Air Creatures ───
   { id: 'air_breeze_fairy', name: 'Breeze Fairy', type: 'creature', element: 'air', cost: 1, attack: 1, health: 1, creatureType: 'fairy', keywords: ['swift', 'draw'], tier: 'apprentice', flavor: 'She speaks only in riddles and giggles.' },
@@ -82,8 +82,8 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'air_tempest_eagle', name: 'Tempest Eagle', type: 'creature', element: 'air', cost: 5, attack: 5, health: 5, creatureType: 'beast', keywords: [], tier: 'apprentice', flavor: 'Where it flies, the sky itself bows.' },
 
   // ─── Air Spells ───
-  { id: 'air_gust', name: 'Gust', type: 'spell', element: 'air', cost: 1, keywords: [], tier: 'apprentice', effectId: 'gust', targetingType: EFFECT_REGISTRY.gust.targetingType, flavor: '"Goodbye!" —The wind' },
-  { id: 'air_lightning_bolt', name: 'Lightning Bolt', type: 'spell', element: 'air', cost: 2, keywords: [], tier: 'apprentice', effectId: 'lightning_bolt', targetingType: EFFECT_REGISTRY.lightning_bolt.targetingType, flavor: 'Nature\'s way of saying "no."' },
+  { id: 'air_gust', name: 'Gust', type: 'spell', element: 'air', cost: 1, spellSpeed: 'instant', keywords: [], tier: 'apprentice', effectId: 'gust', targetingType: EFFECT_REGISTRY.gust.targetingType, flavor: '"Goodbye!" —The wind' },
+  { id: 'air_lightning_bolt', name: 'Lightning Bolt', type: 'spell', element: 'air', cost: 2, spellSpeed: 'instant', instantSurcharge: 1, keywords: [], tier: 'apprentice', effectId: 'lightning_bolt', targetingType: EFFECT_REGISTRY.lightning_bolt.targetingType, flavor: 'Nature\'s way of saying "no."' },
   { id: 'air_tailwind', name: 'Tailwind', type: 'spell', element: 'air', cost: 3, keywords: [], tier: 'apprentice', effectId: 'tailwind', flavor: 'The breeze carries friends to battle faster.' },
 
   // ─── Shadow Creatures ───
@@ -96,9 +96,9 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'shadow_shadow_dragon', name: 'Shadow Dragon', type: 'creature', element: 'shadow', cost: 5, attack: 5, health: 5, creatureType: 'dragon', keywords: [], tier: 'apprentice', effectId: 'shadow_dragon_etb', flavor: 'It doesn\'t breathe fire. It breathes fear.' },
 
   // ─── Shadow Spells ───
-  { id: 'shadow_dark_bolt', name: 'Dark Bolt', type: 'spell', element: 'shadow', cost: 1, keywords: [], tier: 'apprentice', effectId: 'dark_bolt', targetingType: EFFECT_REGISTRY.dark_bolt.targetingType, flavor: 'Power always comes at a price.' },
+  { id: 'shadow_dark_bolt', name: 'Dark Bolt', type: 'spell', element: 'shadow', cost: 1, spellSpeed: 'instant', instantSurcharge: 1, keywords: [], tier: 'apprentice', effectId: 'dark_bolt', targetingType: EFFECT_REGISTRY.dark_bolt.targetingType, flavor: 'Power always comes at a price.' },
   { id: 'shadow_life_drain', name: 'Life Drain', type: 'spell', element: 'shadow', cost: 3, keywords: [], tier: 'apprentice', effectId: 'life_drain', flavor: 'What is taken is never truly gone.' },
-  { id: 'shadow_doom', name: 'Doom', type: 'spell', element: 'shadow', cost: 4, keywords: [], tier: 'apprentice', effectId: 'doom', targetingType: EFFECT_REGISTRY.doom.targetingType, flavor: 'No armor thick enough. No magic strong enough.' },
+  { id: 'shadow_doom', name: 'Doom', type: 'spell', element: 'shadow', cost: 4, spellSpeed: 'instant', instantSurcharge: 2, keywords: [], tier: 'apprentice', effectId: 'doom', targetingType: EFFECT_REGISTRY.doom.targetingType, flavor: 'No armor thick enough. No magic strong enough.' },
 
   // ─── Shadow Creatures (Dread) ───
   { id: 'shadow_venom_wisp', name: 'Venom Wisp', type: 'creature', element: 'shadow', cost: 1, attack: 1, health: 1, creatureType: 'undead', keywords: ['lifesteal'], tier: 'alchemist', flavor: 'It nibbles your soul. Just a little.' },
@@ -110,8 +110,8 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'shadow_abyssal_reaper', name: 'Abyssal Reaper', type: 'creature', element: 'shadow', cost: 6, attack: 4, health: 4, creatureType: 'undead', keywords: ['lifesteal'], tier: 'archmage', flavor: 'It harvests what fear cannot hold.' },
 
   // ─── Shadow Spells (Dread) ───
-  { id: 'shadow_shadow_strike', name: 'Shadow Strike', type: 'spell', element: 'shadow', cost: 2, keywords: [], tier: 'alchemist', effectId: 'shadow_strike', targetingType: EFFECT_REGISTRY.shadow_strike.targetingType, flavor: 'A fair trade, if you\'re desperate enough.' },
-  { id: 'shadow_soul_siphon', name: 'Soul Siphon', type: 'spell', element: 'shadow', cost: 3, keywords: [], tier: 'archmage', effectId: 'soul_siphon', targetingType: EFFECT_REGISTRY.soul_siphon.targetingType, flavor: 'What is yours becomes mine.' },
+  { id: 'shadow_shadow_strike', name: 'Shadow Strike', type: 'spell', element: 'shadow', cost: 2, spellSpeed: 'instant', instantSurcharge: 1, keywords: [], tier: 'alchemist', effectId: 'shadow_strike', targetingType: EFFECT_REGISTRY.shadow_strike.targetingType, flavor: 'A fair trade, if you\'re desperate enough.' },
+  { id: 'shadow_soul_siphon', name: 'Soul Siphon', type: 'spell', element: 'shadow', cost: 3, spellSpeed: 'instant', instantSurcharge: 1, keywords: [], tier: 'archmage', effectId: 'soul_siphon', targetingType: EFFECT_REGISTRY.soul_siphon.targetingType, flavor: 'What is yours becomes mine.' },
   { id: 'shadow_void_storm', name: 'Void Storm', type: 'spell', element: 'shadow', cost: 5, keywords: [], tier: 'archmage', effectId: 'void_storm', flavor: 'Darkness that swallows everything.' },
 
   // ─── Shadow Creatures (Witches) ───
@@ -124,9 +124,9 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'shadow_coven_matriarch', name: 'Coven Matriarch', type: 'creature', element: 'shadow', cost: 5, attack: 4, health: 5, creatureType: 'witch', keywords: ['heal'], tier: 'apprentice', flavor: 'Her warm tea solves problems and starts adventures.' },
 
   // ─── Shadow Spells (Witches) ───
-  { id: 'shadow_starlit_hex', name: 'Starlit Hex', type: 'spell', element: 'shadow', cost: 1, keywords: [], tier: 'apprentice', effectId: 'dark_bolt', targetingType: EFFECT_REGISTRY.dark_bolt.targetingType, flavor: 'A tiny hex with a little sting for everyone.' },
+  { id: 'shadow_starlit_hex', name: 'Starlit Hex', type: 'spell', element: 'shadow', cost: 1, spellSpeed: 'instant', instantSurcharge: 1, keywords: [], tier: 'apprentice', effectId: 'dark_bolt', targetingType: EFFECT_REGISTRY.dark_bolt.targetingType, flavor: 'A tiny hex with a little sting for everyone.' },
   { id: 'shadow_moon_sip', name: 'Moon Sip', type: 'spell', element: 'shadow', cost: 3, keywords: [], tier: 'apprentice', effectId: 'life_drain', flavor: 'A silver sip that steals a little gloom.' },
-  { id: 'shadow_midnight_banish', name: 'Midnight Banish', type: 'spell', element: 'shadow', cost: 4, keywords: [], tier: 'apprentice', effectId: 'doom', targetingType: EFFECT_REGISTRY.doom.targetingType, flavor: 'Back to the shadows. No arguing.' },
+  { id: 'shadow_midnight_banish', name: 'Midnight Banish', type: 'spell', element: 'shadow', cost: 4, spellSpeed: 'instant', instantSurcharge: 2, keywords: [], tier: 'apprentice', effectId: 'doom', targetingType: EFFECT_REGISTRY.doom.targetingType, flavor: 'Back to the shadows. No arguing.' },
 
   // ─── Air Creatures (Angels / Priests) ───
   { id: 'air_acolyte', name: 'Acolyte', type: 'creature', element: 'air', cost: 1, attack: 1, health: 2, creatureType: 'human', keywords: ['heal'], tier: 'apprentice', flavor: 'Still learning which end of the wand to hold.' },
@@ -139,7 +139,7 @@ export const ALL_CARDS: CardDefinition[] = [
 
   // ─── Air Spells (Angels / Priests) ───
   { id: 'air_soothe', name: 'Soothe', type: 'spell', element: 'air', cost: 1, keywords: [], tier: 'apprentice', effectId: 'soothe', flavor: 'Like a warm blanket made of starlight.' },
-  { id: 'air_blessing', name: 'Blessing', type: 'spell', element: 'air', cost: 2, keywords: [], tier: 'apprentice', effectId: 'blessing', targetingType: EFFECT_REGISTRY.blessing.targetingType, flavor: 'The light wraps around you like armor made of kindness.' },
+  { id: 'air_blessing', name: 'Blessing', type: 'spell', element: 'air', cost: 2, spellSpeed: 'instant', keywords: [], tier: 'apprentice', effectId: 'blessing', targetingType: EFFECT_REGISTRY.blessing.targetingType, flavor: 'The light wraps around you like armor made of kindness.' },
   { id: 'air_radiance', name: 'Radiance', type: 'spell', element: 'air', cost: 4, keywords: [], tier: 'apprentice', effectId: 'radiance', flavor: 'So bright, even your cards look happier.' },
 
   // ─── Earth Creatures (Dinosaurs) ───
@@ -152,8 +152,8 @@ export const ALL_CARDS: CardDefinition[] = [
   { id: 'earth_tyrant_rex', name: 'Tyrant Rex', type: 'creature', element: 'earth', cost: 5, attack: 4, health: 5, creatureType: 'dinosaur', keywords: ['blast'], tier: 'apprentice', flavor: 'The ground shakes. The trees lean away. Lunch is served.' },
 
   // ─── Earth Spells (Dinosaurs) ───
-  { id: 'earth_primal_roar', name: 'Primal Roar', type: 'spell', element: 'earth', cost: 1, keywords: [], tier: 'apprentice', effectId: 'primal_roar', targetingType: EFFECT_REGISTRY.primal_roar.targetingType, flavor: "RAAAWR! (Translation: 'I'm very upset.')" },
-  { id: 'earth_tar_pit', name: 'Tar Pit', type: 'spell', element: 'earth', cost: 2, keywords: [], tier: 'apprentice', effectId: 'tar_pit', targetingType: EFFECT_REGISTRY.tar_pit.targetingType, flavor: "One step in and you're going nowhere fast." },
+  { id: 'earth_primal_roar', name: 'Primal Roar', type: 'spell', element: 'earth', cost: 1, spellSpeed: 'instant', keywords: [], tier: 'apprentice', effectId: 'primal_roar', targetingType: EFFECT_REGISTRY.primal_roar.targetingType, flavor: "RAAAWR! (Translation: 'I'm very upset.')" },
+  { id: 'earth_tar_pit', name: 'Tar Pit', type: 'spell', element: 'earth', cost: 2, spellSpeed: 'instant', instantSurcharge: 1, keywords: [], tier: 'apprentice', effectId: 'tar_pit', targetingType: EFFECT_REGISTRY.tar_pit.targetingType, flavor: "One step in and you're going nowhere fast." },
   { id: 'earth_meteor_strike', name: 'Meteor Strike', type: 'spell', element: 'earth', cost: 4, keywords: [], tier: 'apprentice', effectId: 'meteor_strike', flavor: 'The sky remembers the dinosaurs. Sometimes it visits.' },
 ];
 

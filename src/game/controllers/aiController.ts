@@ -22,7 +22,7 @@ interface StoreAccessor {
   dispatch: (action: GameAction, actingPlayer: PlayerId) => GameEvent[];
 }
 
-export function createAIController(store: StoreAccessor, aiConfig?: AIConfig): OpponentController {
+export function createAIController(store: StoreAccessor, aiConfig: AIConfig): OpponentController {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   const scheduleAIAction = () => {

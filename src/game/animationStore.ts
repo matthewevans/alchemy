@@ -331,14 +331,20 @@ export function groupEventsIntoSteps(
 ): AnimationStep[] {
   const hasBlockersConfirmed = events.some((e) => e.type === 'BLOCKERS_DECLARED');
   const hasAttackersDeclared = events.some((e) => e.type === 'ATTACKERS_DECLARED');
+  const hasCombatDamage = events.some((e) =>
+    (e.type === 'DAMAGE_DEALT' || e.type === 'PLAYER_DAMAGED') && e.source !== 'spell',
+  );
   const hasSpellResolved = events.some((e) => e.type === 'SPELL_RESOLVED');
   const hasKeywordTriggered = events.some((e) => e.type === 'KEYWORD_TRIGGERED');
   const hasCreatureEntered = events.some((e) => e.type === 'CREATURE_ENTERED');
   const hasPlayerDamaged = events.some((e) => e.type === 'PLAYER_DAMAGED');
   const hasDamageDealt = events.some((e) => e.type === 'DAMAGE_DEALT');
 
-  // Route both blocker-confirmed AND auto-skipped-blocker combat through per-attacker grouping
-  if (hasBlockersConfirmed || hasAttackersDeclared) return groupCombatEvents(events, positions, cardIdMap);
+  // Route all combat (including post-priority combat resolution with no declare markers)
+  // through per-exchange grouping.
+  if (hasBlockersConfirmed || hasAttackersDeclared || hasCombatDamage) {
+    return groupCombatEvents(events, positions, cardIdMap);
+  }
   if (hasSpellResolved) return groupSpellEvents(events, positions);
   if (hasCreatureEntered && hasKeywordTriggered) return groupETBEvents(events, positions);
   if (hasCreatureEntered) return groupSummonEvents(events, positions);
@@ -380,6 +386,15 @@ function groupCombatEvents(
     const attackerForSource = blockerToAttacker.get(event.source);
     if (attackerForSource === event.targetId) {
       return `${event.targetId}::${event.source}`;
+    }
+
+    // Fallback for combat resolved outside declare events (e.g. PASS_PRIORITY close):
+    // if both IDs are on-board permanents, group reciprocal strikes into one exchange.
+    if (positions.has(event.source) && positions.has(event.targetId)) {
+      const [left, right] = event.source < event.targetId
+        ? [event.source, event.targetId]
+        : [event.targetId, event.source];
+      return `${left}::${right}`;
     }
 
     return `${event.source}::${event.targetId}`;

@@ -29,6 +29,7 @@ export function getDisplayPhaseKey(phase: Phase): string {
   if (phase.type === 'learning') return getDisplayPhaseKey(phase.suspendedPhase);
   if (phase.type === 'play' && phase.postCombat) return 'play2';
   if (phase.type === 'targeting' && phase.postCombat) return 'play2';
+  if (phase.type === 'combat_priority') return 'battle';
   return phase.type;
 }
 

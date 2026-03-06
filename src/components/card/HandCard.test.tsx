@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { HandCard } from './HandCard';
 
 describe('HandCard layout metadata', () => {
@@ -32,5 +32,25 @@ describe('HandCard layout metadata', () => {
 
     expect(screen.getByTestId('hand-card-type-label')).toHaveTextContent('Creature');
   });
-});
 
+  it('shows instant surcharge cost and hover explanation when provided', () => {
+    render(
+      <HandCard
+        cardInstance={{ instanceId: 'c3', cardId: 'fire_fireball' }}
+        isPlayable
+        isSelected={false}
+        costOverride={3}
+        costHint="Combat instant cast: 2 base + 1 surcharge = 3 (before blockers)."
+        highlightCost
+        onClick={() => {}}
+        onHover={() => {}}
+      />,
+    );
+
+    expect(screen.getByTestId('hand-card-cost')).toHaveTextContent('×3');
+    const cost = screen.getByTestId('hand-card-cost');
+    expect(cost).toHaveClass('cursor-help');
+    fireEvent.mouseEnter(cost);
+    expect(screen.getByTestId('hand-card-cost-tooltip')).toHaveTextContent('Combat instant cast');
+  });
+});

@@ -4,9 +4,9 @@ import { enumerateLegalActions } from './validation';
 import { reduce } from './reducer';
 import { evaluateState, softmaxSelect } from './aiEval';
 import type { AIConfig, AISearchConfig } from './aiConfig';
-import type { SeededRNG } from './prng';
 import { restoreRNG } from './prng';
 import { filterAIViableActions } from './aiActionPolicy';
+import { isSeededRNG } from './aiCombat';
 
 interface SearchState {
   state: GameState;
@@ -31,15 +31,15 @@ interface SearchTableEntry {
 
 type SearchTable = Map<string, SearchTableEntry>;
 
-function isSeededRNG(rng: RNG): rng is SeededRNG {
-  return typeof (rng as SeededRNG).getState === 'function';
-}
-
-function canUseSearch(config: AIConfig | undefined, phaseType: GameState['phase']['type']): config is AIConfig & {
+function canUseSearch(config: AIConfig | undefined, phase: GameState['phase']): config is AIConfig & {
   search: AISearchConfig;
 } {
   if (!config?.search?.enabled || config.policy !== 'tree_search') return false;
-  return phaseType === 'play' || phaseType === 'targeting';
+  if (phase.type === 'targeting') return false;
+  if (phase.type === 'battle') {
+    return phase.step === 'declare_attackers';
+  }
+  return phase.type === 'play' || phase.type === 'combat_priority';
 }
 
 function actionKey(action: GameAction): string {
@@ -276,7 +276,7 @@ export function chooseActionByTreeSearch(
   rootActions?: GameAction[],
 ): GameAction | null {
   if (!isSeededRNG(rng)) return null;
-  if (!canUseSearch(config, state.phase.type)) return null;
+  if (!canUseSearch(config, state.phase)) return null;
   if (getActingPlayer(state) !== aiPlayer) return null;
 
   const legal = filterAIViableActions(state, aiPlayer, rootActions ?? getSearchLegalActions(state, aiPlayer));

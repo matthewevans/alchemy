@@ -10,6 +10,9 @@ interface HandCardProps {
   cardInstance: CardInstance;
   isPlayable: boolean;
   isSelected: boolean;
+  costOverride?: number;
+  costHint?: string;
+  highlightCost?: boolean;
   verbose?: boolean;
   onClick: () => void;
   onDoubleClick?: () => void;
@@ -22,6 +25,9 @@ export function HandCard({
   cardInstance,
   isPlayable,
   isSelected,
+  costOverride,
+  costHint,
+  highlightCost,
   verbose,
   onClick,
   onDoubleClick,
@@ -106,6 +112,9 @@ export function HandCard({
       <CardFace
         cardId={cardInstance.cardId}
         viewLevel={verbose ? 'verbose' : 'normal'}
+        costOverride={costOverride}
+        costHint={costHint}
+        highlightCost={highlightCost}
       />
     </motion.div>
   );

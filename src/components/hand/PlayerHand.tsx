@@ -6,6 +6,7 @@ import { useGameDispatch } from '@game/GameDispatchContext';
 import { useUIStore } from '@game/uiStore';
 import type { GameAction } from '@engine/types';
 import { HandCard } from '@components/card';
+import { getCardCostPresentation } from '@components/card/costPresentation';
 import { useActionFeedback } from '@hooks/useActionFeedback';
 
 const DRAG_THRESHOLD = 10;
@@ -136,19 +137,16 @@ export function PlayerHand() {
       const el = document.elementFromPoint(x, y);
       if (!el) return;
 
-      // Drop on player board area — auto-place to first available slot
+      // Drop on either battlefield side — auto-place to first available slot
       const boardArea = (el as HTMLElement).closest('[data-player-board], [data-board-player]');
       if (boardArea) {
-        const player = boardArea.getAttribute('data-player-board') ?? boardArea.getAttribute('data-board-player');
-        if (player === humanPlayer) {
-          const playAction = legalActions.find(
-            (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
-              a.type === 'PLAY_CARD' && a.cardIndex === cardIndex,
-          );
-          if (playAction) {
-            dispatch(playAction, humanPlayer);
-            selectHandCard(null);
-          }
+        const playAction = legalActions.find(
+          (a): a is Extract<GameAction, { type: 'PLAY_CARD' }> =>
+            a.type === 'PLAY_CARD' && a.cardIndex === cardIndex,
+        );
+        if (playAction) {
+          dispatch(playAction, humanPlayer);
+          selectHandCard(null);
         }
       }
     },
@@ -207,6 +205,9 @@ export function PlayerHand() {
 
   // Phantom card for drag
   const draggedCard = draggedIndex !== null ? hand[draggedIndex] : null;
+  const draggedCardInstantCost = draggedCard
+    ? getCardCostPresentation(draggedCard.cardId, phase)
+    : null;
 
   // Auto-collapse on phase changes (hand peeks back down, user can re-expand)
   const phaseType = phase?.type;
@@ -251,6 +252,7 @@ export function PlayerHand() {
         onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHandHovered(false); }}
       >
         {hand.map((cardInstance, index) => {
+          const instantCost = getCardCostPresentation(cardInstance.cardId, phase);
           const angle = cardCount > 1 ? -maxFanAngle + fanStep * index : 0;
           const isPlayable = playableIndices.has(index) || discardableIndices.has(index);
           const isSelected = selectedHandIndex === index;
@@ -276,6 +278,9 @@ export function PlayerHand() {
                 cardInstance={cardInstance}
                 isPlayable={isPlayable}
                 isSelected={isSelected}
+                costOverride={instantCost.costOverride}
+                costHint={instantCost.costHint}
+                highlightCost={instantCost.highlightCost}
                 onClick={() => handleCardClick(index)}
                 onDoubleClick={() => handleCardDoubleClick(index)}
                 onHover={(hovering) => hoverCard(hovering ? cardInstance.cardId : null)}
@@ -325,6 +330,9 @@ export function PlayerHand() {
             cardInstance={draggedCard}
             isPlayable
             isSelected={false}
+            costOverride={draggedCardInstantCost?.costOverride}
+            costHint={draggedCardInstantCost?.costHint}
+            highlightCost={draggedCardInstantCost?.highlightCost}
             onClick={() => {}}
             onHover={() => {}}
           />

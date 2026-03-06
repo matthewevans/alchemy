@@ -1,5 +1,7 @@
 import type {
   CardInstance,
+  CombatPriorityPhase,
+  CombatPriorityStackItem,
   CorePhase,
   GameAction,
   GameEvent,
@@ -24,7 +26,7 @@ import { drawCards, performMulligan } from './deck';
 import { EFFECT_REGISTRY } from './effects';
 import type { EffectStep } from './effects';
 import { getOpponent, getCurrentHealth, getEffectiveAttack } from './types';
-import { validateAction } from './validation';
+import { enumerateLegalActions, validateAction } from './validation';
 
 // ─── Main Reducer ───
 
@@ -84,6 +86,9 @@ export function reduce(
     case 'CONFIRM_BLOCKER_ORDER':
       result = handleConfirmBlockerOrder(state);
       break;
+    case 'PASS_PRIORITY':
+      result = handlePassPriority(state);
+      break;
     case 'START_LEARNING_CHALLENGE':
       result = handleStartLearningChallenge(
         state,
@@ -108,10 +113,48 @@ export function reduce(
       break;
   }
 
+  // Auto-pass priority when the acting priority player has no legal casts.
+  result = autoAdvanceCombatPriority(result);
+
   // Post-process: derive stats from events (damage, deaths)
   result.newState = deriveStatsFromEvents(state, result.newState, result.events);
 
   return result;
+}
+
+function autoAdvanceCombatPriority(result: ReducerResult): ReducerResult {
+  let currentState = result.newState;
+  const events = [...result.events];
+  let safety = 0;
+
+  while (currentState.phase.type === 'combat_priority') {
+    if (safety >= 32) {
+      throw new Error('Priority auto-pass loop exceeded safety limit');
+    }
+    safety += 1;
+
+    const priorityPlayer = currentState.phase.priorityPlayer;
+    const legalActions = enumerateLegalActions(currentState, priorityPlayer);
+    const canCast = legalActions.some((action) => {
+      if (action.type !== 'PLAY_CARD') return false;
+      const card = currentState.players[priorityPlayer].hand[action.cardIndex];
+      if (!card) return false;
+
+      const cardDef = CARD_REGISTRY[card.cardId];
+      if (!cardDef.targetingType) return true;
+
+      return computeValidTargets(currentState, priorityPlayer, cardDef.targetingType).length > 0;
+    });
+    if (canCast) {
+      break;
+    }
+
+    const passResult = handlePassPriority(currentState);
+    currentState = passResult.newState;
+    events.push(...passResult.events);
+  }
+
+  return { newState: currentState, events };
 }
 
 /** Derive combat/damage stats from events rather than threading through every function. */
@@ -208,6 +251,34 @@ function findFirstEmptySlot(board: (Permanent | null)[]): number {
 function hasKeyword(permanent: Permanent, keyword: Keyword): boolean {
   const cardDef = CARD_REGISTRY[permanent.cardId];
   return cardDef.keywords.includes(keyword);
+}
+
+function getPlayCost(state: GameState, cardId: string): number {
+  const cardDef = CARD_REGISTRY[cardId];
+  if (state.phase.type === 'combat_priority') {
+    return cardDef.cost + (cardDef.instantSurcharge ?? 0);
+  }
+  return cardDef.cost;
+}
+
+function createCombatPriorityPhase(
+  state: GameState,
+  window: CombatPriorityPhase['window'],
+  confirmedAttackers: string[],
+  blockers: Record<string, string>,
+  attackerBlockerOrder: Record<string, string[]>,
+  stack: CombatPriorityStackItem[] = [],
+): CombatPriorityPhase {
+  return {
+    type: 'combat_priority',
+    window,
+    confirmedAttackers,
+    blockers,
+    attackerBlockerOrder,
+    priorityPlayer: state.activePlayer,
+    passCount: 0,
+    stack,
+  };
 }
 
 function incrementStat(
@@ -482,14 +553,16 @@ function handlePlayCard(
   const ps = players[actingPlayer];
   const cardInstance = ps.hand[cardIndex];
   const cardDef = CARD_REGISTRY[cardInstance.cardId];
+  const effectiveCost = getPlayCost(state, cardInstance.cardId);
+  const isCombatPriority = state.phase.type === 'combat_priority';
 
   // Remove card from hand and deduct energy
   ps.hand = ps.hand.filter((_, i) => i !== cardIndex);
-  ps.currentEnergy -= cardDef.cost;
+  ps.currentEnergy -= effectiveCost;
 
   // Track stats
   let stats = incrementStat(state.stats, actingPlayer, 'cardsPlayed');
-  stats = incrementStat(stats, actingPlayer, 'energySpent', cardDef.cost);
+  stats = incrementStat(stats, actingPlayer, 'energySpent', effectiveCost);
   if (cardDef.type === 'creature') {
     stats = incrementStat(stats, actingPlayer, 'creaturesPlayed');
   } else {
@@ -543,14 +616,46 @@ function handlePlayCard(
       actingPlayer,
       cardDef.targetingType,
     );
-    const playPhase = state.phase as Extract<Phase, { type: 'play' }>;
-    const newPhase: Phase = {
-      type: 'targeting',
+    const newPhase: Phase = isCombatPriority
+      ? {
+          type: 'targeting',
+          effectId: cardDef.effectId!,
+          casterId: actingPlayer,
+          sourceCardId: cardInstance.cardId,
+          validTargets,
+          resumePriority: state.phase as CombatPriorityPhase,
+          stackOnResolve: true,
+          surchargePaid: effectiveCost - cardDef.cost,
+        }
+      : {
+          type: 'targeting',
+          effectId: cardDef.effectId!,
+          casterId: actingPlayer,
+          sourceCardId: cardInstance.cardId,
+          validTargets,
+          postCombat: (state.phase as Extract<Phase, { type: 'play' }>).postCombat,
+        };
+    return {
+      newState: { ...state, players, stats, phase: newPhase },
+      events,
+    };
+  }
+
+  if (isCombatPriority) {
+    const priorityPhase = state.phase as CombatPriorityPhase;
+    const stackItem: CombatPriorityStackItem = {
+      stackId: `${cardInstance.instanceId}#stack`,
+      cardId: cardInstance.cardId,
       effectId: cardDef.effectId!,
       casterId: actingPlayer,
-      sourceCardId: cardInstance.cardId,
-      validTargets,
-      postCombat: playPhase.postCombat,
+      selectedTarget: null,
+      surchargePaid: effectiveCost - cardDef.cost,
+    };
+    const newPhase: CombatPriorityPhase = {
+      ...priorityPhase,
+      stack: [...priorityPhase.stack, stackItem],
+      passCount: 0,
+      priorityPlayer: getOpponent(actingPlayer),
     };
     return {
       newState: { ...state, players, stats, phase: newPhase },
@@ -591,6 +696,29 @@ function handleSelectTarget(
   targetRef: TargetRef,
 ): ReducerResult {
   const phase = state.phase as Extract<Phase, { type: 'targeting' }>;
+
+  if (phase.stackOnResolve && phase.resumePriority) {
+    const cardDef = CARD_REGISTRY[phase.sourceCardId];
+    const stackItem: CombatPriorityStackItem = {
+      stackId: `${phase.sourceCardId}#stack#${phase.resumePriority.stack.length}`,
+      cardId: phase.sourceCardId,
+      effectId: cardDef.effectId!,
+      casterId: phase.casterId,
+      selectedTarget: targetRef,
+      surchargePaid: phase.surchargePaid ?? 0,
+    };
+    const nextPriority: CombatPriorityPhase = {
+      ...phase.resumePriority,
+      stack: [...phase.resumePriority.stack, stackItem],
+      passCount: 0,
+      priorityPlayer: getOpponent(phase.casterId),
+    };
+    return {
+      newState: { ...state, phase: nextPriority },
+      events: [],
+    };
+  }
+
   const effect = EFFECT_REGISTRY[phase.effectId];
   const events: GameEvent[] = [];
 
@@ -629,10 +757,18 @@ function handleCancelTargeting(state: GameState): ReducerResult {
   const players = clonePlayers(state.players);
   const casterPs = players[phase.casterId];
   const cardDef = CARD_REGISTRY[phase.sourceCardId];
+  const refundAmount = cardDef.cost + (phase.surchargePaid ?? 0);
 
   // Refund: return card to hand and restore energy
   casterPs.hand = [...casterPs.hand, { instanceId: `${phase.sourceCardId}#spell`, cardId: phase.sourceCardId }];
-  casterPs.currentEnergy += cardDef.cost;
+  casterPs.currentEnergy += refundAmount;
+
+  if (phase.stackOnResolve && phase.resumePriority) {
+    return {
+      newState: { ...state, players, phase: phase.resumePriority },
+      events: [],
+    };
+  }
 
   return {
     newState: { ...state, players, phase: { type: 'play', postCombat: phase.postCombat } },
@@ -1265,22 +1401,36 @@ function handleConfirmAttackers(state: GameState): ReducerResult {
 
   const tappedState: GameState = { ...state, players };
 
-  // Skip blockers if defender has no untapped creatures
-  const defender = getOpponent(state.activePlayer);
-  const defenderBoard = players[defender].board;
-  const hasEligibleBlockers = defenderBoard.some((p) => p !== null && !p.isTapped);
+  if (!state.ruleset.allowCombatTricks) {
+    // Legacy flow for apprentice/alchemist: resolve blockers/combat immediately.
+    const defender = getOpponent(state.activePlayer);
+    const hasEligibleBlockers = players[defender].board
+      .some((p) => p !== null && !p.isTapped);
 
-  if (!hasEligibleBlockers) {
-    // Resolve combat immediately with no blockers
-    const combatResult = resolveCombat(tappedState, phase.tentativeAttackers, {});
-    events.push(...combatResult.events);
+    if (!hasEligibleBlockers) {
+      const combatResult = resolveCombat(tappedState, phase.tentativeAttackers, {});
+      events.push(...combatResult.events);
 
-    if (combatResult.newState.phase.type === 'game_over') {
-      return { newState: combatResult.newState, events };
+      if (combatResult.newState.phase.type === 'game_over') {
+        return { newState: combatResult.newState, events };
+      }
+
+      return {
+        newState: { ...combatResult.newState, phase: { type: 'play', postCombat: true } },
+        events,
+      };
     }
 
     return {
-      newState: { ...combatResult.newState, phase: { type: 'play', postCombat: true } },
+      newState: {
+        ...tappedState,
+        phase: {
+          type: 'battle',
+          step: 'declare_blockers',
+          confirmedAttackers: phase.tentativeAttackers,
+          tentativeBlockers: {},
+        },
+      },
       events,
     };
   }
@@ -1288,12 +1438,13 @@ function handleConfirmAttackers(state: GameState): ReducerResult {
   return {
     newState: {
       ...tappedState,
-      phase: {
-        type: 'battle',
-        step: 'declare_blockers',
-        confirmedAttackers: phase.tentativeAttackers,
-        tentativeBlockers: {},
-      },
+      phase: createCombatPriorityPhase(
+        tappedState,
+        'post_attackers',
+        phase.tentativeAttackers,
+        {},
+        {},
+      ),
     },
     events,
   };
@@ -1364,22 +1515,36 @@ function handleConfirmBlockers(state: GameState): ReducerResult {
     };
   }
 
-  // Resolve combat immediately
-  const combatResult = resolveCombat(
-    state,
-    phase.confirmedAttackers,
-    phase.tentativeBlockers,
-    attackerBlockerOrder,
-  );
-  events.push(...combatResult.events);
+  if (!state.ruleset.allowCombatTricks) {
+    const combatResult = resolveCombat(
+      state,
+      phase.confirmedAttackers,
+      phase.tentativeBlockers,
+      attackerBlockerOrder,
+    );
+    events.push(...combatResult.events);
 
-  if (combatResult.newState.phase.type === 'game_over') {
-    return { newState: combatResult.newState, events };
+    if (combatResult.newState.phase.type === 'game_over') {
+      return { newState: combatResult.newState, events };
+    }
+
+    return {
+      newState: { ...combatResult.newState, phase: { type: 'play', postCombat: true } },
+      events,
+    };
   }
 
-  // Post-combat main phase — player can play more cards
   return {
-    newState: { ...combatResult.newState, phase: { type: 'play', postCombat: true } },
+    newState: {
+      ...state,
+      phase: createCombatPriorityPhase(
+        state,
+        'post_blockers',
+        phase.confirmedAttackers,
+        phase.tentativeBlockers,
+        attackerBlockerOrder,
+      ),
+    },
     events,
   };
 }
@@ -1411,21 +1576,154 @@ function handleConfirmBlockerOrder(state: GameState): ReducerResult {
     type: 'BLOCKERS_DECLARED',
     assignments: phase.blockers,
   }];
+
+  if (!state.ruleset.allowCombatTricks) {
+    const combatResult = resolveCombat(
+      state,
+      phase.confirmedAttackers,
+      phase.blockers,
+      phase.attackerBlockerOrder,
+    );
+    events.push(...combatResult.events);
+
+    if (combatResult.newState.phase.type === 'game_over') {
+      return { newState: combatResult.newState, events };
+    }
+
+    return {
+      newState: { ...combatResult.newState, phase: { type: 'play', postCombat: true } },
+      events,
+    };
+  }
+
+  return {
+    newState: {
+      ...state,
+      phase: createCombatPriorityPhase(
+        state,
+        'post_blockers',
+        phase.confirmedAttackers,
+        phase.blockers,
+        phase.attackerBlockerOrder,
+      ),
+    },
+    events,
+  };
+}
+
+function handlePassPriority(state: GameState): ReducerResult {
+  const phase = state.phase as CombatPriorityPhase;
+
+  if (phase.passCount === 0) {
+    return {
+      newState: {
+        ...state,
+        phase: {
+          ...phase,
+          passCount: 1,
+          priorityPlayer: getOpponent(phase.priorityPlayer),
+        },
+      },
+      events: [],
+    };
+  }
+
+  if (phase.stack.length > 0) {
+    return resolveTopPriorityStackSpell(state, phase);
+  }
+
+  return closePriorityWindow(state, phase);
+}
+
+function resolveTopPriorityStackSpell(
+  state: GameState,
+  phase: CombatPriorityPhase,
+): ReducerResult {
+  const top = phase.stack[phase.stack.length - 1];
+  const remainingStack = phase.stack.slice(0, -1);
+  const effect = EFFECT_REGISTRY[top.effectId];
+
+  const resolveResult = resolveEffectSteps(state, effect.steps, top.casterId, top.selectedTarget);
+  const events = [...resolveResult.events];
+  const players = clonePlayers(resolveResult.newState.players);
+  players[top.casterId].discard = [
+    ...players[top.casterId].discard,
+    { instanceId: top.stackId, cardId: top.cardId },
+  ];
+
+  events.push({
+    type: 'SPELL_RESOLVED',
+    cardId: top.cardId,
+    targets: top.selectedTarget ? [top.selectedTarget] : [],
+  });
+
+  if (resolveResult.newState.phase.type === 'game_over') {
+    return {
+      newState: { ...resolveResult.newState, players },
+      events,
+    };
+  }
+
+  const nextPhase: CombatPriorityPhase = {
+    ...phase,
+    stack: remainingStack,
+    passCount: 0,
+    priorityPlayer: state.activePlayer,
+  };
+
+  return {
+    newState: { ...resolveResult.newState, players, phase: nextPhase },
+    events,
+  };
+}
+
+function closePriorityWindow(
+  state: GameState,
+  phase: CombatPriorityPhase,
+): ReducerResult {
+  if (phase.window === 'post_attackers') {
+    const defender = getOpponent(state.activePlayer);
+    const hasEligibleBlockers = state.players[defender].board
+      .some((p) => p !== null && !p.isTapped);
+
+    if (!hasEligibleBlockers) {
+      const combatResult = resolveCombat(state, phase.confirmedAttackers, {});
+      if (combatResult.newState.phase.type === 'game_over') {
+        return { newState: combatResult.newState, events: combatResult.events };
+      }
+      return {
+        newState: { ...combatResult.newState, phase: { type: 'play', postCombat: true } },
+        events: combatResult.events,
+      };
+    }
+
+    return {
+      newState: {
+        ...state,
+        phase: {
+          type: 'battle',
+          step: 'declare_blockers',
+          confirmedAttackers: phase.confirmedAttackers,
+          tentativeBlockers: {},
+        },
+      },
+      events: [],
+    };
+  }
+
   const combatResult = resolveCombat(
     state,
     phase.confirmedAttackers,
     phase.blockers,
     phase.attackerBlockerOrder,
   );
-  events.push(...combatResult.events);
-
   if (combatResult.newState.phase.type === 'game_over') {
-    return { newState: combatResult.newState, events };
+    return { newState: combatResult.newState, events: combatResult.events };
   }
 
   return {
     newState: { ...combatResult.newState, phase: { type: 'play', postCombat: true } },
-    events,
+    events: combatResult.events,
   };
 }
 

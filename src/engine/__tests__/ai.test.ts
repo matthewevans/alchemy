@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { chooseAction, runAITurn } from '../ai';
 import { createRNG } from '../prng';
 import { enumerateLegalActions } from '../validation';
-import type { AIConfig } from '../aiConfig';
+import { reduce } from '../reducer';
+import { createAIConfig, DEFAULT_AI_CONFIG, type AIConfig } from '../aiConfig';
 import {
   createTestGameState,
   makeCardInstance,
@@ -10,6 +11,31 @@ import {
   resetTestCounters,
 } from './__fixtures__/testHelpers';
 import type { Phase } from '../types';
+
+const HEURISTIC_CONFIG: AIConfig = {
+  difficulty: 'easy',
+  personality: 'balanced',
+  policy: 'heuristic',
+  temperature: 0.01,
+  playLookahead: false,
+  combatLookahead: false,
+  search: {
+    enabled: false,
+    maxDepth: 1,
+    maxNodes: 4,
+    maxBranching: 2,
+    rolloutDepth: 0,
+    useTransposition: false,
+  },
+  weights: {
+    health: 1.0,
+    aggression: 1.0,
+    boardPresence: 1.0,
+    boardPower: 1.0,
+    boardDurability: 1.0,
+    handSize: 0.8,
+  },
+};
 
 beforeEach(() => {
   resetTestCounters();
@@ -30,7 +56,7 @@ describe('mulligan', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action.type).toBe('KEEP_HAND');
   });
 
@@ -47,7 +73,7 @@ describe('mulligan', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action.type).toBe('MULLIGAN_CARDS');
   });
 
@@ -63,7 +89,7 @@ describe('mulligan', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action.type).toBe('KEEP_HAND');
   });
 });
@@ -77,7 +103,7 @@ describe('draw and energy phases', () => {
       activePlayer: 'player2',
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action).toEqual({ type: 'ADVANCE_PHASE' });
   });
 
@@ -87,7 +113,7 @@ describe('draw and energy phases', () => {
       activePlayer: 'player2',
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action).toEqual({ type: 'ADVANCE_PHASE' });
   });
 });
@@ -110,7 +136,7 @@ describe('play phase', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action.type).toBe('PLAY_CARD');
     if (action.type === 'PLAY_CARD') {
       // cardIndex 2 = fire_magma_golem (cost 3, the most expensive affordable)
@@ -131,7 +157,7 @@ describe('play phase', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action).toEqual({ type: 'ADVANCE_PHASE' });
   });
 
@@ -152,7 +178,7 @@ describe('play phase', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), HEURISTIC_CONFIG);
     expect(action.type).toBe('PLAY_CARD');
     if (action.type === 'PLAY_CARD') {
       expect(state.players.player2.hand[action.cardIndex].cardId).toBe('water_splash');
@@ -173,7 +199,7 @@ describe('play phase', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action).toEqual({ type: 'ADVANCE_PHASE' });
   });
 
@@ -197,10 +223,84 @@ describe('play phase', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), HEURISTIC_CONFIG);
     expect(action.type).toBe('PLAY_CARD');
     if (action.type === 'PLAY_CARD') {
       expect(action.targetSlot).toBe(0);
+    }
+  });
+});
+
+// ─── Targeting ───
+
+describe('targeting', () => {
+  it('prioritizes the highest attack creature for prevent-attack effects on very easy', () => {
+    const lowThreat = makePermanent('fire_ember_sprite', 'player1', {
+      attack: 1,
+      health: 2,
+    });
+    const highThreat = makePermanent('earth_mountain_giant', 'player1', {
+      attack: 5,
+      health: 6,
+    });
+
+    const state = createTestGameState({
+      phase: {
+        type: 'targeting',
+        effectId: 'entangle',
+        casterId: 'player2',
+        sourceCardId: 'earth_entangle',
+        validTargets: [
+          { type: 'creature', permanentId: lowThreat.permanentId },
+          { type: 'creature', permanentId: highThreat.permanentId },
+        ],
+      },
+      activePlayer: 'player2',
+      player1: {
+        board: [lowThreat, highThreat, null, null, null],
+      },
+    });
+
+    const config = createAIConfig('very_easy', createRNG(7));
+    const action = chooseAction(state, 'player2', createRNG(8), config);
+    expect(action.type).toBe('SELECT_TARGET');
+    if (action.type === 'SELECT_TARGET') {
+      expect(action.targetRef).toEqual({ type: 'creature', permanentId: highThreat.permanentId });
+    }
+  });
+
+  it('prioritizes threat over low-health cleanup for mixed damage plus prevent effects', () => {
+    const lowThreat = makePermanent('fire_ember_sprite', 'player1', {
+      attack: 1,
+      health: 1,
+    });
+    const highThreat = makePermanent('earth_mountain_giant', 'player1', {
+      attack: 5,
+      health: 6,
+    });
+
+    const state = createTestGameState({
+      phase: {
+        type: 'targeting',
+        effectId: 'tar_pit',
+        casterId: 'player2',
+        sourceCardId: 'earth_tar_pit',
+        validTargets: [
+          { type: 'creature', permanentId: lowThreat.permanentId },
+          { type: 'creature', permanentId: highThreat.permanentId },
+        ],
+      },
+      activePlayer: 'player2',
+      player1: {
+        board: [lowThreat, highThreat, null, null, null],
+      },
+    });
+
+    const config = createAIConfig('easy', createRNG(17));
+    const action = chooseAction(state, 'player2', createRNG(18), config);
+    expect(action.type).toBe('SELECT_TARGET');
+    if (action.type === 'SELECT_TARGET') {
+      expect(action.targetRef).toEqual({ type: 'creature', permanentId: highThreat.permanentId });
     }
   });
 });
@@ -228,7 +328,7 @@ describe('declare attackers', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action.type).toBe('DECLARE_ATTACKER');
     if (action.type === 'DECLARE_ATTACKER') {
       expect(action.permanentId).toBe(creature.permanentId);
@@ -256,8 +356,208 @@ describe('declare attackers', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action.type).toBe('CONFIRM_ATTACKERS');
+  });
+
+  it('avoids suicidal attacks with combat lookahead heuristic scoring', () => {
+    const attacker = makePermanent('fire_lava_hound', 'player2', {
+      attack: 2,
+      health: 1,
+    });
+    const blocker = makePermanent('earth_mountain_giant', 'player1', {
+      attack: 4,
+      health: 6,
+    });
+
+    const phase: Phase = {
+      type: 'battle',
+      step: 'declare_attackers',
+      tentativeAttackers: [],
+    };
+
+    const state = createTestGameState({
+      phase,
+      activePlayer: 'player2',
+      player1: {
+        board: [blocker, null, null, null, null],
+      },
+      player2: {
+        board: [attacker, null, null, null, null],
+      },
+    });
+
+    const heuristicCombatLookahead: AIConfig = {
+      difficulty: 'hard',
+      personality: 'balanced',
+      policy: 'heuristic',
+      temperature: 0.05,
+      playLookahead: true,
+      combatLookahead: true,
+      search: {
+        enabled: false,
+        maxDepth: 1,
+        maxNodes: 8,
+        maxBranching: 4,
+        rolloutDepth: 0,
+        useTransposition: false,
+      },
+      weights: {
+        health: 1.0,
+        aggression: 1.0,
+        boardPresence: 1.0,
+        boardPower: 1.0,
+        boardDurability: 1.0,
+        handSize: 0.8,
+      },
+    };
+
+    const action = chooseAction(state, 'player2', createRNG(99), heuristicCombatLookahead);
+    expect(action).toEqual({ type: 'CONFIRM_ATTACKERS' });
+  });
+
+  it('medium tree search avoids suicidal attacks in battle', () => {
+    const attacker = makePermanent('fire_lava_hound', 'player2', {
+      attack: 2,
+      health: 1,
+    });
+    const blocker = makePermanent('earth_mountain_giant', 'player1', {
+      attack: 4,
+      health: 6,
+    });
+
+    const phase: Phase = {
+      type: 'battle',
+      step: 'declare_attackers',
+      tentativeAttackers: [],
+    };
+
+    const state = createTestGameState({
+      phase,
+      activePlayer: 'player2',
+      player1: {
+        board: [blocker, null, null, null, null],
+      },
+      player2: {
+        board: [attacker, null, null, null, null],
+      },
+    });
+
+    const mediumSearchConfig: AIConfig = {
+      difficulty: 'medium',
+      personality: 'balanced',
+      policy: 'tree_search',
+      temperature: 0.05,
+      playLookahead: true,
+      combatLookahead: false,
+      search: {
+        enabled: true,
+        maxDepth: 2,
+        maxNodes: 16,
+        maxBranching: 4,
+        rolloutDepth: 2,
+        useTransposition: true,
+      },
+      weights: {
+        health: 1.0,
+        aggression: 1.0,
+        boardPresence: 1.0,
+        boardPower: 1.0,
+        boardDurability: 1.0,
+        handSize: 0.8,
+      },
+    };
+
+    const action = chooseAction(state, 'player2', createRNG(123), mediumSearchConfig);
+    expect(action).toEqual({ type: 'CONFIRM_ATTACKERS' });
+  });
+
+  it('very hard confirms instead of adding low-value suicidal attackers', () => {
+    const strongBlocker = makePermanent('shadow_ghost_knight', 'player1', {
+      attack: 3,
+      health: 4,
+    });
+    const smallBlocker = makePermanent('water_jellyfish_swarm', 'player1', {
+      attack: 1,
+      health: 2,
+    });
+    const priestess = makePermanent('air_priestess_of_light', 'player2', {
+      attack: 1,
+      health: 4,
+    });
+    const scribe = makePermanent('air_angelic_scribe', 'player2', {
+      attack: 1,
+      health: 3,
+    });
+    const dove = makePermanent('air_temple_dove', 'player2', {
+      attack: 0,
+      health: 3,
+    });
+
+    const phase: Phase = {
+      type: 'battle',
+      step: 'declare_attackers',
+      tentativeAttackers: [priestess.permanentId],
+    };
+
+    const state = createTestGameState({
+      phase,
+      activePlayer: 'player2',
+      player1: {
+        board: [strongBlocker, smallBlocker, null, null, null],
+      },
+      player2: {
+        board: [priestess, scribe, dove, null, null],
+      },
+    });
+
+    const config = createAIConfig('very_hard', createRNG(44));
+    const action = chooseAction(state, 'player2', createRNG(45), config);
+    expect(action).toEqual({ type: 'CONFIRM_ATTACKERS' });
+  });
+
+  it('hard also confirms instead of adding low-value suicidal attackers', () => {
+    const strongBlocker = makePermanent('shadow_ghost_knight', 'player1', {
+      attack: 3,
+      health: 4,
+    });
+    const smallBlocker = makePermanent('water_jellyfish_swarm', 'player1', {
+      attack: 1,
+      health: 2,
+    });
+    const priestess = makePermanent('air_priestess_of_light', 'player2', {
+      attack: 1,
+      health: 4,
+    });
+    const scribe = makePermanent('air_angelic_scribe', 'player2', {
+      attack: 1,
+      health: 3,
+    });
+    const dove = makePermanent('air_temple_dove', 'player2', {
+      attack: 0,
+      health: 3,
+    });
+
+    const phase: Phase = {
+      type: 'battle',
+      step: 'declare_attackers',
+      tentativeAttackers: [priestess.permanentId],
+    };
+
+    const state = createTestGameState({
+      phase,
+      activePlayer: 'player2',
+      player1: {
+        board: [strongBlocker, smallBlocker, null, null, null],
+      },
+      player2: {
+        board: [priestess, scribe, dove, null, null],
+      },
+    });
+
+    const config = createAIConfig('hard', createRNG(54));
+    const action = chooseAction(state, 'player2', createRNG(55), config);
+    expect(action).toEqual({ type: 'CONFIRM_ATTACKERS' });
   });
 });
 
@@ -292,7 +592,7 @@ describe('declare blockers', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action.type).toBe('ASSIGN_BLOCKER');
     if (action.type === 'ASSIGN_BLOCKER') {
       expect(action.blockerPermanentId).toBe(myCreature.permanentId);
@@ -328,7 +628,7 @@ describe('declare blockers', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action.type).toBe('ASSIGN_BLOCKER');
   });
 
@@ -360,8 +660,8 @@ describe('declare blockers', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
-    // Should confirm without blocking (1 damage is not >= 3)
+    const action = chooseAction(state, 'player2', createRNG(42), HEURISTIC_CONFIG);
+    // Should confirm without blocking (1 damage is not worth the trade)
     expect(action.type).toBe('CONFIRM_BLOCKERS');
   });
 
@@ -389,8 +689,236 @@ describe('declare blockers', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action.type).toBe('CONFIRM_BLOCKERS');
+  });
+
+  it('blocks the highest damage attacker first when facing lethal', () => {
+    const blocker = makePermanent('fire_ember_sprite', 'player2', {
+      attack: 1,
+      health: 2,
+    });
+    const highDamageAttacker = makePermanent('earth_mountain_giant', 'player1', {
+      attack: 4,
+      health: 6,
+    });
+    const lowDamageAttacker = makePermanent('fire_lava_hound', 'player1', {
+      attack: 2,
+      health: 3,
+    });
+
+    const phase: Phase = {
+      type: 'battle',
+      step: 'declare_blockers',
+      confirmedAttackers: [highDamageAttacker.permanentId, lowDamageAttacker.permanentId],
+      tentativeBlockers: {},
+    };
+
+    const state = createTestGameState({
+      phase,
+      activePlayer: 'player1',
+      player1: {
+        board: [highDamageAttacker, lowDamageAttacker, null, null, null],
+      },
+      player2: {
+        health: 4,
+        board: [blocker, null, null, null, null],
+      },
+    });
+
+    const config = createAIConfig('very_easy', createRNG(23));
+    const action = chooseAction(state, 'player2', createRNG(24), config);
+    expect(action.type).toBe('ASSIGN_BLOCKER');
+    if (action.type === 'ASSIGN_BLOCKER') {
+      expect(action.attackerPermanentId).toBe(highDamageAttacker.permanentId);
+    }
+  });
+});
+
+describe('order blockers', () => {
+  it('confirms blocker order when reordering is not a strict improvement', () => {
+    const attacker = makePermanent('earth_mountain_giant', 'player2', {
+      attack: 4,
+      health: 6,
+      isTapped: true,
+    });
+    const blockerA = makePermanent('fire_magma_golem', 'player1', {
+      attack: 2,
+      health: 2,
+    });
+    const blockerB = makePermanent('water_river_otter', 'player1', {
+      attack: 2,
+      health: 2,
+    });
+
+    const phase: Phase = {
+      type: 'battle',
+      step: 'order_blockers',
+      confirmedAttackers: [attacker.permanentId],
+      blockers: {
+        [blockerA.permanentId]: attacker.permanentId,
+        [blockerB.permanentId]: attacker.permanentId,
+      },
+      attackerBlockerOrder: {
+        [attacker.permanentId]: [blockerA.permanentId, blockerB.permanentId],
+      },
+    };
+
+    const state = createTestGameState({
+      phase,
+      activePlayer: 'player2',
+      player1: {
+        board: [blockerA, blockerB, null, null, null],
+      },
+      player2: {
+        board: [attacker, null, null, null, null],
+      },
+    });
+
+    const treeSearchConfig: AIConfig = {
+      difficulty: 'hard',
+      personality: 'balanced',
+      policy: 'tree_search',
+      temperature: 0.01,
+      playLookahead: true,
+      combatLookahead: true,
+      search: {
+        enabled: true,
+        maxDepth: 2,
+        maxNodes: 24,
+        maxBranching: 4,
+        rolloutDepth: 2,
+        useTransposition: true,
+      },
+      weights: {
+        health: 1.0,
+        aggression: 1.0,
+        boardPresence: 1.0,
+        boardPower: 1.0,
+        boardDurability: 1.0,
+        handSize: 0.8,
+      },
+    };
+
+    const firstAction = chooseAction(state, 'player2', createRNG(4242), treeSearchConfig);
+    expect(firstAction.type).toBe('CONFIRM_BLOCKER_ORDER');
+
+    const firstResult = reduce(state, firstAction, 'player2', createRNG(7));
+    expect(firstResult.newState.phase.type).not.toBe('battle');
+  });
+});
+
+// ─── Combat Priority ───
+
+describe('combat priority', () => {
+  it('passes priority when no legal instant casts are available', () => {
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      phase: {
+        type: 'combat_priority',
+        window: 'post_attackers',
+        confirmedAttackers: ['atk_1'],
+        blockers: {},
+        attackerBlockerOrder: {},
+        priorityPlayer: 'player2',
+        passCount: 0,
+        stack: [],
+      },
+      activePlayer: 'player1',
+      player2: {
+        currentEnergy: 10,
+        maxEnergy: 10,
+        hand: [makeCardInstance('fire_eruption')],
+      },
+    });
+
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
+    expect(action).toEqual({ type: 'PASS_PRIORITY' });
+  });
+
+  it('casts an instant when one is legal in combat priority', () => {
+    const enemy = makePermanent('fire_lava_hound', 'player1', { attack: 2, health: 3 });
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      phase: {
+        type: 'combat_priority',
+        window: 'post_attackers',
+        confirmedAttackers: ['atk_1'],
+        blockers: {},
+        attackerBlockerOrder: {},
+        priorityPlayer: 'player2',
+        passCount: 0,
+        stack: [],
+      },
+      activePlayer: 'player1',
+      player1: {
+        board: [enemy, null, null, null, null],
+      },
+      player2: {
+        currentEnergy: 4,
+        maxEnergy: 4,
+        hand: [makeCardInstance('fire_fireball')],
+      },
+    });
+
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
+    expect(action.type).toBe('PLAY_CARD');
+  });
+
+  it('is deterministic in combat priority with seeded RNG', () => {
+    const myCreature = makePermanent('fire_lava_hound', 'player2', { attack: 2, health: 3 });
+    const config: AIConfig = {
+      difficulty: 'medium',
+      personality: 'balanced',
+      policy: 'heuristic',
+      temperature: 1.1,
+      playLookahead: false,
+      combatLookahead: false,
+      search: {
+        enabled: false,
+        maxDepth: 1,
+        maxNodes: 8,
+        maxBranching: 4,
+        rolloutDepth: 0,
+        useTransposition: false,
+      },
+      weights: {
+        health: 1.0,
+        aggression: 1.0,
+        boardPresence: 1.0,
+        boardPower: 1.0,
+        boardDurability: 1.0,
+        handSize: 0.8,
+      },
+    };
+
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      phase: {
+        type: 'combat_priority',
+        window: 'post_blockers',
+        confirmedAttackers: ['atk_1'],
+        blockers: {},
+        attackerBlockerOrder: {},
+        priorityPlayer: 'player2',
+        passCount: 0,
+        stack: [],
+      },
+      activePlayer: 'player1',
+      player2: {
+        currentEnergy: 2,
+        maxEnergy: 2,
+        hand: [
+          makeCardInstance('fire_blazing_speed'),
+          makeCardInstance('fire_forge_hammer'),
+        ],
+        board: [myCreature, null, null, null, null],
+      },
+    });
+
+    const actionA = chooseAction(state, 'player2', createRNG(777), config);
+    const actionB = chooseAction(state, 'player2', createRNG(777), config);
+    expect(actionA).toEqual(actionB);
   });
 });
 
@@ -409,7 +937,7 @@ describe('discard phase', () => {
       },
     });
 
-    const action = chooseAction(state, 'player2', createRNG(42));
+    const action = chooseAction(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(action.type).toBe('DISCARD_CARD');
     if (action.type === 'DISCARD_CARD') {
       expect(action.cardIndex).toBe(1); // dragon whelp is the most expensive
@@ -567,7 +1095,7 @@ describe('action validity', () => {
         },
       });
 
-      const action = chooseAction(state, 'player2', rng);
+      const action = chooseAction(state, 'player2', rng, DEFAULT_AI_CONFIG);
       const legalActions = enumerateLegalActions(state, 'player2');
 
       const isLegal = legalActions.some((la) =>
@@ -595,7 +1123,7 @@ describe('runAITurn', () => {
       },
     });
 
-    const result = runAITurn(state, 'player2', createRNG(42));
+    const result = runAITurn(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(result.actions.length).toBeGreaterThan(0);
     expect(result.finalState).toBeDefined();
     expect(result.events).toBeDefined();
@@ -613,7 +1141,7 @@ describe('runAITurn', () => {
     });
 
     const start = Date.now();
-    const result = runAITurn(state, 'player2', createRNG(42));
+    const result = runAITurn(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     const elapsed = Date.now() - start;
 
     // Should complete very quickly
@@ -634,7 +1162,7 @@ describe('runAITurn', () => {
       },
     });
 
-    const result = runAITurn(state, 'player2', createRNG(42));
+    const result = runAITurn(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     // Should have advanced phase and gone through battle
     expect(result.actions.length).toBeGreaterThanOrEqual(1);
   });
@@ -650,7 +1178,7 @@ describe('runAITurn', () => {
       },
     });
 
-    const result = runAITurn(state, 'player2', createRNG(42));
+    const result = runAITurn(state, 'player2', createRNG(42), DEFAULT_AI_CONFIG);
     expect(result.actions.length).toBe(1);
     expect(result.actions[0].type).toBe('KEEP_HAND');
   });

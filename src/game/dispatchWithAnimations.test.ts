@@ -79,6 +79,90 @@ describe('dispatchWithAnimations', () => {
     unregisterPosition('player:player2');
   });
 
+  it('keeps per-pair combat sequencing when resolving from post-blockers priority', () => {
+    const attackerA = makePermanent('fire_lava_hound', 'player1', {
+      attack: 2,
+      health: 3,
+      isTapped: true,
+    });
+    const attackerB = makePermanent('fire_lava_hound', 'player1', {
+      attack: 2,
+      health: 3,
+      isTapped: true,
+    });
+    const blockerA = makePermanent('water_river_otter', 'player2', {
+      attack: 2,
+      health: 3,
+      isTapped: false,
+    });
+    const blockerB = makePermanent('water_river_otter', 'player2', {
+      attack: 2,
+      health: 3,
+      isTapped: false,
+    });
+
+    const state = createTestGameState({
+      ruleset: { allowCombatTricks: true },
+      activePlayer: 'player1',
+      phase: {
+        type: 'combat_priority',
+        window: 'post_blockers',
+        confirmedAttackers: [attackerA.permanentId, attackerB.permanentId],
+        blockers: {
+          [blockerA.permanentId]: attackerA.permanentId,
+          [blockerB.permanentId]: attackerB.permanentId,
+        },
+        attackerBlockerOrder: {
+          [attackerA.permanentId]: [blockerA.permanentId],
+          [attackerB.permanentId]: [blockerB.permanentId],
+        },
+        priorityPlayer: 'player1',
+        passCount: 1,
+        stack: [],
+      },
+      player1: { board: [attackerA, attackerB, null, null, null, null] },
+      player2: { board: [blockerA, blockerB, null, null, null, null], health: 20 },
+    });
+
+    useGameStore.setState({
+      state,
+      rng: createRNG(11),
+      humanPlayer: 'player1',
+      gameId: null,
+      player1DeckIds: [],
+      player2DeckIds: [],
+      legalActions: [],
+      events: [],
+    });
+
+    registerPosition(attackerA.permanentId, { x: 110, y: 260, width: 80, height: 120 });
+    registerPosition(attackerB.permanentId, { x: 210, y: 260, width: 80, height: 120 });
+    registerPosition(blockerA.permanentId, { x: 110, y: 130, width: 80, height: 120 });
+    registerPosition(blockerB.permanentId, { x: 210, y: 130, width: 80, height: 120 });
+
+    dispatchWithAnimations({ type: 'PASS_PRIORITY' }, 'player1');
+
+    const { activeStep, queue } = useAnimationStore.getState();
+    const allSteps = [
+      ...(activeStep ? [activeStep] : []),
+      ...queue,
+    ];
+    const combatSteps = allSteps.filter((step) =>
+      step.effects.some((effect) => effect.type === 'combat_strike'),
+    );
+
+    expect(combatSteps.length).toBe(2);
+    for (const step of combatSteps) {
+      const strikeCount = step.effects.filter((effect) => effect.type === 'combat_strike').length;
+      expect(strikeCount).toBe(2);
+    }
+
+    unregisterPosition(attackerA.permanentId);
+    unregisterPosition(attackerB.permanentId);
+    unregisterPosition(blockerA.permanentId);
+    unregisterPosition(blockerB.permanentId);
+  });
+
   it('notifies optional local-action callback once', () => {
     const state = createTestGameState({ phase: { type: 'play' } });
     useGameStore.setState({

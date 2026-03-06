@@ -3,6 +3,7 @@
 export type PlayerId = 'player1' | 'player2';
 export type Tier = 'apprentice' | 'alchemist' | 'archmage';
 export type Element = 'fire' | 'water' | 'earth' | 'air' | 'shadow';
+export type SpellSpeed = 'sorcery' | 'instant';
 export type Keyword =
   | 'swift'
   | 'blast'
@@ -35,6 +36,8 @@ export interface CardDefinition {
   type: 'creature' | 'spell';
   element: Element;
   cost: number;
+  spellSpeed?: SpellSpeed;
+  instantSurcharge?: number;
   attack?: number;
   health?: number;
   creatureType?: CreatureType;
@@ -108,6 +111,28 @@ export interface LearningChallengeMeta {
   effectiveMathLevel: string;
 }
 
+export type CombatPriorityWindow = 'post_attackers' | 'post_blockers';
+
+export interface CombatPriorityStackItem {
+  stackId: string;
+  cardId: string;
+  effectId: string;
+  casterId: PlayerId;
+  selectedTarget: TargetRef | null;
+  surchargePaid: number;
+}
+
+export interface CombatPriorityPhase {
+  type: 'combat_priority';
+  window: CombatPriorityWindow;
+  confirmedAttackers: string[];
+  blockers: Record<string, string>;
+  attackerBlockerOrder: Record<string, string[]>;
+  priorityPlayer: PlayerId;
+  passCount: number;
+  stack: CombatPriorityStackItem[];
+}
+
 export type LearningResumeAction =
   | { type: 'ADVANCE_PHASE' }
   | { type: 'CONFIRM_ATTACKERS' }
@@ -128,6 +153,9 @@ export type CorePhase =
       sourceCardId: string;
       validTargets: TargetRef[];
       postCombat?: boolean;
+      resumePriority?: CombatPriorityPhase;
+      stackOnResolve?: boolean;
+      surchargePaid?: number;
     }
   | {
       type: 'battle';
@@ -153,6 +181,7 @@ export type CorePhase =
       attackers: string[];
       blockers: Record<string, string>;
     }
+  | CombatPriorityPhase
   | { type: 'discard'; player: PlayerId; mustDiscard: number }
   | { type: 'end' };
 
@@ -243,6 +272,7 @@ export type GameAction =
       blockerPermanentIds: string[];
     }
   | { type: 'CONFIRM_BLOCKER_ORDER' }
+  | { type: 'PASS_PRIORITY' }
   | {
       type: 'START_LEARNING_CHALLENGE';
       prompt: LearningPrompt;
@@ -377,6 +407,8 @@ export function getActingPlayer(state: GameState): PlayerId | null {
     case 'battle':
       if (phase.step === 'declare_blockers') return getOpponent(state.activePlayer);
       return state.activePlayer;
+    case 'combat_priority':
+      return phase.priorityPlayer;
     case 'game_over':
       return null;
     default:

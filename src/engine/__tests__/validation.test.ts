@@ -365,6 +365,98 @@ describe('validateAction', () => {
     });
   });
 
+  describe('combat priority windows', () => {
+    const combatPriorityPhase: Phase = {
+      type: 'combat_priority',
+      window: 'post_attackers',
+      confirmedAttackers: ['atk_1'],
+      blockers: {},
+      attackerBlockerOrder: {},
+      priorityPlayer: 'player1',
+      passCount: 0,
+      stack: [],
+    };
+
+    it('allows instant spells in combat priority for the priority player', () => {
+      const state = createTestGameState({
+        phase: combatPriorityPhase,
+        ruleset: { allowCombatTricks: true },
+        player1: {
+          currentEnergy: 4,
+          maxEnergy: 4,
+          hand: [makeCardInstance('fire_fireball')],
+        },
+      });
+
+      const result = validateAction(state, { type: 'PLAY_CARD', cardIndex: 0 }, 'player1');
+      expect(result).toEqual({ valid: true });
+    });
+
+    it('blocks sorcery-speed spells in combat priority', () => {
+      const state = createTestGameState({
+        phase: combatPriorityPhase,
+        ruleset: { allowCombatTricks: true },
+        player1: {
+          currentEnergy: 5,
+          maxEnergy: 5,
+          hand: [makeCardInstance('fire_eruption')],
+        },
+      });
+
+      const result = validateAction(state, { type: 'PLAY_CARD', cardIndex: 0 }, 'player1');
+      expect(result.valid).toBe(false);
+      expect((result as { valid: false; reason: string }).reason).toContain('instant');
+    });
+
+    it('enforces instant surcharge energy checks in combat priority', () => {
+      const state = createTestGameState({
+        phase: combatPriorityPhase,
+        ruleset: { allowCombatTricks: true },
+        player1: {
+          currentEnergy: 2,
+          maxEnergy: 2,
+          hand: [makeCardInstance('fire_fireball')], // 2 base + 1 surcharge
+        },
+      });
+
+      const result = validateAction(state, { type: 'PLAY_CARD', cardIndex: 0 }, 'player1');
+      expect(result.valid).toBe(false);
+      expect((result as { valid: false; reason: string }).reason).toContain('energy');
+    });
+
+    it('validates PASS_PRIORITY for the priority player only', () => {
+      const state = createTestGameState({
+        phase: combatPriorityPhase,
+        ruleset: { allowCombatTricks: true },
+      });
+
+      expect(validateAction(state, { type: 'PASS_PRIORITY' }, 'player1')).toEqual({ valid: true });
+      expect(validateAction(state, { type: 'PASS_PRIORITY' }, 'player2').valid).toBe(false);
+    });
+
+    it('enumerates PASS_PRIORITY and instant-only PLAY_CARD actions', () => {
+      const state = createTestGameState({
+        phase: combatPriorityPhase,
+        ruleset: { allowCombatTricks: true },
+        player1: {
+          currentEnergy: 4,
+          maxEnergy: 4,
+          hand: [
+            makeCardInstance('fire_fireball'), // instant, affordable with surcharge
+            makeCardInstance('fire_eruption'), // sorcery
+            makeCardInstance('fire_lava_hound'), // creature
+          ],
+        },
+      });
+
+      const actions = enumerateLegalActions(state, 'player1');
+      expect(actions).toContainEqual({ type: 'PASS_PRIORITY' });
+      expect(actions).toContainEqual({ type: 'PLAY_CARD', cardIndex: 0 });
+      expect(actions).not.toContainEqual({ type: 'PLAY_CARD', cardIndex: 1 });
+      expect(actions).not.toContainEqual({ type: 'PLAY_CARD', cardIndex: 2 });
+    });
+  });
+
   // ─── SELECT_TARGET ───
 
   describe('SELECT_TARGET', () => {

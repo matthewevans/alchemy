@@ -52,29 +52,34 @@ export function BlockAssignmentLines() {
   const phase = useGameStore((s) => s.state?.phase);
   const [links, setLinks] = useState<BlockLink[]>([]);
 
+  const blockerAssignments = phase?.type === 'battle'
+    ? (
+      phase.step === 'declare_blockers'
+        ? phase.tentativeBlockers
+        : phase.step === 'order_blockers'
+          ? phase.blockers
+          : null
+    )
+    : phase?.type === 'combat_priority' && phase.window === 'post_blockers'
+      ? phase.blockers
+      : null;
+
   // Poll card positions via RAF until they stabilize. This tracks Framer Motion
   // layout animations so lines follow cards smoothly during rearrangement, then
   // stop polling once positions settle (~10 stable frames).
   useEffect(() => {
-    if (
-      !phase
-      || phase.type !== 'battle'
-      || (phase.step !== 'declare_blockers' && phase.step !== 'order_blockers')
-    ) {
+    if (!blockerAssignments) {
       setLinks((prev) => (prev.length === 0 ? prev : []));
       return;
     }
 
-    const blockerAssignments = phase.step === 'declare_blockers'
-      ? phase.tentativeBlockers
-      : phase.blockers;
     let rafId: number;
     let stableCount = 0;
     let lastStableKey = '';
     let lastRenderedKey: string | null = null;
 
     function updateLinks() {
-      const newLinks = collectBlockLinks(blockerAssignments);
+      const newLinks = collectBlockLinks(blockerAssignments!);
       const key = serializeLinks(newLinks);
 
       if (key !== lastRenderedKey) {
@@ -96,7 +101,7 @@ export function BlockAssignmentLines() {
 
     rafId = requestAnimationFrame(updateLinks);
     return () => cancelAnimationFrame(rafId);
-  }, [phase]);
+  }, [blockerAssignments]);
 
   if (links.length === 0) return null;
   const fullEffects = links.length <= FULL_EFFECT_LINK_LIMIT;

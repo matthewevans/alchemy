@@ -7,6 +7,7 @@ import { usePreferencesStore } from '@game/preferencesStore';
 import { GameDispatchProvider, useGameDispatch } from '@game/GameDispatchContext';
 import { dispatchWithAnimations } from '@game/dispatchWithAnimations';
 import { createAIController } from '@game/controllers/aiController';
+import { DEFAULT_AI_CONFIG } from '@engine/aiConfig';
 import { createNetworkController } from '@game/controllers/networkController';
 import type { OpponentController } from '@game/controllers/types';
 import { takePendingSession } from '@network/sessionTransfer';
@@ -118,7 +119,7 @@ export function GamePage() {
       const ai = createAIController({
         getState: () => useGameStore.getState(),
         dispatch: (action, player) => dispatchWithAnimations(action, player),
-      }, storeAiConfig ?? undefined);
+      }, storeAiConfig ?? DEFAULT_AI_CONFIG);
       setController(ai);
     }
   }, [gameId, storeGameId, navigate, startupProgress.phase]);
