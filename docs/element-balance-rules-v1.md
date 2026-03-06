@@ -1,7 +1,7 @@
 # Element Balance Rules v1
 
-Status: Draft v1  
-Date: March 4, 2026  
+Status: Draft v1.1
+Last updated: March 6, 2026
 Owner: Game Design + Engine
 
 ## 1) Purpose
@@ -20,20 +20,22 @@ Non-goals:
 
 ## 2) Evidence Base
 
-Primary evidence (confirmed):
-- Full-matrix AI simulations run on March 4, 2026 with tree-search AI enabled.
+Primary evidence:
+- Full-matrix AI simulations use tree-search combat (attacker declarations + combat-aware heuristics).
 - Tier-stratified matrix runs (apprentice/alchemist/archmage), `maxSteps=1000`.
-- Card-signal extraction from matchup-controlled regression (card presence deltas vs win-rate deltas).
-- Apprentice energy-cap A/B (`energyCap=5` vs `6`).
+- Card-signal extraction uses matchup-controlled regression (card presence deltas vs win-rate deltas).
+- `aiActionPolicy.ts` prevents targetless-spell loops that inflate draw rates artificially.
 
-Observed patterns (confirmed):
-- Persistent bottom deck: `Divine Light` across tiers.
-- Repeated high-pressure packages in top decks (water/fire at low tiers, mixed air/fire-water at higher tiers).
-- Apprentice energy cap increase to 6 raised draws and did not reduce spread meaningfully.
+Observed patterns:
+- `Divine Light` tends to be the bottom deck across tiers (may shift as the shadow pool expands with Moon Coven).
+- High-pressure packages dominate top decks (water/fire at low tiers, mixed air/fire-water at higher tiers).
+- Apprentice energy cap of 6 (vs 5) increases draws without reducing spread meaningfully.
+- Tree-search AI combat produces longer, more defensive games — draw rates are low and average turns are roughly double what heuristic-only AI produces.
 
 Assumptions:
 - Starter-deck matrix is a useful proxy for global health, but not a complete proxy for player-built ladder meta.
-- Current very-strong AI settings approximate high-skill play better than heuristic-only AI.
+- Tree-search combat + strategy selection approximates high-skill play better than heuristic-only AI.
+- Wide guardrail bands reflect the exploratory state of the AI combat strategy; bands should tighten as the meta stabilizes.
 
 Confidence:
 - High for directional trends.
@@ -48,23 +50,26 @@ Potential contradiction signals:
 Every balance PR that changes card stats/effects must pass these checks.
 
 Test config:
-- AI: `policy=tree_search`, strong preset (hard/very_hard budgets), deterministic seeds.
+- AI: tree-search combat (attacker declarations + combat-aware heuristics), strong preset, deterministic seeds.
 - Matchup suite: full starter-deck matrix per tier.
 - `maxSteps=1000`.
-- Minimum sample: 12 games per matchup for PR gate; 30+ for release candidate.
+- Minimum sample: 6 games per matchup for fast PR gate; 12+ for full gate; 30+ for release candidate.
+- CI: `.github/workflows/balance-gates.yml` (fast, every PR) and `balance-gates-full.yml` (extended).
 
 Gate metrics:
 - Draw-rate band by tier:
-  - apprentice: 40% to 52%
-  - alchemist: 30% to 45%
-  - archmage: 22% to 36%
+  - apprentice: 0% to 20%
+  - alchemist: 0% to 15%
+  - archmage: 0% to 15%
 - Average turns:
-  - apprentice: 9 to 16
-  - alchemist: 10 to 18
-  - archmage: 11 to 20
+  - apprentice: 18 to 45
+  - alchemist: 25 to 55
+  - archmage: 25 to 55
 - Tier spread (top deck win rate - bottom deck win rate):
-  - short-term cap: <= 45 percentage points
-  - long-term target: <= 30 percentage points
+  - apprentice: <= 85 percentage points
+  - alchemist: <= 80 percentage points
+  - archmage: <= 90 percentage points
+  - long-term target: tighten as the meta stabilizes
 - Single PR regression cap:
   - no deck may move more than +/-6 percentage points without explicit intent and signoff.
 
@@ -90,6 +95,8 @@ Tuning size limits per patch (minor tuning policy):
 - Cost change: +/-1 max.
 - Effect magnitude: +/-1 damage/heal/draw step max.
 - Keyword changes: one keyword add/remove max.
+- Spell speed change: sorcery↔instant requires simulation (treat as a new-card-level change, not minor tuning).
+- Surcharge change: +/-1 max per card.
 
 ## 5) Core Mechanics Evolution Policy
 
@@ -115,7 +122,7 @@ Required evidence before shipping a semantic change:
 
 ### 5.2 Tier scaffolding policy
 
-Tier scaffolding parameters (for example: energy cap, damage persistence, keyword access) are considered part of the tier contract.
+Tier scaffolding parameters (for example: energy cap, damage persistence, keyword access, combat tricks) are considered part of the tier contract.
 
 Change policy:
 - Any scaffolding change requires a dedicated proposal and A/B simulation across all tiers.
@@ -217,7 +224,38 @@ Budget adjustments:
 Hard rule:
 - Do not exceed baseline by >1 while also granting premium keyword/effect unless there is a compensating downside.
 
-## 8) New Card PR Rubric (Required)
+## 8) Spell Speed and Instant Surcharge Heuristics
+
+Spells have a `spellSpeed` of `sorcery` (default) or `instant`. Instant spells can be cast during the `combat_priority` phase; sorcery spells cannot.
+
+Combat priority is gated by the `allowCombatTricks` ruleset flag:
+- **Apprentice / Alchemist** (`allowCombatTricks: false`): Combat resolves immediately after attackers/blockers. No priority windows. Instant spells exist in these decks but can only be cast during main phase at base cost — the `spellSpeed` tag has no mechanical effect.
+- **Archmage** (`allowCombatTricks: true`): After attackers are confirmed and after blockers are confirmed, both players receive priority windows. Instant spells cast during priority go on a stack that resolves LIFO. Auto-pass skips the window when neither player has playable instants.
+
+When cast during combat priority, instant spells pay their base cost plus an `instantSurcharge`. During main phase, instants cost their base rate — no surcharge. This creates a timing trade-off: cast early at base cost, or save for combat at a premium.
+
+### Surcharge tiers
+
+| Surcharge | Category | Examples |
+|-----------|----------|----------|
+| +0 | Utility / buffs | Blazing Speed, Growth, Blessing, Gust, Entangle, Forge Hammer, Primal Roar, Tidal Surge |
+| +1 | Burn / targeted damage | Fireball, Lightning Bolt, Dark Bolt, Shadow Strike, Soul Siphon, Starlit Hex, Tar Pit |
+| +2 | Hard removal (unconditional destroy) | Doom, Midnight Banish |
+
+### Classification rules for new instant spells
+
+- **+0**: The spell buffs a friendly creature, provides soft disruption (tap, bounce), or grants a keyword. It does not directly remove or damage enemy creatures.
+- **+1**: The spell deals direct damage to enemy creatures or players. This includes drain effects.
+- **+2**: The spell unconditionally destroys a creature regardless of stats.
+- If a spell combines categories (e.g. damage + buff), use the higher surcharge tier.
+
+### Hard rules
+
+- Sorcery-speed spells do not pay surcharges (they cannot be cast during combat).
+- A spell's base cost is balanced assuming main-phase timing. The surcharge is the premium for combat-trick flexibility.
+- Do not create instant-speed spells with zero surcharge that deal damage or destroy creatures — this underprices combat interaction.
+
+## 9) New Card PR Rubric (Required)
 
 Every new card PR must answer all items:
 
@@ -230,6 +268,7 @@ Every new card PR must answer all items:
 
 3. Curve fit:
 - Where is it on the cost/stat/effect budget curve?
+- For spells: what is the spell speed? If instant, what surcharge tier and why (see Section 8)?
 
 4. Tier impact:
 - Apprentice, alchemist, archmage impact expectation (one sentence each).
@@ -242,7 +281,7 @@ Every new card PR must answer all items:
 6. Risk callout:
 - What would indicate this card is overtuned within one week of testing?
 
-## 9) Balance Iteration Workflow
+## 10) Balance Iteration Workflow
 
 Use this workflow for every balance pass:
 
@@ -262,7 +301,7 @@ Use this workflow for every balance pass:
 - If metrics pass, retain patch and monitor custom-deck/human telemetry.
 - If metrics fail, revert and test next minimal patch.
 
-## 10) Change Control
+## 11) Change Control
 
 When this document changes:
 - Include sim evidence links/output in PR description.

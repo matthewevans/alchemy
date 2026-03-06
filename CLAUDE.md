@@ -11,6 +11,8 @@ pnpm lint           # ESLint
 pnpm test           # Vitest (single run)
 pnpm test:watch     # Vitest (watch mode)
 pnpm vitest run src/engine/__tests__/reducer.test.ts  # Run a single test file
+pnpm run balance:gate          # AI-vs-AI balance gate tests (all tiers)
+npx tsx scripts/simulate.ts    # Deck matchup simulation harness
 npx cypress open     # Cypress E2E tests (interactive)
 npx cypress run      # Cypress E2E tests (headless)
 ```
@@ -36,9 +38,13 @@ Alchemy is a browser-based 1v1 elemental card battler (MTG-inspired, kid-friendl
 - **`elements.ts`** — Five-element color wheel (fire, water, earth, air, shadow).
 - **`prng.ts`** — Seeded RNG (`createRNG(seed)`) for deterministic gameplay and multiplayer sync.
 - **`ruleset.ts`** — `TIER_CONFIGS` for apprentice/alchemist/archmage difficulty tiers.
-- **`ai.ts`** — AI opponent decision logic (action selection, lookahead).
+- **`ai.ts`** — AI opponent decision logic (top-level entry point).
 - **`aiConfig.ts`** — AI difficulty/personality presets (`AIDifficulty`, `AIPersonality`, `EvalWeights`).
 - **`aiEval.ts`** — Pure board-state evaluation function used by AI scoring.
+- **`aiStrategy.ts`** — High-level AI strategy selection (aggro, control, tempo).
+- **`aiSearch.ts`** — Action search / lookahead tree for AI decision-making.
+- **`aiCombat.ts`** — AI combat-specific logic (attacker/blocker assignment).
+- **`aiActionPolicy.ts`** — Shared action filtering policy (e.g. preventing targetless-spell loops).
 - **`starterDecks.ts`** — Pre-built deck archetypes per element and tier.
 
 ### Game State Layer (`src/game/`) — Zustand stores + dispatch orchestration
@@ -48,6 +54,10 @@ Alchemy is a browser-based 1v1 elemental card battler (MTG-inspired, kid-friendl
 - **`animationStore.ts`** — Animation queue. Steps block game progression until animations complete.
 - **`dispatchWithAnimations.ts`** — Wraps `gameStore.dispatch` to capture element positions and enqueue animation steps from events.
 - **`preferencesStore.ts`** — User preferences (difficulty, tier, battlefield, UI scale). localStorage-persisted Zustand store.
+- **`learningStore.ts`** — Runtime learning challenge state (opportunity count, streaks) per game session.
+- **`learningProfileStore.ts`** — Persistent learner profile (mastery levels, subject preferences).
+- **`tutorialStore.ts`** — Tutorial tip dismissal and progression state.
+- **`sessionMeta.ts`** — Per-session metadata (game mode, adventure node context).
 - **`controllers/`** — `OpponentController` interface with `aiController` (single-player) and `networkController` (peer-to-peer WebRTC).
 
 ### Data Flow
@@ -64,9 +74,36 @@ User interaction → dispatchWithAnimations(action, player)
 
 Organized by domain: `board/`, `card/`, `hand/`, `combat/`, `phase/`, `targeting/`, `animation/`, `effects/`, `hero/`, `layout/`, `ui/`. The `ui/` subdirectory has screens (title, deck builder, game over, etc.).
 
+### Learning (`src/learning/`) — Educational challenge system
+
+- **`content.ts`** / **`mathCurriculum.ts`** / **`readingCurriculum.ts`** — Curriculum data and challenge content by subject and grade level.
+- **`domain/`** — Domain logic: `cadencePolicy` (when to show challenges), `promptSelectionPolicy` (which prompt to pick), `rewardPolicy` (bonus cards for correct answers), `masteryModel` (spaced-repetition progression).
+- **`onboarding.ts`** — First-run learning setup flow (subject/grade selection).
+- **`config.ts`** — Learning feature configuration and toggles.
+- **`infrastructure/learningProfileRepository.ts`** — IndexedDB persistence for learner profiles.
+
+### Campaign (`src/campaign/`) — Adventure mode progression
+
+- **`domain/types.ts`** — Campaign types (zones, nodes, progression state).
+- **`domain/progression.ts`** — Node unlock logic and campaign advancement.
+- **`domain/mapBoard.ts`** — Map board layout and node connectivity.
+- **`data/zones.ts`** / **`data/mapLayouts.ts`** — Zone definitions and map node positions.
+- **`store/campaignStore.ts`** — Zustand store for campaign state.
+- **`infrastructure/campaignRepository.ts`** — IndexedDB persistence for campaign progress.
+
+### Tutorial (`src/tutorial/`) — Contextual gameplay tips
+
+- **`domain/stepRegistry.ts`** — Registry of tutorial tip definitions.
+- **`domain/tipPolicy.ts`** — Policy for when/which tips to show based on game state.
+- **`infrastructure/tipPersistence.ts`** — Persistence for tip dismissal state.
+
+### Startup (`src/startup/`) — Asset preloading
+
+- **`preloadAssets.ts`** — Gates game entry until critical assets (card art, battlefields, audio) are loaded.
+
 ### Pages (`src/pages/`)
 
-Two routes: `/` (HomePage — menus, deck select) and `/game/:id` (GamePage — active game).
+Four routes: `/` (HomePage — menus, deck select), `/game/:id` (GamePage — active game), `/adventure` (AdventurePage — campaign map), `/adventure/deck-select/:nodeId` (AdventureDeckSelectPage).
 
 ### Network (`src/network/`) — Peer-to-peer multiplayer via PeerJS (WebRTC signaling) with 5-character room codes.
 
@@ -76,6 +113,7 @@ Two routes: `/` (HomePage — menus, deck select) and `/game/:id` (GamePage — 
 - **`audioStore.ts`** — Zustand store for `sfxVolume`/`musicVolume` preferences (follows `preferencesStore` pattern).
 - **`sounds.ts`** — Synthesis functions for each `AnimationEffect` type + `SOUND_REGISTRY` for per-card custom sounds via `CardDefinition.soundId`.
 - **`ambientMusic.ts`** — Procedural ambient pads (cycling pentatonic chords + atmospheric noise).
+- **`multiplayerLobbyMusic.ts`** — Dedicated multiplayer lobby music track.
 - **`triggerSoundEffect.ts`** — Maps `AnimationEffect` → sound playback (parallels `triggerParticleEffect` in `AnimationOverlay`).
 
 ### Storage (`src/storage/`) — IndexedDB persistence for game state and decks. `shareCode.ts` handles deck compression/sharing.
@@ -83,6 +121,10 @@ Two routes: `/` (HomePage — menus, deck select) and `/game/:id` (GamePage — 
 ### Battlefields (`src/components/board/battlefields.ts`) — Registry of battlefield backgrounds with per-battlefield particle configs. Follows the same registry pattern as cards/effects.
 
 ### PWA (`src/pwa/`) — Service worker registration, update status tracking, and version badge integration.
+
+### CI — Balance Gates
+
+GitHub Actions workflows (`.github/workflows/balance-gates.yml`, `balance-gates-full.yml`) run AI-vs-AI deck matchup simulations on every PR and push to main. Tests assert win-rate and draw-rate guardrails per tier to prevent balance regressions.
 
 ## Testing
 

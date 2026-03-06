@@ -30,8 +30,8 @@
 ## Features
 
 - **Elemental card battles** — five elements (fire, water, earth, air, shadow) with a rock-paper-scissors color wheel
-- **MTG-inspired combat** — tap to attack, assign blockers, spells and keywords — simplified for ages 6–10
-- **9 starter decks** — mono and dual-element archetypes, each with a unique playstyle
+- **MTG-inspired combat** — tap to attack, assign blockers, instant-speed combat tricks with a priority stack at Archmage tier — simplified for ages 6–10
+- **18 starter decks** — mono and dual-element archetypes, each with a unique playstyle
 - **3 difficulty tiers** — Apprentice, Alchemist, and Archmage rulesets with scaling complexity
 - **5 AI difficulties** — from Very Easy to Very Hard, with distinct AI personalities
 - **Deck builder** — craft custom decks from the full card pool
@@ -85,12 +85,13 @@ The learning system is grounded in evidence-aligned progression, retrieval pract
 ```bash
 pnpm build          # TypeScript check + production build
 pnpm test           # Vitest (single run)
+pnpm run balance:gate  # AI-vs-AI balance gate tests
 pnpm lint           # ESLint
 ```
 
 ## Deployment
 
-GitHub Pages deploys automatically from `main` via `.github/workflows/deploy-pages.yml`.
+GitHub Pages deploys automatically from `main` via `.github/workflows/deploy-pages.yml`. Balance gate CI runs on every PR and push to main.
 
 ## License
 
