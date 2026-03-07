@@ -118,6 +118,11 @@ export function reduce(
   // Post-process: derive stats from events (damage, deaths)
   result.newState = deriveStatsFromEvents(state, result.newState, result.events);
 
+  // State-based check: if any player reached 0 health but the handler didn't
+  // set game_over (e.g. a spell handler overwrote the phase), force it here.
+  // This single checkpoint prevents every handler from needing its own check.
+  result = enforceLethalGameOver(result);
+
   return result;
 }
 
@@ -154,6 +159,33 @@ function autoAdvanceCombatPriority(result: ReducerResult): ReducerResult {
   }
 
   return { newState: currentState, events };
+}
+
+/**
+ * State-based lethal check: if any player is at ≤ 0 health but the phase
+ * wasn't set to game_over (because a handler overwrote it), force it here.
+ * This acts as a single safety net so individual handlers don't need to
+ * remember to preserve game_over — analogous to MTG's state-based actions.
+ */
+function enforceLethalGameOver(result: ReducerResult): ReducerResult {
+  if (result.newState.phase.type === 'game_over') return result;
+
+  for (const playerId of ['player1', 'player2'] as PlayerId[]) {
+    if (result.newState.players[playerId].health <= 0) {
+      const winner = getOpponent(playerId);
+      const hasGameOverEvent = result.events.some(
+        (e) => e.type === 'GAME_OVER',
+      );
+      return {
+        newState: { ...result.newState, phase: { type: 'game_over', winner } },
+        events: hasGameOverEvent
+          ? result.events
+          : [...result.events, { type: 'GAME_OVER', winner }],
+      };
+    }
+  }
+
+  return result;
 }
 
 /** Derive combat/damage stats from events rather than threading through every function. */

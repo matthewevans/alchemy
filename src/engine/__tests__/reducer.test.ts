@@ -1346,6 +1346,56 @@ describe('Game over on lethal damage', () => {
       winner: 'player1',
     }));
   });
+
+  it('triggers game_over when untargeted spell kills a player', () => {
+    // shadow_life_drain: 3 damage to opponent (untargeted)
+    const state = createTestGameState({
+      phase: { type: 'play' },
+      activePlayer: 'player1',
+      player1: {
+        hand: [makeCardInstance('shadow_life_drain')],
+        currentEnergy: 5,
+        maxEnergy: 5,
+      },
+      player2: { health: 3 },
+    });
+
+    const { newState, events } = reduce(state, { type: 'PLAY_CARD', cardIndex: 0 }, 'player1', rng);
+
+    expect(newState.phase).toEqual({ type: 'game_over', winner: 'player1' });
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'GAME_OVER',
+      winner: 'player1',
+    }));
+  });
+
+  it('triggers game_over when targeted spell kills a player', () => {
+    // air_lightning_bolt: 3 damage to any target (targeted)
+    const state = createTestGameState({
+      phase: {
+        type: 'targeting',
+        effectId: 'lightning_bolt',
+        casterId: 'player1',
+        sourceCardId: 'air_lightning_bolt',
+        validTargets: [{ type: 'player', playerId: 'player2' }],
+      },
+      activePlayer: 'player1',
+      player2: { health: 3 },
+    });
+
+    const { newState, events } = reduce(
+      state,
+      { type: 'SELECT_TARGET', targetRef: { type: 'player', playerId: 'player2' } },
+      'player1',
+      rng,
+    );
+
+    expect(newState.phase).toEqual({ type: 'game_over', winner: 'player1' });
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'GAME_OVER',
+      winner: 'player1',
+    }));
+  });
 });
 
 // ─── End of Turn ───
