@@ -62,8 +62,6 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
   const shouldReduceMotion = useReducedMotion();
   const floatingIcons = useFloatingIcons(shouldReduceMotion ? 0 : 8);
   const logoWordmarkSrc = `${import.meta.env.BASE_URL}logo_wordmark.webp`;
-  const selectedTier = usePreferencesStore((s) => s.tier);
-
   useEffect(() => {
     return () => {
       mountedRef.current = false;
@@ -73,25 +71,17 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
     };
   }, []);
 
-  const hostDeckIds = step.type === 'host_waiting' ? step.hostDeckIds : null;
-
   // ─── Host Flow ───
 
   const handleHostDeckSelected = useCallback((deckIds: string[]) => {
     connectAttemptRef.current += 1;
+    const attemptId = connectAttemptRef.current;
     const host = hostRoom();
     hostRef.current = host;
     setStep({ type: 'host_waiting', roomCode: host.roomCode, hostDeckIds: deckIds });
-  }, []);
 
-  // Effect: wait for guest when host is waiting
-  useEffect(() => {
-    if (step.type !== 'host_waiting' || !hostDeckIds) return;
-
-    const host = hostRef.current;
-    if (!host) return;
-    const attemptId = connectAttemptRef.current;
-
+    // Run the entire host handshake inline — using an effect would self-cancel
+    // because setStep('connecting') changes the deps mid-flow.
     (async () => {
       try {
         const { conn, destroyPeer } = await host.waitForGuest();
@@ -123,11 +113,11 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
         if (attemptId !== connectAttemptRef.current || !mountedRef.current) { session.close(); return; }
 
         const seed = Date.now();
-        const tier = selectedTier;
+        const tier = usePreferencesStore.getState().tier;
         const sent = session.send({
           type: 'game_setup',
           seed,
-          hostDeckIds,
+          hostDeckIds: deckIds,
           guestDeckIds,
           tier,
         });
@@ -135,7 +125,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
 
         sessionRef.current = null;
         hostRef.current = null;
-        onStartGame(session, true, hostDeckIds, guestDeckIds, seed, tier);
+        onStartGame(session, true, deckIds, guestDeckIds, seed, tier);
       } catch (err) {
         sessionRef.current?.close();
         sessionRef.current = null;
@@ -143,11 +133,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
         setStep({ type: 'error', message: err instanceof Error ? err.message : `Connection failed: ${err}` });
       }
     })();
-
-    return () => {
-      connectAttemptRef.current += 1;
-    };
-  }, [step.type, hostDeckIds, onStartGame, selectedTier]);
+  }, [onStartGame]);
 
   // ─── Join Flow ───
 
