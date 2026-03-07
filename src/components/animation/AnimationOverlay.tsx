@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useAnimationStore } from '@game/animationStore';
 import type { AnimationEffect, ElementPosition } from '@game/animationStore';
 import type { Element } from '@engine/types';
@@ -15,6 +15,7 @@ import { CombatMathOverlay } from './CombatMathOverlay';
 import { DamageVignette } from './DamageVignette';
 import { ParticleCanvas } from './ParticleCanvas';
 import { MathBreakdownOverlay } from './MathBreakdownOverlay';
+import { ElementCardEffect } from './ElementCardEffect';
 import type { ParticleCanvasHandle } from './ParticleCanvas';
 
 const SPELL_REVEAL_DURATION_MS = 2600;
@@ -570,100 +571,6 @@ function posCenter(pos: ElementPosition): { cx: number; cy: number } {
 }
 
 // ─── Particle Effect Triggers ───
-
-// ─── On-Card Element Effect Overlays ───
-
-const ELEMENT_EFFECT_STYLES: Record<Element, {
-  background: string;
-  boxShadow: string;
-  borderColor: string;
-  label: string;
-}> = {
-  fire: {
-    background: 'radial-gradient(ellipse at bottom, rgba(255,100,0,0.5) 0%, rgba(255,60,0,0.3) 40%, transparent 70%)',
-    boxShadow: '0 0 20px 8px rgba(255,80,0,0.5), inset 0 0 30px 10px rgba(255,120,0,0.3)',
-    borderColor: 'rgba(255,100,0,0.8)',
-    label: '🔥',
-  },
-  water: {
-    background: 'radial-gradient(ellipse at top, rgba(0,120,255,0.4) 0%, rgba(0,80,200,0.25) 40%, transparent 70%)',
-    boxShadow: '0 0 20px 8px rgba(0,100,255,0.4), inset 0 0 30px 10px rgba(0,150,255,0.2)',
-    borderColor: 'rgba(0,120,255,0.8)',
-    label: '❄️',
-  },
-  earth: {
-    background: 'radial-gradient(ellipse at bottom, rgba(60,180,60,0.4) 0%, rgba(40,120,40,0.25) 40%, transparent 70%)',
-    boxShadow: '0 0 20px 8px rgba(60,160,60,0.4), inset 0 0 30px 10px rgba(80,200,80,0.2)',
-    borderColor: 'rgba(60,160,60,0.8)',
-    label: '🌿',
-  },
-  air: {
-    background: 'radial-gradient(ellipse at center, rgba(200,230,255,0.35) 0%, rgba(180,220,255,0.2) 40%, transparent 70%)',
-    boxShadow: '0 0 20px 8px rgba(180,220,255,0.4), inset 0 0 30px 10px rgba(200,240,255,0.2)',
-    borderColor: 'rgba(180,220,255,0.8)',
-    label: '🌪️',
-  },
-  shadow: {
-    background: 'radial-gradient(ellipse at center, rgba(100,0,160,0.5) 0%, rgba(60,0,100,0.3) 40%, transparent 70%)',
-    boxShadow: '0 0 20px 8px rgba(80,0,140,0.5), inset 0 0 30px 10px rgba(120,0,200,0.3)',
-    borderColor: 'rgba(100,0,160,0.8)',
-    label: '💀',
-  },
-};
-
-function ElementCardEffect({ element, position }: { element: Element; position: ElementPosition }) {
-  const style = ELEMENT_EFFECT_STYLES[element];
-  const pad = 6;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-      style={{
-        position: 'fixed',
-        left: position.x - pad,
-        top: position.y - pad,
-        width: position.width + pad * 2,
-        height: position.height + pad * 2,
-        pointerEvents: 'none',
-        zIndex: 45,
-        borderRadius: 8,
-        border: `2px solid ${style.borderColor}`,
-        background: style.background,
-        boxShadow: style.boxShadow,
-      }}
-    >
-      {/* Pulsing glow animation */}
-      <motion.div
-        animate={{ opacity: [0.6, 1, 0.6] }}
-        transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: 6,
-          background: style.background,
-        }}
-      />
-      {/* Element icon */}
-      <motion.div
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.1, duration: 0.3, ease: 'backOut' }}
-        style={{
-          position: 'absolute',
-          top: -12,
-          right: -12,
-          fontSize: 20,
-          filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))',
-        }}
-      >
-        {style.label}
-      </motion.div>
-    </motion.div>
-  );
-}
 
 function triggerParticleEffect(
   particles: ParticleCanvasHandle,
