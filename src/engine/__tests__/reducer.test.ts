@@ -2138,7 +2138,7 @@ describe('combat priority stack', () => {
     expect(newState.phase.sourceCardId).toBe('fire_fireball');
   });
 
-  it('SELECT_TARGET during combat targeting pushes item onto the stack', () => {
+  it('SELECT_TARGET during combat targeting auto-resolves the spell', () => {
     const target = makePermanent('water_tide_sprite', 'player2', {
       attack: 1,
       health: 2,
@@ -2166,7 +2166,6 @@ describe('combat priority stack', () => {
         hand: [makeCardInstance('fire_fireball')],
       },
       player2: {
-        // Give player2 an instant so auto-pass doesn't resolve everything
         currentEnergy: 4,
         maxEnergy: 4,
         hand: [makeCardInstance('air_blessing')],
@@ -2178,24 +2177,19 @@ describe('combat priority stack', () => {
     const { newState: targetingState } = reduce(state, { type: 'PLAY_CARD', cardIndex: 0 }, 'player1', rng);
     expect(targetingState.phase.type).toBe('targeting');
 
-    // Select target -> pushes onto stack and returns to combat_priority
-    const { newState: afterSelect } = reduce(
+    // Select target -> spell auto-resolves (stack doesn't pause for caster confirmation)
+    const { newState: afterSelect, events } = reduce(
       targetingState,
       { type: 'SELECT_TARGET', targetRef: { type: 'creature', permanentId: target.permanentId } },
       'player1',
       rng,
     );
+    // Spell resolved — target should have taken damage
+    expect(events.some((e) => e.type === 'SPELL_RESOLVED' && e.cardId === 'fire_fireball')).toBe(true);
+    // Stack should be empty after auto-resolution
     expect(afterSelect.phase.type).toBe('combat_priority');
     if (afterSelect.phase.type !== 'combat_priority') return;
-    expect(afterSelect.phase.stack).toHaveLength(1);
-    expect(afterSelect.phase.stack[0].cardId).toBe('fire_fireball');
-    expect(afterSelect.phase.stack[0].selectedTarget).toEqual({
-      type: 'creature',
-      permanentId: target.permanentId,
-    });
-    // Priority passes to opponent after casting
-    expect(afterSelect.phase.priorityPlayer).toBe('player2');
-    expect(afterSelect.phase.passCount).toBe(0);
+    expect(afterSelect.phase.stack).toHaveLength(0);
   });
 
   it('PASS_PRIORITY with auto-pass resolves stacked spell when opponent has no instants', () => {

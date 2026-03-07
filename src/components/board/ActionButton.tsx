@@ -18,10 +18,6 @@ function getPriorityWindowLabel(window: CombatPriorityPhase['window']): string {
 }
 
 function getPriorityButtonLabel(phase: CombatPriorityPhase): string {
-  if (phase.stack.length > 0) {
-    return 'Resolve Top Spell';
-  }
-
   if (phase.window === 'post_attackers') {
     return 'Proceed to Blockers';
   }

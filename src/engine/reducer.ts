@@ -112,7 +112,8 @@ export function reduce(
       break;
   }
 
-  // Auto-pass priority when the acting priority player has no legal casts.
+  // Auto-resolve stacked spells and auto-pass when no instants are available.
+  // Players only see the priority UI when the stack is empty (to cast or proceed).
   result = autoAdvanceCombatPriority(result);
 
   // Post-process: derive stats from events (damage, deaths)
@@ -139,18 +140,23 @@ function autoAdvanceCombatPriority(result: ReducerResult): ReducerResult {
 
     const priorityPlayer = currentState.phase.priorityPlayer;
     const legalActions = enumerateLegalActions(currentState, priorityPlayer);
-    const canCast = legalActions.some((action) => {
-      if (action.type !== 'PLAY_CARD') return false;
-      const card = currentState.players[priorityPlayer].hand[action.cardIndex];
-      if (!card) return false;
+    // Only stop auto-advancing when the stack is empty and the player can
+    // cast instants.  When the stack has items, always auto-pass so spells
+    // resolve immediately — no "full control" priority passing required.
+    if (currentState.phase.stack.length === 0) {
+      const canCast = legalActions.some((action) => {
+        if (action.type !== 'PLAY_CARD') return false;
+        const card = currentState.players[priorityPlayer].hand[action.cardIndex];
+        if (!card) return false;
 
-      const cardDef = CARD_REGISTRY[card.cardId];
-      if (!cardDef.targetingType) return true;
+        const cardDef = CARD_REGISTRY[card.cardId];
+        if (!cardDef.targetingType) return true;
 
-      return computeValidTargets(currentState, priorityPlayer, cardDef.targetingType).length > 0;
-    });
-    if (canCast) {
-      break;
+        return computeValidTargets(currentState, priorityPlayer, cardDef.targetingType).length > 0;
+      });
+      if (canCast) {
+        break;
+      }
     }
 
     const passResult = handlePassPriority(currentState);

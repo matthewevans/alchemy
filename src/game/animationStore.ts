@@ -347,6 +347,21 @@ export function groupEventsIntoSteps(
   if (hasBlockersConfirmed || hasAttackersDeclared) {
     return groupCombatEvents(events, positions, cardIdMap);
   }
+  // When an instant resolves during combat priority, autoAdvanceCombatPriority chains
+  // spell resolution events and combat resolution events into one batch. Split them
+  // at the last SPELL_RESOLVED boundary so each gets proper animation grouping.
+  if (hasSpellResolved && hasCombatDamage) {
+    let lastSpellIdx = -1;
+    for (let i = events.length - 1; i >= 0; i--) {
+      if (events[i].type === 'SPELL_RESOLVED') { lastSpellIdx = i; break; }
+    }
+    const spellEvents = events.slice(0, lastSpellIdx + 1);
+    const combatEvents = events.slice(lastSpellIdx + 1);
+    return [
+      ...groupSpellEvents(spellEvents, positions),
+      ...groupCombatEvents(combatEvents, positions, cardIdMap),
+    ];
+  }
   if (hasSpellResolved) return groupSpellEvents(events, positions);
   if (hasCreatureEntered && hasKeywordTriggered) return groupETBEvents(events, positions);
   if (hasCreatureEntered) return groupSummonEvents(events, positions);

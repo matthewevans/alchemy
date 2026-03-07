@@ -214,6 +214,95 @@ describe('groupEventsIntoSteps (summon)', () => {
   });
 });
 
+describe('groupEventsIntoSteps (spell + combat priority)', () => {
+  it('splits spell resolution and combat damage into separate animation groups', () => {
+    const attackerId = 'perm-attacker';
+    const blockerId = 'perm-blocker';
+    const spellTargetId = 'perm-spell-target';
+    const positions = new Map([
+      [attackerId, pos(100, 300)],
+      [blockerId, pos(250, 140)],
+      [spellTargetId, pos(350, 140)],
+      ['player:player2', { x: 400, y: 50, width: 56, height: 56 }],
+    ]);
+
+    // Events as produced by autoAdvanceCombatPriority when an instant resolves
+    // during combat_priority, then combat resolves via closePriorityWindow.
+    const events: GameEvent[] = [
+      // Spell resolution events (from resolveTopPriorityStackSpell)
+      { type: 'DAMAGE_DEALT', targetId: spellTargetId, amount: 2, source: 'spell' },
+      { type: 'SPELL_RESOLVED', cardId: 'fire_fireball', targets: [{ type: 'creature', permanentId: spellTargetId }] },
+      // Combat resolution events (from closePriorityWindow → resolveCombat)
+      { type: 'DAMAGE_DEALT', targetId: blockerId, amount: 3, source: attackerId },
+      { type: 'DAMAGE_DEALT', targetId: attackerId, amount: 2, source: blockerId },
+    ];
+
+    const steps = groupEventsIntoSteps(events, positions);
+
+    // Should produce spell step(s) THEN combat step(s), not one merged step
+    expect(steps.length).toBeGreaterThanOrEqual(2);
+
+    // First step should be spell effects (spell_impact + damage)
+    const spellStep = steps[0];
+    expect(spellStep.effects.some((e) => e.type === 'spell_impact')).toBe(true);
+
+    // Later step(s) should be combat effects (combat_strike + damage)
+    const combatSteps = steps.slice(1);
+    const combatEffects = combatSteps.flatMap((s) => s.effects);
+    expect(combatEffects.some((e) => e.type === 'combat_strike')).toBe(true);
+    expect(combatEffects.some((e) => e.type === 'damage')).toBe(true);
+  });
+
+  it('handles unblocked combat after spell resolution', () => {
+    const attackerId = 'perm-attacker';
+    const spellTargetId = 'perm-spell-target';
+    const positions = new Map([
+      [attackerId, pos(100, 300)],
+      [spellTargetId, pos(350, 140)],
+      ['player:player2', { x: 400, y: 50, width: 56, height: 56 }],
+    ]);
+
+    const events: GameEvent[] = [
+      // Spell
+      { type: 'DAMAGE_DEALT', targetId: spellTargetId, amount: 2, source: 'spell' },
+      { type: 'CREATURE_DIED', permanentId: spellTargetId, cardId: 'fire_ember_sprite' },
+      { type: 'SPELL_RESOLVED', cardId: 'fire_fireball', targets: [{ type: 'creature', permanentId: spellTargetId }] },
+      // Combat — unblocked attacker hits player
+      { type: 'PLAYER_DAMAGED', player: 'player2', amount: 4, source: attackerId },
+    ];
+
+    const steps = groupEventsIntoSteps(events, positions);
+
+    expect(steps.length).toBeGreaterThanOrEqual(2);
+
+    // Spell step should include death from spell
+    const spellStep = steps[0];
+    const spellEffectTypes = spellStep.effects.map((e) => e.type);
+    expect(spellEffectTypes).toContain('spell_impact');
+
+    // Combat step should include player damage
+    const combatSteps = steps.slice(1);
+    const combatEffects = combatSteps.flatMap((s) => s.effects);
+    expect(combatEffects.some((e) => e.type === 'player_damage')).toBe(true);
+  });
+
+  it('still routes pure spell events normally (no combat damage)', () => {
+    const targetId = 'perm-target';
+    const positions = new Map([[targetId, pos()]]);
+
+    const events: GameEvent[] = [
+      { type: 'DAMAGE_DEALT', targetId, amount: 3, source: 'spell' },
+      { type: 'SPELL_RESOLVED', cardId: 'fire_fireball', targets: [{ type: 'creature', permanentId: targetId }] },
+    ];
+
+    const steps = groupEventsIntoSteps(events, positions);
+
+    // Should produce a single spell step — not split
+    expect(steps).toHaveLength(1);
+    expect(steps[0].effects.some((e) => e.type === 'spell_impact')).toBe(true);
+  });
+});
+
 describe('displayHealth — per-step health updates', () => {
   beforeEach(() => {
     useAnimationStore.getState().clear();
