@@ -4,7 +4,9 @@ import type { PeerSession } from '@network/peer';
 import { createPeerSession } from '@network/peer';
 import type { HostResult } from '@network/connection';
 import { hostRoom, joinRoom, parseRoomCode } from '@network/connection';
+import type { Tier } from '@engine/types';
 import { ELEMENTS } from '@engine/elements';
+import { usePreferencesStore } from '@game/preferencesStore';
 import { DeckSelector } from './DeckSelector';
 import { gameButtonClass } from './buttonStyles';
 import { ScreenChrome } from './ScreenChrome';
@@ -19,7 +21,7 @@ type LobbyStep =
   | { type: 'error'; message: string };
 
 interface MultiplayerLobbyProps {
-  onStartGame: (session: PeerSession, isHost: boolean, localDeckIds: string[], remoteDeckIds: string[], seed: number) => void;
+  onStartGame: (session: PeerSession, isHost: boolean, localDeckIds: string[], remoteDeckIds: string[], seed: number, tier: Tier) => void;
   onBack: () => void;
 }
 
@@ -60,6 +62,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
   const shouldReduceMotion = useReducedMotion();
   const floatingIcons = useFloatingIcons(shouldReduceMotion ? 0 : 8);
   const logoWordmarkSrc = `${import.meta.env.BASE_URL}logo_wordmark.webp`;
+  const selectedTier = usePreferencesStore((s) => s.tier);
 
   useEffect(() => {
     return () => {
@@ -120,18 +123,19 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
         if (attemptId !== connectAttemptRef.current || !mountedRef.current) { session.close(); return; }
 
         const seed = Date.now();
+        const tier = selectedTier;
         const sent = session.send({
           type: 'game_setup',
           seed,
           hostDeckIds,
           guestDeckIds,
-          tier: 'apprentice',
+          tier,
         });
         if (!sent) throw new Error('Failed to send game setup. Connection may have been lost.');
 
         sessionRef.current = null;
         hostRef.current = null;
-        onStartGame(session, true, hostDeckIds, guestDeckIds, seed);
+        onStartGame(session, true, hostDeckIds, guestDeckIds, seed, tier);
       } catch (err) {
         sessionRef.current?.close();
         sessionRef.current = null;
@@ -143,7 +147,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
     return () => {
       connectAttemptRef.current += 1;
     };
-  }, [step.type, hostDeckIds, onStartGame]);
+  }, [step.type, hostDeckIds, onStartGame, selectedTier]);
 
   // ─── Join Flow ───
 
@@ -175,14 +179,14 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
       if (!sent) throw new Error('Failed to send deck. Connection may have been lost.');
 
       // Wait for game setup from host
-      const setup = await new Promise<{ seed: number; hostDeckIds: string[]; guestDeckIds: string[] }>((resolve, reject) => {
+      const setup = await new Promise<{ seed: number; hostDeckIds: string[]; guestDeckIds: string[]; tier: Tier }>((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error('Timeout waiting for game setup')), 30_000);
         const unsubMsg = session.onMessage((msg) => {
           if (msg.type === 'game_setup') {
             clearTimeout(timeout);
             unsubMsg();
             unsubDc();
-            resolve({ seed: msg.seed, hostDeckIds: msg.hostDeckIds, guestDeckIds: msg.guestDeckIds });
+            resolve({ seed: msg.seed, hostDeckIds: msg.hostDeckIds, guestDeckIds: msg.guestDeckIds, tier: msg.tier });
           }
         });
         const unsubDc = session.onDisconnect((reason) => {
@@ -196,7 +200,7 @@ export function MultiplayerLobby({ onStartGame, onBack }: MultiplayerLobbyProps)
       if (attemptId !== connectAttemptRef.current || !mountedRef.current) { session.close(); return; }
 
       sessionRef.current = null;
-      onStartGame(session, false, deckIds, setup.hostDeckIds, setup.seed);
+      onStartGame(session, false, deckIds, setup.hostDeckIds, setup.seed, setup.tier);
     } catch (err) {
       sessionRef.current?.close();
       sessionRef.current = null;

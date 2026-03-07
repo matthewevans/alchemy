@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import type { PlayerId } from '@engine/types';
+import type { PlayerId, Tier } from '@engine/types';
 import { createRNG } from '@engine/prng';
 import { TIER_CONFIGS } from '@engine/ruleset';
 import { useGameStore } from '@game/gameStore';
@@ -139,7 +139,7 @@ export function HomePage() {
   );
 
   const handleMultiplayerStart = useCallback(
-    (session: PeerSession, isHost: boolean, localDeckIds: string[], remoteDeckIds: string[], seed: number) => {
+    (session: PeerSession, isHost: boolean, localDeckIds: string[], remoteDeckIds: string[], seed: number, tier: Tier) => {
       const player1Deck = isHost ? localDeckIds : remoteDeckIds;
       const player2Deck = isHost ? remoteDeckIds : localDeckIds;
       const localPlayer: PlayerId = isHost ? 'player1' : 'player2';
@@ -148,7 +148,7 @@ export function HomePage() {
 
       const gameId = initGame(
         {
-          ruleset: TIER_CONFIGS[selectedTier],
+          ruleset: TIER_CONFIGS[tier],
           player1Deck,
           player2Deck,
           rng,
