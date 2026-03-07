@@ -113,17 +113,17 @@ export function VfxTestPage() {
   }, [getCardCenter, addOverlay]);
 
   return (
+    <>
+    {/* Overlays rendered outside the scrollable container to avoid stacking context issues */}
+    {overlays.map((overlay) => (
+      <ElementCardEffect
+        key={overlay.id}
+        element={overlay.element}
+        position={overlay.position}
+      />
+    ))}
     <div className="fixed inset-0 bg-gray-950 overflow-auto">
       <ParticleCanvas ref={particleRef} />
-
-      {/* Element overlays */}
-      {overlays.map((overlay) => (
-        <ElementCardEffect
-          key={overlay.id}
-          element={overlay.element}
-          position={overlay.position}
-        />
-      ))}
 
       {/* UI overlay */}
       <div className="relative z-50 p-4 max-w-6xl mx-auto">
@@ -237,6 +237,8 @@ export function VfxTestPage() {
           Navigate to <code className="text-gray-400">/vfx-test</code> to access this page.
         </p>
       </div>
+
     </div>
+    </>
   );
 }

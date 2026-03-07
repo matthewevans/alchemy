@@ -355,17 +355,18 @@ export function AnimationOverlay() {
           )}
         </AnimatePresence>
 
-        {/* On-card element effect overlays (fire-and-forget) */}
-        <AnimatePresence>
-          {elementEffects.map((entry) => (
-            <ElementCardEffect
-              key={`elem-fx-${entry.id}`}
-              element={entry.element}
-              position={entry.position}
-            />
-          ))}
-        </AnimatePresence>
       </div>
+
+      {/* On-card element effect overlays — outside z-40 container so zIndex works against page stacking */}
+      <AnimatePresence>
+        {elementEffects.map((entry) => (
+          <ElementCardEffect
+            key={`elem-fx-${entry.id}`}
+            element={entry.element}
+            position={entry.position}
+          />
+        ))}
+      </AnimatePresence>
     </>
   );
 }
