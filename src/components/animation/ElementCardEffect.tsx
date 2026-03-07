@@ -180,7 +180,7 @@ const ELEMENT_OVERLAY_CONFIG: Record<Element, OverlayConfig> = {
     outerGlow: '0 0 25px 10px rgba(255,80,0,0.6)',
     borderColor: 'rgba(255,120,0,0.9)',
     pulseDuration: 0.6,
-    overlayOpacity: 0.85,
+    overlayOpacity: 0.5,
   },
   water: {
     background: `
@@ -193,7 +193,7 @@ const ELEMENT_OVERLAY_CONFIG: Record<Element, OverlayConfig> = {
     outerGlow: '0 0 22px 8px rgba(80,160,255,0.5)',
     borderColor: 'rgba(80,180,255,0.9)',
     pulseDuration: 1.0,
-    overlayOpacity: 0.85,
+    overlayOpacity: 0.5,
   },
   earth: {
     background: `
@@ -204,7 +204,7 @@ const ELEMENT_OVERLAY_CONFIG: Record<Element, OverlayConfig> = {
     outerGlow: '0 0 20px 8px rgba(40,140,40,0.5)',
     borderColor: 'rgba(50,170,50,0.9)',
     pulseDuration: 1.2,
-    overlayOpacity: 0.85,
+    overlayOpacity: 0.5,
   },
   air: {
     background: 'radial-gradient(ellipse at center, rgba(200,235,255,0.55) 0%, rgba(180,220,255,0.3) 40%, rgba(200,240,255,0.1) 70%)',
@@ -212,7 +212,7 @@ const ELEMENT_OVERLAY_CONFIG: Record<Element, OverlayConfig> = {
     outerGlow: '0 0 22px 8px rgba(180,220,255,0.5)',
     borderColor: 'rgba(180,230,255,0.9)',
     pulseDuration: 0.8,
-    overlayOpacity: 0.55,
+    overlayOpacity: 0.4,
   },
   shadow: {
     background: 'radial-gradient(ellipse at center, rgba(40,0,60,0.3) 10%, rgba(60,0,100,0.65) 50%, rgba(30,0,50,0.8) 100%)',
@@ -220,6 +220,6 @@ const ELEMENT_OVERLAY_CONFIG: Record<Element, OverlayConfig> = {
     outerGlow: '0 0 25px 10px rgba(80,0,140,0.5)',
     borderColor: 'rgba(120,0,180,0.9)',
     pulseDuration: 0.7,
-    overlayOpacity: 0.85,
+    overlayOpacity: 0.5,
   },
 };
