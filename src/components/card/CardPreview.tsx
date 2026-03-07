@@ -77,13 +77,7 @@ export function CardPreview({ cardId, onDismiss }: CardPreviewProps) {
         transition={{ type: 'spring', stiffness: 350, damping: 22, delay: 0.05 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          style={{
-            '--card-width': `calc(var(--_card-w) * ${PREVIEW_SCALE})`,
-            '--card-height': `calc(var(--_card-h) * ${PREVIEW_SCALE})`,
-            '--card-font-scale': `calc(var(--_card-fs) * ${PREVIEW_SCALE})`,
-          } as React.CSSProperties}
-        >
+        <div style={{ zoom: PREVIEW_SCALE }}>
           <HandCard
             cardInstance={previewCardInstance}
             isPlayable={false}
