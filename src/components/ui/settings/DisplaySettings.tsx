@@ -1,11 +1,17 @@
 import { usePreferencesStore, DEFAULT_UI_SCALE, DEFAULT_BOARD_SCALE } from '@game/preferencesStore';
-import type { StatLayout } from '@game/preferencesStore';
+import type { StatLayout, VfxLevel } from '@game/preferencesStore';
 import { BATTLEFIELDS } from '@components/board/battlefields';
 import { SettingsSlider, SettingsToggle, SettingsSelect } from './SettingsControls';
 
 const BATTLEFIELD_OPTIONS = [
   { value: 'auto', label: 'Auto (match deck)' },
   ...BATTLEFIELDS.map((b) => ({ value: b.id, label: b.label })),
+];
+
+const VFX_LEVEL_OPTIONS = [
+  { value: 'full', label: 'Full (particles + element overlays)' },
+  { value: 'reduced', label: 'Reduced (particles only)' },
+  { value: 'minimal', label: 'Minimal (numbers only)' },
 ];
 
 const STAT_LAYOUT_OPTIONS = [
@@ -26,6 +32,8 @@ export function DisplaySettings() {
     setBattlefieldAmbience,
     battlefield,
     setBattlefield,
+    vfxLevel,
+    setVfxLevel,
     statLayout,
     setStatLayout,
   } = usePreferencesStore();
@@ -71,10 +79,18 @@ export function DisplaySettings() {
       />
       <SettingsToggle
         id="battlefield-ambience"
-        label="Particles"
+        label="Ambient Particles"
         description="Shows animated ambient effects for the selected battlefield."
         checked={battlefieldAmbience}
         onChange={setBattlefieldAmbience}
+      />
+      <SettingsSelect
+        id="vfx-level"
+        label="Combat VFX"
+        description="Controls combat visual effects: projectiles, explosions, and on-card element overlays."
+        value={vfxLevel}
+        options={VFX_LEVEL_OPTIONS}
+        onChange={(v) => setVfxLevel(v as VfxLevel)}
       />
       <SettingsSelect
         id="stat-layout"

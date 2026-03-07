@@ -15,6 +15,9 @@ export type BattlefieldPreference = string;
 /** How attack/health stats are positioned on creature cards. */
 export type StatLayout = 'spread' | 'center' | 'right';
 
+/** Controls combat visual effects intensity. */
+export type VfxLevel = 'full' | 'reduced' | 'minimal';
+
 const STORAGE_KEY = 'alchemy:preferences';
 export const DEFAULT_UI_SCALE = 1;
 export const DEFAULT_BOARD_SCALE = 0.85;
@@ -50,6 +53,7 @@ interface PreferencesState {
   adaptiveExplanationEnabled: boolean;
   learningOnboardingCompleted: boolean;
   learningAgeRange: LearningAgeRange | null;
+  vfxLevel: VfxLevel;
   autoUpdateEnabled: boolean;
   setStatLayout: (layout: StatLayout) => void;
   setUIScale: (scale: number) => void;
@@ -79,6 +83,7 @@ interface PreferencesState {
   applyLearningPreset: (ageRange: LearningAgeRange) => void;
   clearLearningPreset: () => void;
   completeLearningOnboarding: (enabled: boolean, ageRange: LearningAgeRange) => void;
+  setVfxLevel: (level: VfxLevel) => void;
   setAutoUpdateEnabled: (enabled: boolean) => void;
 }
 
@@ -116,6 +121,7 @@ interface PersistedPreferences {
   adaptiveExplanationEnabled: boolean;
   learningOnboardingCompleted: boolean;
   learningAgeRange: LearningAgeRange | null;
+  vfxLevel: VfxLevel;
   autoUpdateEnabled: boolean;
 }
 
@@ -200,6 +206,7 @@ function loadPersistedPreferences(): PersistedPreferences {
         learningAgeRange: isLearningAgeRange(parsed.learningAgeRange)
           ? parsed.learningAgeRange
           : null,
+        vfxLevel: ['full', 'reduced', 'minimal'].includes(parsed.vfxLevel) ? parsed.vfxLevel : 'full',
         autoUpdateEnabled: typeof parsed.autoUpdateEnabled === 'boolean' ? parsed.autoUpdateEnabled : true,
       };
     }
@@ -232,6 +239,7 @@ function loadPersistedPreferences(): PersistedPreferences {
     adaptiveExplanationEnabled: true,
     learningOnboardingCompleted: false,
     learningAgeRange: null,
+    vfxLevel: 'full' as VfxLevel,
     autoUpdateEnabled: true,
   };
 }
@@ -271,6 +279,7 @@ export const usePreferencesStore = create<PreferencesState>()(
     adaptiveExplanationEnabled: initial.adaptiveExplanationEnabled,
     learningOnboardingCompleted: initial.learningOnboardingCompleted,
     learningAgeRange: initial.learningAgeRange,
+    vfxLevel: initial.vfxLevel,
     autoUpdateEnabled: initial.autoUpdateEnabled,
 
     setStatLayout: (statLayout) => {
@@ -455,6 +464,11 @@ export const usePreferencesStore = create<PreferencesState>()(
         ...patch,
         learningOnboardingCompleted: true,
       });
+    },
+
+    setVfxLevel: (vfxLevel) => {
+      persistPreferences({ ...get(), vfxLevel });
+      set({ vfxLevel });
     },
 
     setAutoUpdateEnabled: (autoUpdateEnabled) => {

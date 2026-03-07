@@ -1,19 +1,71 @@
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Element } from '@engine/types';
 import type { ElementPosition } from '@game/animationStore';
 
 interface ElementCardEffectProps {
   element: Element;
+  /** permanentId to track — overlay follows the card and self-removes when card leaves DOM. */
+  permanentId?: string;
+  /** Static fallback position (used for spell impacts without a permanentId). */
   position: ElementPosition;
+  /** Called when the tracked card leaves the DOM, so parent can clean up. */
+  onRemove?: () => void;
 }
 
 /**
  * On-card element overlay that appears when a card takes elemental damage.
- * Fire-and-forget: fades in, pulses, then removed by parent timeout.
+ * When given a permanentId, it tracks the card's DOM element each frame,
+ * matching its position, size, and rotation. Self-removes when the card disappears.
  */
-export function ElementCardEffect({ element, position }: ElementCardEffectProps) {
+export function ElementCardEffect({ element, permanentId, position, onRemove }: ElementCardEffectProps) {
   const pad = 4;
   const config = ELEMENT_OVERLAY_CONFIG[element];
+  const overlayPath = ELEMENT_OVERLAY_ASSETS[element];
+  const rafRef = useRef(0);
+  const onRemoveRef = useRef(onRemove);
+  onRemoveRef.current = onRemove;
+  const [tracked, setTracked] = useState<TrackedPosition | null>(null);
+
+  // Track the card DOM element each frame
+  useEffect(() => {
+    if (!permanentId) return;
+
+    function tick() {
+      const el = document.querySelector(`[data-testid="board-card-${permanentId}"]`) as HTMLElement | null;
+      if (!el) {
+        onRemoveRef.current?.();
+        return;
+      }
+      // Use untransformed dimensions (offsetWidth/Height) to avoid AABB inflation
+      const trueWidth = el.offsetWidth;
+      const trueHeight = el.offsetHeight;
+      // getBoundingClientRect center IS the visual center even when transformed
+      const rect = el.getBoundingClientRect();
+      const cx = rect.x + rect.width / 2;
+      const cy = rect.y + rect.height / 2;
+      const transform = getComputedStyle(el).transform;
+      const { rotation, scale } = parseTransformMatrix(transform);
+      const scaledWidth = trueWidth * scale;
+      const scaledHeight = trueHeight * scale;
+
+      setTracked({
+        x: cx - scaledWidth / 2,
+        y: cy - scaledHeight / 2,
+        width: scaledWidth,
+        height: scaledHeight,
+        rotation,
+      });
+
+      rafRef.current = requestAnimationFrame(tick);
+    }
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [permanentId]);
+
+  // Use tracked position if available, otherwise static position
+  const pos = tracked ?? { ...position, rotation: 0 };
 
   return (
     <motion.div
@@ -23,18 +75,35 @@ export function ElementCardEffect({ element, position }: ElementCardEffectProps)
       transition={{ duration: 0.25, ease: 'easeOut' }}
       style={{
         position: 'fixed',
-        left: position.x - pad,
-        top: position.y - pad,
-        width: position.width + pad * 2,
-        height: position.height + pad * 2,
+        left: pos.x - pad,
+        top: pos.y - pad,
+        width: pos.width + pad * 2,
+        height: pos.height + pad * 2,
         pointerEvents: 'none',
         zIndex: 9999,
         borderRadius: 8,
         overflow: 'hidden',
         border: `2px solid ${config.borderColor}`,
         boxShadow: config.outerGlow,
+        transform: pos.rotation ? `rotate(${pos.rotation}deg)` : undefined,
+        transformOrigin: 'center center',
       }}
     >
+      {/* Animated WebP overlay layer */}
+      <img
+        src={overlayPath}
+        alt=""
+        draggable={false}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          opacity: 0.85,
+          mixBlendMode: 'screen',
+        }}
+      />
       {/* Base gradient layer */}
       <div
         style={{
@@ -58,6 +127,40 @@ export function ElementCardEffect({ element, position }: ElementCardEffectProps)
     </motion.div>
   );
 }
+
+// ─── Helpers ───
+
+interface TrackedPosition extends ElementPosition {
+  rotation: number;
+}
+
+interface TransformInfo {
+  rotation: number;
+  scale: number;
+}
+
+function parseTransformMatrix(transform: string): TransformInfo {
+  if (!transform || transform === 'none') return { rotation: 0, scale: 1 };
+  // matrix(a, b, c, d, tx, ty) — rotation = atan2(b, a), scale = sqrt(a² + b²)
+  const match = transform.match(/^matrix\((.+)\)$/);
+  if (!match) return { rotation: 0, scale: 1 };
+  const [a, b] = match[1].split(',').map(Number);
+  const rotation = Math.round(Math.atan2(b, a) * (180 / Math.PI) * 100) / 100;
+  const scale = Math.round(Math.sqrt(a * a + b * b) * 1000) / 1000;
+  return { rotation, scale };
+}
+
+// ─── Per-Element Animated Overlay Assets ───
+
+const BASE_URL = import.meta.env.BASE_URL;
+
+const ELEMENT_OVERLAY_ASSETS: Record<Element, string> = {
+  fire: `${BASE_URL}vfx/overlays/fire.webp`,
+  water: `${BASE_URL}vfx/overlays/water.webp`,
+  earth: `${BASE_URL}vfx/overlays/earth.webp`,
+  air: `${BASE_URL}vfx/overlays/air.webp`,
+  shadow: `${BASE_URL}vfx/overlays/shadow.webp`,
+};
 
 // ─── Per-Element Visual Config ───
 

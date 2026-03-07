@@ -120,6 +120,7 @@ export function VfxTestPage() {
         key={overlay.id}
         element={overlay.element}
         position={overlay.position}
+        onRemove={() => setOverlays((prev) => prev.filter((o) => o.id !== overlay.id))}
       />
     ))}
     <div className="fixed inset-0 bg-gray-950 overflow-auto">

@@ -36,7 +36,7 @@ export type AnimationEffect =
   | { type: 'player_heal'; player: PlayerId; amount: number; position: ElementPosition }
   | { type: 'death'; permanentId: string; position: ElementPosition; element?: Element; soundId?: string }
   | { type: 'bounce'; permanentId: string; position: ElementPosition; element?: Element }
-  | { type: 'spell_impact'; position: ElementPosition; element?: Element; soundId?: string; isHealing?: boolean }
+  | { type: 'spell_impact'; position: ElementPosition; element?: Element; soundId?: string; isHealing?: boolean; permanentId?: string }
   | { type: 'keyword'; permanentId: string; keyword: Keyword; position: ElementPosition; element?: Element }
   | { type: 'summon'; permanentId: string; position: ElementPosition; element?: Element; soundId?: string }
   | { type: 'card_reveal'; cardId: string }
@@ -523,6 +523,7 @@ function groupSpellEvents(
             element: spellElement,
             soundId: getCardSoundId(e.cardId),
             isHealing: hasHealingEvents,
+            permanentId: target.type === 'creature' ? target.permanentId : undefined,
           });
         }
       }

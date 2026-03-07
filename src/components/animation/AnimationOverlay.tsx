@@ -39,6 +39,7 @@ interface ActiveElementEffect {
   id: number;
   element: Element;
   position: ElementPosition;
+  permanentId?: string;
 }
 
 interface MathBreakdownDraft {
@@ -56,6 +57,7 @@ export function AnimationOverlay() {
   const players = useGameStore((s) => s.state?.players);
   const playerStartingHealth = useGameStore((s) => s.state?.ruleset.startingHealth);
   const mathBreakdownEnabled = usePreferencesStore((s) => s.mathBreakdownEnabled);
+  const vfxLevel = usePreferencesStore((s) => s.vfxLevel);
   const particleRef = useRef<ParticleCanvasHandle>(null);
   const revealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nextRevealKeyRef = useRef(0);
@@ -117,10 +119,12 @@ export function AnimationOverlay() {
     const particles = particleRef.current;
 
     for (const effect of activeStep.effects) {
-      triggerParticleEffect(particles, effect, livePositions);
+      if (vfxLevel !== 'minimal') {
+        triggerParticleEffect(particles, effect, livePositions);
+      }
       triggerSoundEffect(effect);
     }
-  }, [activeStep, livePositions]);
+  }, [activeStep, livePositions, vfxLevel]);
 
   // Persist card reveals independently so they can outlive step transitions.
   useEffect(() => {
@@ -183,18 +187,19 @@ export function AnimationOverlay() {
 
   // Spawn fire-and-forget element effect overlays on damaged cards
   useEffect(() => {
-    if (!activeStep) return;
+    if (!activeStep || vfxLevel !== 'full') return;
 
     const entries: ActiveElementEffect[] = [];
 
     for (const effect of activeStep.effects) {
-      if (effect.type === 'combat_strike' && effect.element) {
+      if (effect.type === 'combat_strike' && effect.element && !effect.targetId.startsWith('player:')) {
         const position = getStepPosition(livePositions, effect.targetId, effect.to);
         const id = ++nextElementEffectIdRef.current;
-        entries.push({ id, element: effect.element, position });
-      } else if (effect.type === 'spell_impact' && effect.element && !effect.isHealing) {
+        entries.push({ id, element: effect.element, position, permanentId: effect.targetId });
+      } else if (effect.type === 'spell_impact' && effect.element && !effect.isHealing && effect.permanentId) {
+        const position = getStepPosition(livePositions, effect.permanentId, effect.position);
         const id = ++nextElementEffectIdRef.current;
-        entries.push({ id, element: effect.element, position: effect.position });
+        entries.push({ id, element: effect.element, position, permanentId: effect.permanentId });
       }
     }
     if (entries.length === 0) return;
@@ -208,7 +213,7 @@ export function AnimationOverlay() {
       }, ELEMENT_EFFECT_DURATION_MS);
       elementEffectTimeoutsRef.current.set(entry.id, timeout);
     }
-  }, [activeStep, livePositions]);
+  }, [activeStep, livePositions, vfxLevel]);
 
   useEffect(() => () => {
     if (revealTimeoutRef.current) {
@@ -237,7 +242,7 @@ export function AnimationOverlay() {
   return (
     <>
       {/* Canvas layer for particle VFX */}
-      <ParticleCanvas ref={particleRef} />
+      {vfxLevel !== 'minimal' && <ParticleCanvas ref={particleRef} />}
 
       {/* DOM layer for text/structural animations */}
       <div className="fixed inset-0 z-40 pointer-events-none">
@@ -364,6 +369,15 @@ export function AnimationOverlay() {
             key={`elem-fx-${entry.id}`}
             element={entry.element}
             position={entry.position}
+            permanentId={entry.permanentId}
+            onRemove={() => {
+              setElementEffects((prev) => prev.filter((item) => item.id !== entry.id));
+              const timeout = elementEffectTimeoutsRef.current.get(entry.id);
+              if (timeout) {
+                clearTimeout(timeout);
+                elementEffectTimeoutsRef.current.delete(entry.id);
+              }
+            }}
           />
         ))}
       </AnimatePresence>
