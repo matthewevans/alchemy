@@ -212,7 +212,7 @@ const ELEMENT_OVERLAY_CONFIG: Record<Element, OverlayConfig> = {
     outerGlow: '0 0 22px 8px rgba(180,220,255,0.5)',
     borderColor: 'rgba(180,230,255,0.9)',
     pulseDuration: 0.8,
-    overlayOpacity: 0.4,
+    overlayOpacity: 0.3,
   },
   shadow: {
     background: 'radial-gradient(ellipse at center, rgba(40,0,60,0.3) 10%, rgba(60,0,100,0.65) 50%, rgba(30,0,50,0.8) 100%)',
