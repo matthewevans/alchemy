@@ -20,16 +20,21 @@ interface StatBarProps {
 const SIZE_CONFIG = {
   compact: {
     container: 'px-[3px] py-[2px]',
+    containerStyle: undefined as React.CSSProperties | undefined,
     fontSize: '0.65rem',
     padding: '0.08rem 0.25rem',
   },
   normal: {
-    container: 'px-1 pb-1 pt-0.5',
+    container: '',
+    containerStyle: {
+      padding: 'calc(var(--card-font-scale) * 0.125rem) calc(var(--card-font-scale) * 0.25rem) calc(var(--card-font-scale) * 0.25rem)',
+    } as React.CSSProperties,
     fontSize: '0.75rem',
     padding: '0.12rem 0.3rem',
   },
   large: {
     container: 'px-3 pb-3',
+    containerStyle: undefined as React.CSSProperties | undefined,
     fontSize: '1.25rem',
     padding: '0.375rem 0.75rem',
   },
@@ -86,7 +91,7 @@ export function StatBar({
       : 'rounded-md';
 
   return (
-    <div className={`flex items-center ${justifyClass} ${config.container}`}>
+    <div className={`flex items-center ${justifyClass} ${config.container}`} style={config.containerStyle}>
       {/* Attack */}
       <div
         className={`${badgeBase} ${roundedClass('left')}`}

@@ -113,15 +113,20 @@ export function CardFace({
 
       {/* Card inner body */}
       <div
-        className={`relative z-[2] flex flex-col m-[2px] rounded-[10px] h-full bg-slate-900 ${
+        className={`relative z-[2] flex flex-col rounded-[10px] h-full bg-slate-900 ${
           viewLevel === 'compact' ? 'overflow-visible' : 'overflow-hidden'
         }`}
+        style={{ margin: 'calc(var(--card-font-scale) * 0.125rem)' }}
       >
         {/* ── Name bar ── */}
         <div
           data-testid="hand-card-header"
-          className={`flex items-center ${viewLevel === 'compact' ? 'gap-0.5 px-1 py-[1px]' : 'gap-1 px-1.5 py-[2px]'}`}
+          className={`flex items-center ${viewLevel === 'compact' ? 'gap-0.5 px-1 py-[1px]' : ''}`}
           style={{
+            ...viewLevel !== 'compact' && {
+              gap: 'calc(var(--card-font-scale) * 0.25rem)',
+              padding: 'calc(var(--card-font-scale) * 0.125rem) calc(var(--card-font-scale) * 0.375rem)',
+            },
             background: `linear-gradient(90deg, ${elementColor}33, ${elementColor}11)`,
             borderBottom: `1px solid ${elementColor}${viewLevel === 'compact' ? '33' : '44'}`,
           }}
@@ -233,12 +238,16 @@ export function CardFace({
           className={`relative ${
             viewLevel === 'compact'
               ? 'mx-[3px] mt-[3px] rounded overflow-visible'
-              : 'mx-1 mt-1 rounded-md overflow-hidden'
+              : 'rounded-md overflow-hidden'
           }`}
           style={{
             flex: '1 1 0',
             minHeight: 0,
             background: artGradient,
+            ...viewLevel !== 'compact' && {
+              margin: 'calc(var(--card-font-scale) * 0.25rem)',
+              marginBottom: 0,
+            },
           }}
         >
           {/* Element icon placeholder — visible when art is missing */}
@@ -281,9 +290,10 @@ export function CardFace({
           <div className="flex justify-center" style={{ marginTop: 'calc(var(--card-font-scale) * -0.35rem)' }}>
             <span
               data-testid="hand-card-type-label"
-              className="relative z-[3] inline-flex items-center rounded px-1.5 py-[1px] text-white/85 uppercase tracking-wide backdrop-blur-sm"
+              className="relative z-[3] inline-flex items-center rounded text-white/85 uppercase tracking-wide backdrop-blur-sm"
               style={{
                 fontSize: 'calc(var(--card-font-scale) * 0.44rem)',
+                padding: 'calc(var(--card-font-scale) * 0.0625rem) calc(var(--card-font-scale) * 0.375rem)',
                 background: 'rgba(15, 23, 42, 0.85)',
                 border: '1px solid rgba(148, 163, 184, 0.3)',
                 gap: 'calc(var(--card-font-scale) * 0.2rem)',
@@ -325,13 +335,12 @@ export function CardFace({
         {/* ── Text box (normal/verbose only) ── */}
         {config.showTextBox && (
           <div
-            className="mx-1 mb-1 px-1.5 rounded-md overflow-hidden"
+            className="rounded-md overflow-hidden"
             style={{
               background: 'rgba(15, 23, 42, 0.8)',
               border: '1px solid rgba(148, 163, 184, 0.15)',
-              marginTop: 'calc(var(--card-font-scale) * -0.3rem)',
-              paddingTop: 'calc(var(--card-font-scale) * 0.4rem)',
-              paddingBottom: 'calc(var(--card-font-scale) * 0.2rem)',
+              margin: `calc(var(--card-font-scale) * -0.3rem) calc(var(--card-font-scale) * 0.25rem) calc(var(--card-font-scale) * 0.25rem)`,
+              padding: `calc(var(--card-font-scale) * 0.4rem) calc(var(--card-font-scale) * 0.375rem) calc(var(--card-font-scale) * 0.2rem)`,
             }}
           >
             {/* Keywords */}
