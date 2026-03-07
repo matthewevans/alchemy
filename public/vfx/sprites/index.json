@@ -398,6 +398,74 @@
       "public/vfx/sprites/curated/generic/window_02.webp",
       "public/vfx/sprites/curated/generic/window_03.webp",
       "public/vfx/sprites/curated/generic/window_04.webp"
+    ],
+    "fire": [
+      "public/vfx/sprites/curated/spell/fire_01.webp",
+      "public/vfx/sprites/curated/spell/fire_02.webp",
+      "public/vfx/sprites/curated/spell/flame_01.webp",
+      "public/vfx/sprites/curated/spell/flame_02.webp",
+      "public/vfx/sprites/curated/spell/flame_03.webp",
+      "public/vfx/sprites/curated/spell/flame_04.webp",
+      "public/vfx/sprites/curated/spell/scorch_01.webp",
+      "public/vfx/sprites/curated/spell/scorch_02.webp",
+      "public/vfx/sprites/curated/spell/scorch_03.webp",
+      "public/vfx/sprites/curated/spell/flare_01.webp"
+    ],
+    "water": [
+      "public/vfx/sprites/curated/damage/splat00.webp",
+      "public/vfx/sprites/curated/damage/splat01.webp",
+      "public/vfx/sprites/curated/damage/splat02.webp",
+      "public/vfx/sprites/curated/damage/splat03.webp",
+      "public/vfx/sprites/curated/damage/splat04.webp",
+      "public/vfx/sprites/curated/damage/splat05.webp",
+      "public/vfx/sprites/curated/damage/splat06.webp",
+      "public/vfx/sprites/curated/damage/splat07.webp",
+      "public/vfx/sprites/curated/damage/splat08.webp",
+      "public/vfx/sprites/curated/spell/circle_01.webp",
+      "public/vfx/sprites/curated/spell/circle_02.webp",
+      "public/vfx/sprites/curated/spell/circle_03.webp",
+      "public/vfx/sprites/curated/spell/smoke_01.webp",
+      "public/vfx/sprites/curated/spell/smoke_02.webp",
+      "public/vfx/sprites/curated/spell/smoke_03.webp"
+    ],
+    "earth": [
+      "public/vfx/sprites/curated/spell/dirt_01.webp",
+      "public/vfx/sprites/curated/spell/dirt_02.webp",
+      "public/vfx/sprites/curated/spell/dirt_03.webp",
+      "public/vfx/sprites/curated/spell/scorch_01.webp",
+      "public/vfx/sprites/curated/spell/scorch_02.webp",
+      "public/vfx/sprites/curated/spell/scorch_03.webp",
+      "public/vfx/sprites/curated/spell/smoke_06.webp",
+      "public/vfx/sprites/curated/spell/smoke_07.webp",
+      "public/vfx/sprites/curated/spell/smoke_08.webp",
+      "public/vfx/sprites/curated/spell/smoke_09.webp",
+      "public/vfx/sprites/curated/spell/smoke_10.webp"
+    ],
+    "air": [
+      "public/vfx/sprites/curated/spell/twirl_01.webp",
+      "public/vfx/sprites/curated/spell/twirl_02.webp",
+      "public/vfx/sprites/curated/spell/twirl_03.webp",
+      "public/vfx/sprites/curated/spell/slash_01.webp",
+      "public/vfx/sprites/curated/spell/slash_02.webp",
+      "public/vfx/sprites/curated/spell/slash_03.webp",
+      "public/vfx/sprites/curated/spell/slash_04.webp",
+      "public/vfx/sprites/curated/spell/trace_01.webp",
+      "public/vfx/sprites/curated/spell/trace_02.webp",
+      "public/vfx/sprites/curated/spell/trace_03.webp",
+      "public/vfx/sprites/curated/spell/trace_04.webp",
+      "public/vfx/sprites/curated/spell/trace_05.webp"
+    ],
+    "shadow": [
+      "public/vfx/sprites/curated/spell/magic_01.webp",
+      "public/vfx/sprites/curated/spell/magic_02.webp",
+      "public/vfx/sprites/curated/spell/magic_03.webp",
+      "public/vfx/sprites/curated/spell/magic_04.webp",
+      "public/vfx/sprites/curated/spell/magic_05.webp",
+      "public/vfx/sprites/curated/spell/symbol_01.webp",
+      "public/vfx/sprites/curated/spell/symbol_02.webp",
+      "public/vfx/sprites/curated/spell/star_01.webp",
+      "public/vfx/sprites/curated/spell/star_02.webp",
+      "public/vfx/sprites/curated/spell/star_03.webp"
     ]
   }
 }

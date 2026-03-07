@@ -18,7 +18,7 @@ export interface ParticleCanvasHandle {
   projectile: (fromX: number, fromY: number, toX: number, toY: number, durationMs: number, element?: Element) => void;
   spellImpact: (x: number, y: number, element?: Element) => void;
   damageFlash: (x: number, y: number, amount: number) => void;
-  playerDamage: (x: number, y: number, amount: number) => void;
+  playerDamage: (x: number, y: number, amount: number, element?: Element) => void;
   healEffect: (x: number, y: number, amount: number) => void;
   keywordFlash: (x: number, y: number, element?: Element) => void;
   blockClash: (x: number, y: number) => void;
@@ -68,9 +68,9 @@ export const ParticleCanvas = forwardRef<ParticleCanvasHandle>(function Particle
         const s = getSystem();
         if (s) emitDamageFlash(s, x, y, amount);
       },
-      playerDamage(x, y, amount) {
+      playerDamage(x, y, amount, element) {
         const s = getSystem();
-        if (s) emitPlayerDamage(s, x, y, amount);
+        if (s) emitPlayerDamage(s, x, y, amount, element);
       },
       healEffect(x, y, amount) {
         const s = getSystem();

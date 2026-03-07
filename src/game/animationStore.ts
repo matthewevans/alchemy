@@ -32,7 +32,7 @@ export type AnimationEffect =
     }
   | { type: 'damage'; targetId: string; amount: number; position: ElementPosition }
   | { type: 'heal'; targetId: string; amount: number; position: ElementPosition }
-  | { type: 'player_damage'; player: PlayerId; amount: number; position: ElementPosition }
+  | { type: 'player_damage'; player: PlayerId; amount: number; position: ElementPosition; element?: Element }
   | { type: 'player_heal'; player: PlayerId; amount: number; position: ElementPosition }
   | { type: 'death'; permanentId: string; position: ElementPosition; element?: Element; soundId?: string }
   | { type: 'bounce'; permanentId: string; position: ElementPosition; element?: Element }
@@ -472,7 +472,8 @@ function groupCombatEvents(
               soundId: sourceCardId ? getCardSoundId(sourceCardId) : undefined,
             });
           }
-          effects.push({ type: 'player_damage', player: e.player, amount: e.amount, position: pos });
+          const pdSourceCardId = cardIdMap?.get(e.source);
+          effects.push({ type: 'player_damage', player: e.player, amount: e.amount, position: pos, element: pdSourceCardId ? getCardElement(pdSourceCardId) : undefined });
         }
       }
     }

@@ -4,11 +4,12 @@
 
 import type { Element } from '@engine/types';
 import type { ParticleSystem, RGB, Particle } from './particleSystem';
+import { ELEMENT_VFX } from './elementVfx';
 
-type SpriteBucket = 'damage' | 'spell' | 'death' | 'summon' | 'generic';
+export type SpriteBucket = 'damage' | 'spell' | 'death' | 'summon' | 'generic' | 'fire' | 'water' | 'earth' | 'air' | 'shadow';
 
 interface VfxSpriteIndex {
-  curated: Record<SpriteBucket, string[]>;
+  curated: Partial<Record<SpriteBucket, string[]>>;
 }
 
 const VFX_SPRITE_INDEX_URL = `${import.meta.env.BASE_URL}vfx/sprites/index.json`;
@@ -37,7 +38,7 @@ function loadVfxSpriteIndex(): void {
   })();
 }
 
-function pickVfxSprite(bucket: SpriteBucket): string | undefined {
+export function pickVfxSprite(bucket: SpriteBucket): string | undefined {
   if (!vfxSpriteIndex) {
     loadVfxSpriteIndex();
     return undefined;
@@ -48,7 +49,7 @@ function pickVfxSprite(bucket: SpriteBucket): string | undefined {
   return selected ? toAssetUrl(selected) : undefined;
 }
 
-function pickVfxSpriteWithFallback(bucket: SpriteBucket): string | undefined {
+export function pickVfxSpriteWithFallback(bucket: SpriteBucket): string | undefined {
   return pickVfxSprite(bucket) ?? pickVfxSprite('generic');
 }
 
@@ -56,7 +57,7 @@ if (typeof window !== 'undefined') loadVfxSpriteIndex();
 
 // ─── Element Colors ───
 
-const ELEMENT_COLORS: Record<Element, RGB> = {
+export const ELEMENT_COLORS: Record<Element, RGB> = {
   fire: { r: 255, g: 120, b: 40 },
   water: { r: 80, g: 170, b: 255 },
   earth: { r: 90, g: 210, b: 110 },
@@ -64,32 +65,32 @@ const ELEMENT_COLORS: Record<Element, RGB> = {
   shadow: { r: 190, g: 130, b: 255 },
 };
 
-const COMBAT_COLOR: RGB = { r: 255, g: 180, b: 60 };
-const DAMAGE_COLOR: RGB = { r: 255, g: 70, b: 50 };
+export const COMBAT_COLOR: RGB = { r: 255, g: 180, b: 60 };
+export const DAMAGE_COLOR: RGB = { r: 255, g: 70, b: 50 };
 const HEAL_COLOR: RGB = { r: 80, g: 230, b: 160 };
-const WHITE: RGB = { r: 255, g: 255, b: 255 };
+export const WHITE: RGB = { r: 255, g: 255, b: 255 };
 
-function getElementRGB(element?: Element): RGB {
+export function getElementRGB(element?: Element): RGB {
   return element ? ELEMENT_COLORS[element] : COMBAT_COLOR;
 }
 
 // ─── Easing ───
 
-function easeOutCubic(t: number): number {
+export function easeOutCubic(t: number): number {
   return 1 - (1 - t) ** 3;
 }
 
-function easeOutQuart(t: number): number {
+export function easeOutQuart(t: number): number {
   return 1 - (1 - t) ** 4;
 }
 
 // ─── Helpers ───
 
-function randRange(min: number, max: number): number {
+export function randRange(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-function lerpColor(a: RGB, b: RGB, t: number): RGB {
+export function lerpColor(a: RGB, b: RGB, t: number): RGB {
   return {
     r: a.r + (b.r - a.r) * t,
     g: a.g + (b.g - a.g) * t,
@@ -99,7 +100,7 @@ function lerpColor(a: RGB, b: RGB, t: number): RGB {
 
 // ─── Reusable Burst Primitives ───
 
-interface BurstOpts {
+export interface BurstOpts {
   count: number;
   speedRange: [number, number];
   lifeRange: [number, number];
@@ -111,7 +112,7 @@ interface BurstOpts {
 }
 
 /** Radial burst of colored particles from a center point. */
-function radialBurst(x: number, y: number, color: RGB, opts: BurstOpts): Partial<Particle>[] {
+export function radialBurst(x: number, y: number, color: RGB, opts: BurstOpts): Partial<Particle>[] {
   const { count, speedRange, lifeRange, sizeRange, jitter = 0.3, drag = 2.5, glow = 14, alpha = 0.95 } = opts;
   const particles: Partial<Particle>[] = [];
   for (let i = 0; i < count; i++) {
@@ -132,7 +133,7 @@ function radialBurst(x: number, y: number, color: RGB, opts: BurstOpts): Partial
 }
 
 /** White-hot core sparkles — small count, fast-fading. */
-function coreSparkles(x: number, y: number, count: number, speedRange: [number, number], opts?: { glow?: number; sizeRange?: [number, number] }): Partial<Particle>[] {
+export function coreSparkles(x: number, y: number, count: number, speedRange: [number, number], opts?: { glow?: number; sizeRange?: [number, number] }): Partial<Particle>[] {
   const { glow = 18, sizeRange = [4, 10] } = opts ?? {};
   const particles: Partial<Particle>[] = [];
   for (let i = 0; i < count; i++) {
@@ -153,7 +154,7 @@ function coreSparkles(x: number, y: number, count: number, speedRange: [number, 
 }
 
 /** Slow-falling ember debris with gravity. */
-function emberDebris(x: number, y: number, color: RGB, count: number): Partial<Particle>[] {
+export function emberDebris(x: number, y: number, color: RGB, count: number): Partial<Particle>[] {
   const particles: Partial<Particle>[] = [];
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
@@ -234,6 +235,7 @@ export function emitProjectile(
 ) {
   const now = performance.now();
   const color = element ? ELEMENT_COLORS[element] : COMBAT_COLOR;
+  const elementVfx = element ? ELEMENT_VFX[element] : undefined;
   const dx = toX - fromX;
   const dy = toY - fromY;
   let lastTrailEmitT = -1;
@@ -242,92 +244,73 @@ export function emitProjectile(
     startTime: now,
     duration: durationMs,
     update(t) {
-      // Emit trail particles densely as the projectile moves
       if (t - lastTrailEmitT > 0.025) {
         lastTrailEmitT = t;
         const progress = easeOutCubic(t);
         const px = fromX + dx * progress;
         const py = fromY + dy * progress;
 
-        const trail: Partial<Particle>[] = [
-          {
-            x: px + randRange(-5, 5),
-            y: py + randRange(-5, 5),
-            vx: randRange(-35, 35),
-            vy: randRange(-35, 35),
-            life: randRange(0.15, 0.3),
-            size: randRange(2.5, 5),
-            endSize: 0,
-            r: color.r,
-            g: color.g,
-            b: color.b,
-            alpha: 0.8,
-            drag: 3,
-            glow: 10,
-          },
-          // White hot core trail
-          {
-            x: px,
-            y: py,
-            vx: randRange(-12, 12),
-            vy: randRange(-12, 12),
-            life: 0.1,
-            size: randRange(3, 6),
-            endSize: 1,
-            r: 255,
-            g: 255,
-            b: 240,
-            alpha: 0.7,
-            drag: 2,
-            glow: 12,
-          },
-        ];
-        // Extra scattered sparks every other frame
-        if (Math.random() > 0.4) {
-          trail.push({
-            x: px + randRange(-3, 3),
-            y: py + randRange(-3, 3),
-            vx: randRange(-50, 50),
-            vy: randRange(-50, 50),
-            life: randRange(0.1, 0.2),
-            size: randRange(1.5, 3),
-            endSize: 0,
-            r: 255,
-            g: color.g * 0.8,
-            b: color.b * 0.5,
-            alpha: 0.6,
-            drag: 5,
-            glow: 6,
-          });
+        if (elementVfx) {
+          elementVfx.trail(system, px, py, color);
+        } else {
+          // Generic trail fallback
+          const trail: Partial<Particle>[] = [
+            {
+              x: px + randRange(-5, 5), y: py + randRange(-5, 5),
+              vx: randRange(-35, 35), vy: randRange(-35, 35),
+              life: randRange(0.15, 0.3), size: randRange(2.5, 5), endSize: 0,
+              r: color.r, g: color.g, b: color.b, alpha: 0.8, drag: 3, glow: 10,
+            },
+            {
+              x: px, y: py,
+              vx: randRange(-12, 12), vy: randRange(-12, 12),
+              life: 0.1, size: randRange(3, 6), endSize: 1,
+              r: 255, g: 255, b: 240, alpha: 0.7, drag: 2, glow: 12,
+            },
+          ];
+          if (Math.random() > 0.4) {
+            trail.push({
+              x: px + randRange(-3, 3), y: py + randRange(-3, 3),
+              vx: randRange(-50, 50), vy: randRange(-50, 50),
+              life: randRange(0.1, 0.2), size: randRange(1.5, 3), endSize: 0,
+              r: 255, g: color.g * 0.8, b: color.b * 0.5, alpha: 0.6, drag: 5, glow: 6,
+            });
+          }
+          system.emit(trail);
         }
-        system.emit(trail);
       }
     },
     draw(t, ctx) {
-      // Draw the main projectile body — larger and more prominent
       const progress = easeOutCubic(t);
       const px = fromX + dx * progress;
       const py = fromY + dy * progress;
       const fadeOut = t > 0.85 ? 1 - (t - 0.85) / 0.15 : 1;
       const bodySize = 14 * (1 - t * 0.15) * fadeOut;
 
-      // Wide outer glow
-      system.drawGlowCircle(ctx, px, py, bodySize + 8, color, 0.25 * fadeOut, 25);
-      // Core body
-      system.drawGlowCircle(ctx, px, py, bodySize, color, 0.9 * fadeOut, 15);
-      // White hot center
-      system.drawGlowCircle(ctx, px, py, bodySize * 0.5, WHITE, 0.85 * fadeOut, 10);
+      if (elementVfx) {
+        elementVfx.drawBody(system, ctx, px, py, bodySize, fadeOut, color);
+      } else {
+        system.drawGlowCircle(ctx, px, py, bodySize + 8, color, 0.25 * fadeOut, 25);
+        system.drawGlowCircle(ctx, px, py, bodySize, color, 0.9 * fadeOut, 15);
+        system.drawGlowCircle(ctx, px, py, bodySize * 0.5, WHITE, 0.85 * fadeOut, 10);
+      }
     },
     onComplete(sys) {
-      // Impact burst at destination
-      emitImpact(sys, toX, toY, color);
+      emitImpact(sys, toX, toY, color, element);
     },
   });
 }
 
 // ─── Effect: Impact (at projectile destination) ───
 
-export function emitImpact(system: ParticleSystem, x: number, y: number, color: RGB) {
+export function emitImpact(system: ParticleSystem, x: number, y: number, color: RGB, element?: Element) {
+  // Delegate to element-specific impact when available
+  if (element) {
+    ELEMENT_VFX[element].impact(system, x, y, color);
+    return;
+  }
+
+  // Generic fallback
   const now = performance.now();
   const overlaySprite = pickVfxSpriteWithFallback('damage');
   if (overlaySprite) system.warmSprite(overlaySprite);
@@ -337,7 +320,6 @@ export function emitImpact(system: ParticleSystem, x: number, y: number, color: 
     ...coreSparkles(x, y, 4, [40, 80], { glow: 14, sizeRange: [3, 6] }),
   ]);
 
-  // Impact flash + ring
   system.addEffect({
     startTime: now,
     duration: 400,
@@ -363,6 +345,14 @@ export function emitImpact(system: ParticleSystem, x: number, y: number, color: 
 // ─── Effect: Spell Impact (targeted spell resolves) ───
 
 export function emitSpellImpact(system: ParticleSystem, x: number, y: number, element?: Element) {
+  // Delegate to element-specific impact (spells use the same element VFX at larger scale)
+  if (element) {
+    const color = ELEMENT_COLORS[element];
+    ELEMENT_VFX[element].impact(system, x, y, color);
+    return;
+  }
+
+  // Generic fallback
   const color = getElementRGB(element);
   const now = performance.now();
   const overlaySprite = pickVfxSpriteWithFallback('spell');
@@ -374,13 +364,11 @@ export function emitSpellImpact(system: ParticleSystem, x: number, y: number, el
     ...emberDebris(x, y, color, 6),
   ]);
 
-  // Triple expanding shockwave rings + central flash
   system.addEffect({
     startTime: now,
     duration: 800,
     update() {},
     draw(t, ctx) {
-      // Central flash — intense
       const flashAlpha = (1 - easeOutCubic(t)) * 0.75;
       const flashSize = 15 + easeOutCubic(t) * 55;
       system.drawGlowCircle(ctx, x, y, flashSize, color, flashAlpha, 25);
@@ -391,13 +379,11 @@ export function emitSpellImpact(system: ParticleSystem, x: number, y: number, el
         system.drawSprite(ctx, x, y, spriteSize, spriteAlpha, overlaySprite, t * 2.6);
       }
 
-      // Ring 1 — fast, tight
       const r1t = Math.min(t * 1.4, 1);
       const r1size = 10 + easeOutQuart(r1t) * 70;
       const r1alpha = (1 - r1t) * 0.9;
       system.drawGlowRing(ctx, x, y, r1size, color, r1alpha, 3.5 - r1t * 3, 16);
 
-      // Ring 2 — medium, delayed
       const r2t = Math.max(0, Math.min((t - 0.08) * 1.3, 1));
       if (r2t > 0) {
         const r2size = 8 + easeOutQuart(r2t) * 90;
@@ -405,7 +391,6 @@ export function emitSpellImpact(system: ParticleSystem, x: number, y: number, el
         system.drawGlowRing(ctx, x, y, r2size, lerpColor(color, WHITE, 0.3), r2alpha, 2.5 - r2t * 2, 12);
       }
 
-      // Ring 3 — slow, widest
       const r3t = Math.max(0, Math.min((t - 0.18) * 1.15, 1));
       if (r3t > 0) {
         const r3size = 6 + easeOutQuart(r3t) * 110;
@@ -461,7 +446,15 @@ export function emitDamageFlash(system: ParticleSystem, x: number, y: number, am
 
 // ─── Effect: Player Damage (sparks at hero) ───
 
-export function emitPlayerDamage(system: ParticleSystem, x: number, y: number, amount: number) {
+export function emitPlayerDamage(system: ParticleSystem, x: number, y: number, amount: number, element?: Element) {
+  // Use element-specific impact for player damage when available
+  if (element) {
+    const color = ELEMENT_COLORS[element];
+    ELEMENT_VFX[element].impact(system, x, y, color);
+    return;
+  }
+
+  // Generic fallback
   const now = performance.now();
   const intensity = Math.min(amount / 4, 1);
   const count = 12 + Math.round(intensity * 12);
@@ -478,7 +471,6 @@ export function emitPlayerDamage(system: ParticleSystem, x: number, y: number, a
     ...(amount >= 3 ? emberDebris(x, y, { r: 255, g: 100, b: 30 }, 6) : []),
   ]);
 
-  // Impact flash + expanding ring at hero
   system.addEffect({
     startTime: now,
     duration: 450,
