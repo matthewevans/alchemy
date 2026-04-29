@@ -1868,37 +1868,38 @@ function resolveMultiBlockCombat(
 
     // With deathtouch, 1 post-armor damage is enough to kill any blocker.
     const blockerHP = getCurrentHealth(blocker);
-    let dmgToAssign: number;
+    let assignedDmg: number;
     if (attackerHasDeathtouch) {
       const lethalDmg = hasKeyword(blocker, 'armor') && !blocker.armorUsedThisTurn ? 2 : 1;
-      dmgToAssign = Math.min(remainingDmg, lethalDmg);
+      assignedDmg = Math.min(remainingDmg, lethalDmg);
     } else {
-      dmgToAssign = Math.min(remainingDmg, blockerHP);
+      assignedDmg = Math.min(remainingDmg, blockerHP);
     }
 
     // Blocker armor reduces incoming damage
-    if (hasKeyword(blocker, 'armor') && !blocker.armorUsedThisTurn && dmgToAssign > 0) {
-      dmgToAssign = Math.max(0, dmgToAssign - 1);
+    let dealtDmg = assignedDmg;
+    if (hasKeyword(blocker, 'armor') && !blocker.armorUsedThisTurn && dealtDmg > 0) {
+      dealtDmg = Math.max(0, dealtDmg - 1);
       players[blockerRef.owner].board[blockerRef.slotIndex] = {
         ...blocker,
-        damage: blocker.damage + dmgToAssign,
+        damage: blocker.damage + dealtDmg,
         armorUsedThisTurn: true,
       };
     } else {
       players[blockerRef.owner].board[blockerRef.slotIndex] = {
         ...blocker,
-        damage: blocker.damage + dmgToAssign,
+        damage: blocker.damage + dealtDmg,
       };
     }
-    if (dmgToAssign > 0) {
+    if (dealtDmg > 0) {
       blockersDamagedByAttacker.add(blocker.permanentId);
     }
 
-    remainingDmg -= dmgToAssign;
+    remainingDmg -= assignedDmg;
     events.push({
       type: 'DAMAGE_DEALT',
       targetId: blocker.permanentId,
-      amount: dmgToAssign,
+      amount: dealtDmg,
       source: attacker.permanentId,
     });
   }

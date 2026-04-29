@@ -1261,7 +1261,7 @@ describe('Combat - multi-block', () => {
     const b2After = newState.players.player2.board.find((p) => p?.permanentId === blocker2.permanentId);
 
     expect(b1After).toMatchObject({ damage: 0, armorUsedThisTurn: true });
-    expect(b2After).toMatchObject({ damage: 0, armorUsedThisTurn: true });
+    expect(b2After).toMatchObject({ damage: 0, armorUsedThisTurn: false });
     expect(events).not.toContainEqual(expect.objectContaining({
       type: 'CREATURE_DIED',
       permanentId: blocker1.permanentId,
@@ -1313,7 +1313,7 @@ describe('Combat - multi-block', () => {
     const b2After = newState.players.player2.board.find((p) => p?.permanentId === blocker2.permanentId);
 
     expect(newState.players.player2.board[0]).toBeNull();
-    expect(b2After).toMatchObject({ damage: 0, armorUsedThisTurn: true });
+    expect(b2After).toMatchObject({ damage: 0, armorUsedThisTurn: false });
     expect(events).toContainEqual(expect.objectContaining({
       type: 'CREATURE_DIED',
       permanentId: blocker1.permanentId,
