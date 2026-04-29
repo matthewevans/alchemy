@@ -145,6 +145,19 @@ describe('canKillInCombat', () => {
     expect(canKillInCombat(attacker, defender)).toBe(true);
   });
 
+  it('returns false when armor prevents all deathtouch damage', () => {
+    const attacker = makePermanent('fire_cinder_viper', 'player1', {
+      attack: 1,
+      health: 1,
+    });
+    const defender = makePermanent('fire_forge_guardian', 'player2', {
+      attack: 1,
+      health: 4,
+      armorUsedThisTurn: false,
+    });
+    expect(canKillInCombat(attacker, defender)).toBe(false);
+  });
+
   it('accounts for existing damage on defender', () => {
     const attacker = makePermanent('fire_ember_sprite', 'player1', {
       attack: 1,
@@ -221,6 +234,19 @@ describe('evaluateSingleBlockOutcome', () => {
       damage: 0,
     });
     expect(evaluateSingleBlockOutcome(attacker, blocker)).toBe(-5);
+  });
+
+  it('does not score armor-prevented deathtouch as killing the blocker', () => {
+    const attacker = makePermanent('fire_cinder_viper', 'player1', {
+      attack: 1,
+      health: 1,
+    });
+    const blocker = makePermanent('fire_forge_guardian', 'player2', {
+      attack: 1,
+      health: 4,
+      armorUsedThisTurn: false,
+    });
+    expect(evaluateSingleBlockOutcome(attacker, blocker)).toBeLessThan(0);
   });
 });
 

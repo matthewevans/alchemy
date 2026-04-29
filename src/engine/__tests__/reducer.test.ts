@@ -1219,6 +1219,111 @@ describe('Combat - multi-block', () => {
     expect(b2After!.damage).toBe(0);
   });
 
+  it('multi-block deathtouch only kills blockers that take post-armor damage', () => {
+    const attacker = makePermanent('shadow_deaths_hand', 'player1', {
+      attack: 1,
+      health: 4,
+    });
+    const blocker1 = makePermanent('fire_forge_guardian', 'player2', {
+      attack: 1,
+      health: 4,
+      armorUsedThisTurn: false,
+    });
+    const blocker2 = makePermanent('water_pearl_turtle', 'player2', {
+      attack: 0,
+      health: 3,
+      armorUsedThisTurn: false,
+    });
+
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_blockers',
+        confirmedAttackers: [attacker.permanentId],
+        tentativeBlockers: {
+          [blocker1.permanentId]: attacker.permanentId,
+          [blocker2.permanentId]: attacker.permanentId,
+        },
+      },
+      player1: {
+        board: [{ ...attacker, isTapped: true }, null, null, null, null],
+      },
+      player2: {
+        board: [blocker1, blocker2, null, null, null],
+      },
+    });
+
+    const { newState: orderState } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+    const { newState, events } = reduce(orderState, { type: 'CONFIRM_BLOCKER_ORDER' }, 'player1', rng);
+
+    const b1After = newState.players.player2.board.find((p) => p?.permanentId === blocker1.permanentId);
+    const b2After = newState.players.player2.board.find((p) => p?.permanentId === blocker2.permanentId);
+
+    expect(b1After).toMatchObject({ damage: 0, armorUsedThisTurn: true });
+    expect(b2After).toMatchObject({ damage: 0, armorUsedThisTurn: true });
+    expect(events).not.toContainEqual(expect.objectContaining({
+      type: 'CREATURE_DIED',
+      permanentId: blocker1.permanentId,
+    }));
+    expect(events).not.toContainEqual(expect.objectContaining({
+      type: 'CREATURE_DIED',
+      permanentId: blocker2.permanentId,
+    }));
+  });
+
+  it('multi-block deathtouch can kill an armored blocker when assigned damage penetrates armor', () => {
+    const attacker = makePermanent('shadow_deaths_hand', 'player1', {
+      attack: 2,
+      health: 4,
+    });
+    const blocker1 = makePermanent('fire_forge_guardian', 'player2', {
+      attack: 1,
+      health: 4,
+      armorUsedThisTurn: false,
+    });
+    const blocker2 = makePermanent('water_pearl_turtle', 'player2', {
+      attack: 0,
+      health: 3,
+      armorUsedThisTurn: false,
+    });
+
+    const state = createTestGameState({
+      activePlayer: 'player1',
+      phase: {
+        type: 'battle',
+        step: 'declare_blockers',
+        confirmedAttackers: [attacker.permanentId],
+        tentativeBlockers: {
+          [blocker1.permanentId]: attacker.permanentId,
+          [blocker2.permanentId]: attacker.permanentId,
+        },
+      },
+      player1: {
+        board: [{ ...attacker, isTapped: true }, null, null, null, null],
+      },
+      player2: {
+        board: [blocker1, blocker2, null, null, null],
+      },
+    });
+
+    const { newState: orderState } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+    const { newState, events } = reduce(orderState, { type: 'CONFIRM_BLOCKER_ORDER' }, 'player1', rng);
+
+    const b2After = newState.players.player2.board.find((p) => p?.permanentId === blocker2.permanentId);
+
+    expect(newState.players.player2.board[0]).toBeNull();
+    expect(b2After).toMatchObject({ damage: 0, armorUsedThisTurn: true });
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'CREATURE_DIED',
+      permanentId: blocker1.permanentId,
+    }));
+    expect(events).not.toContainEqual(expect.objectContaining({
+      type: 'CREATURE_DIED',
+      permanentId: blocker2.permanentId,
+    }));
+  });
+
   it('attacker can reorder blockers before combat resolves', () => {
     const attacker = makePermanent('fire_magma_golem', 'player1', {
       attack: 3,
@@ -1313,6 +1418,119 @@ describe('Combat - creature dies', () => {
 
     // Attacker survived (4 health, 2 damage)
     expect(newState.players.player1.board[0]).toBeTruthy();
+  });
+
+  it('does not kill an armored blocker when armor prevents all deathtouch damage', () => {
+    const attacker = makePermanent('fire_cinder_viper', 'player1', {
+      attack: 1,
+      health: 1,
+    });
+    const blocker = makePermanent('fire_forge_guardian', 'player2', {
+      attack: 1,
+      health: 4,
+      armorUsedThisTurn: false,
+    });
+
+    const state = createTestGameState({
+      phase: {
+        type: 'battle',
+        step: 'declare_blockers',
+        confirmedAttackers: [attacker.permanentId],
+        tentativeBlockers: { [blocker.permanentId]: attacker.permanentId },
+      },
+      player1: {
+        board: [{ ...attacker, isTapped: true }, null, null, null, null],
+      },
+      player2: {
+        board: [blocker, null, null, null, null],
+      },
+    });
+
+    const { newState, events } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+
+    expect(newState.players.player2.board[0]).toMatchObject({
+      permanentId: blocker.permanentId,
+      damage: 0,
+      armorUsedThisTurn: true,
+    });
+    expect(events).not.toContainEqual(expect.objectContaining({
+      type: 'CREATURE_DIED',
+      permanentId: blocker.permanentId,
+    }));
+  });
+
+  it('kills an armored blocker when deathtouch damage penetrates armor', () => {
+    const attacker = makePermanent('shadow_deaths_hand', 'player1', {
+      attack: 2,
+      health: 4,
+    });
+    const blocker = makePermanent('fire_forge_guardian', 'player2', {
+      attack: 1,
+      health: 4,
+      armorUsedThisTurn: false,
+    });
+
+    const state = createTestGameState({
+      phase: {
+        type: 'battle',
+        step: 'declare_blockers',
+        confirmedAttackers: [attacker.permanentId],
+        tentativeBlockers: { [blocker.permanentId]: attacker.permanentId },
+      },
+      player1: {
+        board: [{ ...attacker, isTapped: true }, null, null, null, null],
+      },
+      player2: {
+        board: [blocker, null, null, null, null],
+      },
+    });
+
+    const { newState, events } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+
+    expect(newState.players.player2.board[0]).toBeNull();
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'CREATURE_DIED',
+      permanentId: blocker.permanentId,
+    }));
+  });
+
+  it('does not kill an armored attacker when armor prevents all deathtouch blocker damage', () => {
+    const attacker = makePermanent('fire_forge_guardian', 'player1', {
+      attack: 1,
+      health: 4,
+      armorUsedThisTurn: false,
+    });
+    const blocker = makePermanent('fire_cinder_viper', 'player2', {
+      attack: 1,
+      health: 1,
+    });
+
+    const state = createTestGameState({
+      phase: {
+        type: 'battle',
+        step: 'declare_blockers',
+        confirmedAttackers: [attacker.permanentId],
+        tentativeBlockers: { [blocker.permanentId]: attacker.permanentId },
+      },
+      player1: {
+        board: [{ ...attacker, isTapped: true }, null, null, null, null],
+      },
+      player2: {
+        board: [blocker, null, null, null, null],
+      },
+    });
+
+    const { newState, events } = reduce(state, { type: 'CONFIRM_BLOCKERS' }, 'player2', rng);
+
+    expect(newState.players.player1.board[0]).toMatchObject({
+      permanentId: attacker.permanentId,
+      damage: 0,
+      armorUsedThisTurn: true,
+    });
+    expect(events).not.toContainEqual(expect.objectContaining({
+      type: 'CREATURE_DIED',
+      permanentId: attacker.permanentId,
+    }));
   });
 });
 

@@ -44,10 +44,11 @@ export function canKillInCombat(
   attacker: Permanent,
   defender: Permanent,
 ): boolean {
-  if (hasKeyword(attacker, 'deathtouch') && getCombatDamage(attacker) > 0) {
+  const damageToDefender = estimateDamageToCreature(defender, getCombatDamage(attacker));
+  if (hasKeyword(attacker, 'deathtouch') && damageToDefender > 0) {
     return true;
   }
-  return estimateDamageToCreature(defender, getCombatDamage(attacker)) >= getCurrentHealth(defender);
+  return damageToDefender >= getCurrentHealth(defender);
 }
 
 export function evaluateSingleBlockOutcome(attacker: Permanent, blocker: Permanent): number {
@@ -55,9 +56,9 @@ export function evaluateSingleBlockOutcome(attacker: Permanent, blocker: Permane
   const blockerDamage = getCombatDamage(blocker);
   const damageToBlocker = estimateDamageToCreature(blocker, attackerDamage);
   const damageToAttacker = estimateDamageToCreature(attacker, blockerDamage);
-  const attackerDies = (hasKeyword(blocker, 'deathtouch') && blockerDamage > 0)
+  const attackerDies = (hasKeyword(blocker, 'deathtouch') && damageToAttacker > 0)
     || damageToAttacker >= getCurrentHealth(attacker);
-  const blockerDies = (hasKeyword(attacker, 'deathtouch') && attackerDamage > 0)
+  const blockerDies = (hasKeyword(attacker, 'deathtouch') && damageToBlocker > 0)
     || damageToBlocker >= getCurrentHealth(blocker);
 
   if (attackerDies && !blockerDies) {

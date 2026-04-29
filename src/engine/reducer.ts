@@ -1859,17 +1859,19 @@ function resolveMultiBlockCombat(
 
   // Distribute attacker damage among blockers in order
   let remainingDmg = attackDamage;
+  const blockersDamagedByAttacker = new Set<string>();
   for (const blockerRef of blockerRefs) {
     if (remainingDmg <= 0) break;
 
     const blocker = players[blockerRef.owner].board[blockerRef.slotIndex];
     if (!blocker) continue;
 
-    // With deathtouch, 1 damage is enough to kill any blocker
+    // With deathtouch, 1 post-armor damage is enough to kill any blocker.
     const blockerHP = getCurrentHealth(blocker);
     let dmgToAssign: number;
     if (attackerHasDeathtouch) {
-      dmgToAssign = Math.min(remainingDmg, 1);
+      const lethalDmg = hasKeyword(blocker, 'armor') && !blocker.armorUsedThisTurn ? 2 : 1;
+      dmgToAssign = Math.min(remainingDmg, lethalDmg);
     } else {
       dmgToAssign = Math.min(remainingDmg, blockerHP);
     }
@@ -1888,6 +1890,9 @@ function resolveMultiBlockCombat(
         damage: blocker.damage + dmgToAssign,
       };
     }
+    if (dmgToAssign > 0) {
+      blockersDamagedByAttacker.add(blocker.permanentId);
+    }
 
     remainingDmg -= dmgToAssign;
     events.push({
@@ -1901,6 +1906,7 @@ function resolveMultiBlockCombat(
   // All blockers deal damage to attacker simultaneously
   let totalBlockerDmg = 0;
   let attackerArmorUsed = false;
+  let attackerDamagedByDeathtouchBlocker = false;
   for (const blockerRef of blockerRefs) {
     const blocker = players[blockerRef.owner].board[blockerRef.slotIndex];
     if (!blocker) continue;
@@ -1915,6 +1921,9 @@ function resolveMultiBlockCombat(
     }
 
     totalBlockerDmg += blockDmg;
+    if (blockDmg > 0 && hasKeyword(blocker, 'deathtouch')) {
+      attackerDamagedByDeathtouchBlocker = true;
+    }
     events.push({
       type: 'DAMAGE_DEALT',
       targetId: attacker.permanentId,
@@ -1939,7 +1948,7 @@ function resolveMultiBlockCombat(
   if (attackerHasDeathtouch && attackDamage > 0) {
     for (const blockerRef of blockerRefs) {
       const dtPerm = players[blockerRef.owner].board[blockerRef.slotIndex];
-      if (dtPerm) {
+      if (dtPerm && blockersDamagedByAttacker.has(dtPerm.permanentId)) {
         players[blockerRef.owner].board[blockerRef.slotIndex] = {
           ...dtPerm,
           damage: dtPerm.health + dtPerm.temporaryHealthBonus,
@@ -1947,20 +1956,13 @@ function resolveMultiBlockCombat(
       }
     }
   }
-  for (const blockerRef of blockerRefs) {
-    const blocker = players[blockerRef.owner].board[blockerRef.slotIndex];
-    if (!blocker) continue;
-    if (hasKeyword(blocker, 'deathtouch') && getEffectiveAttack(blocker) > 0) {
-      if (attackerRef) {
-        const dtPerm = players[attackerRef.owner].board[attackerRef.slotIndex];
-        if (dtPerm) {
-          players[attackerRef.owner].board[attackerRef.slotIndex] = {
-            ...dtPerm,
-            damage: dtPerm.health + dtPerm.temporaryHealthBonus,
-          };
-        }
-      }
-      break; // One deathtouch blocker is enough to kill the attacker
+  if (attackerDamagedByDeathtouchBlocker && attackerRef) {
+    const dtPerm = players[attackerRef.owner].board[attackerRef.slotIndex];
+    if (dtPerm) {
+      players[attackerRef.owner].board[attackerRef.slotIndex] = {
+        ...dtPerm,
+        damage: dtPerm.health + dtPerm.temporaryHealthBonus,
+      };
     }
   }
 
@@ -2010,6 +2012,7 @@ function resolveBlockedCombat(
   }
 
   // Apply attacker damage to blocker
+  let attackerDamageDealtToBlocker = 0;
   const blockerFound = findPermanent(mutableState, blocker.permanentId);
   if (blockerFound) {
     const blockerNow = players[blockerFound.owner].board[blockerFound.slotIndex];
@@ -2028,6 +2031,7 @@ function resolveBlockedCombat(
           damage: blockerNow.damage + actualDmgToBlocker,
         };
       }
+      attackerDamageDealtToBlocker = actualDmgToBlocker;
       events.push({
         type: 'DAMAGE_DEALT',
         targetId: blockerNow.permanentId,
@@ -2038,6 +2042,7 @@ function resolveBlockedCombat(
   }
 
   // Apply blocker damage to attacker
+  let blockerDamageDealtToAttacker = 0;
   const attackerFound = findPermanent(mutableState, attacker.permanentId);
   if (attackerFound) {
     const attackerNow = players[attackerFound.owner].board[attackerFound.slotIndex];
@@ -2056,6 +2061,7 @@ function resolveBlockedCombat(
           damage: attackerNow.damage + actualDmgToAttacker,
         };
       }
+      blockerDamageDealtToAttacker = actualDmgToAttacker;
       events.push({
         type: 'DAMAGE_DEALT',
         targetId: attackerNow.permanentId,
@@ -2066,7 +2072,7 @@ function resolveBlockedCombat(
   }
 
   // Deathtouch checks — before normal death checks
-  if (hasKeyword(attacker, 'deathtouch') && attackDamage > 0) {
+  if (hasKeyword(attacker, 'deathtouch') && attackerDamageDealtToBlocker > 0) {
     const bf = findPermanent(mutableState, blocker.permanentId);
     if (bf) {
       const dtPerm = players[bf.owner].board[bf.slotIndex];
@@ -2078,7 +2084,7 @@ function resolveBlockedCombat(
       }
     }
   }
-  if (hasKeyword(blocker, 'deathtouch') && blockDamage > 0) {
+  if (hasKeyword(blocker, 'deathtouch') && blockerDamageDealtToAttacker > 0) {
     const af = findPermanent(mutableState, attacker.permanentId);
     if (af) {
       const dtPerm = players[af.owner].board[af.slotIndex];
