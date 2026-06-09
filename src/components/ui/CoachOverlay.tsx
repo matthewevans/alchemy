@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTutorialStore } from '@game/tutorialStore';
 import { narrateText } from '@audio/tts';
-import wizardImg from '/wizard_helper.webp?url';
+
+// Served from public/ at the site root — referenced by URL, not imported.
+const wizardImg = '/wizard_helper.webp';
 
 const VIEWPORT_PAD = 12;
 
