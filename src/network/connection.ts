@@ -6,29 +6,33 @@ const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const CODE_LENGTH = 5;
 const PEER_ID_PREFIX = 'alchemy-';
 
-// Override PeerJS defaults — their bundled TURN servers are broken
+// Override PeerJS defaults — their bundled TURN servers are broken.
+// Free-tier metered.ca relay; rotate username/credential here if abused.
+const TURN_USERNAME = '1e7047bf2684d48f2ad5bfa5';
+const TURN_CREDENTIAL = 'y570oQgyLggaPJl1';
+
 const PEER_CONFIG: RTCConfiguration = {
   iceServers: [
     { urls: 'stun:stun.relay.metered.ca:80' },
     {
-      urls: 'turn:global.relay.metered.ca:80',
-      username: 'a267722d3eb02873687da73c',
-      credential: 'ob5D/eUnCmkkf1Vp',
+      urls: 'turn:standard.relay.metered.ca:80',
+      username: TURN_USERNAME,
+      credential: TURN_CREDENTIAL,
     },
     {
-      urls: 'turn:global.relay.metered.ca:80?transport=tcp',
-      username: 'a267722d3eb02873687da73c',
-      credential: 'ob5D/eUnCmkkf1Vp',
+      urls: 'turn:standard.relay.metered.ca:80?transport=tcp',
+      username: TURN_USERNAME,
+      credential: TURN_CREDENTIAL,
     },
     {
-      urls: 'turn:global.relay.metered.ca:443',
-      username: 'a267722d3eb02873687da73c',
-      credential: 'ob5D/eUnCmkkf1Vp',
+      urls: 'turn:standard.relay.metered.ca:443',
+      username: TURN_USERNAME,
+      credential: TURN_CREDENTIAL,
     },
     {
-      urls: 'turns:global.relay.metered.ca:443?transport=tcp',
-      username: 'a267722d3eb02873687da73c',
-      credential: 'ob5D/eUnCmkkf1Vp',
+      urls: 'turns:standard.relay.metered.ca:443?transport=tcp',
+      username: TURN_USERNAME,
+      credential: TURN_CREDENTIAL,
     },
   ],
 };
